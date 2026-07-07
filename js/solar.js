@@ -158,13 +158,10 @@
     el, body: el.dataset.body, side: el.dataset.side || "l",
   }));
   const N = chapters.length;
-  let centers = [];
+  let bounds = [];                           /* document Y where each chapter begins */
   const recalcCenters = () => {
-    /* document coordinates — offsetTop would be relative to <main> */
-    centers = chapters.map(c => {
-      const r = c.el.getBoundingClientRect();
-      return r.top + window.scrollY + r.height / 2;
-    });
+    /* getBoundingClientRect — offsetTop would be relative to <main> */
+    bounds = chapters.map(c => c.el.getBoundingClientRect().top + window.scrollY);
   };
 
   /* fill each chapter's ephemeris line from the real elements */
@@ -189,9 +186,10 @@
   const ELEV_MIN = 8 * D2R, ELEV_MAX = 88 * D2R;
 
   const EXP = 0.6;                            /* radial compression: r^0.6 in AU */
-  /* scale pinned to the Sun: Mercury's orbit sits at 40 Sun diameters,
-     as it really does; r^0.6 keeps Neptune within one journey */
-  const K = (40 * 2 * SUNPX) / Math.pow(0.38709927, EXP);
+  /* Mercury's orbit ≈ 15 Sun diameters — the real figure is ~42, but this is
+     enough that the Sun reads as a distant disc from every planet without
+     stranding the inner system in empty black */
+  const K = (15 * 2 * SUNPX) / Math.pow(0.38709927, EXP);
   let cw = 0, ch = 0, FL = 1000, dpr = 1, narrow = false;
   let backdrop = null;
 
@@ -214,15 +212,23 @@
     return c.side === "l" ? { x: 0.74, y: 0.46 } : { x: 0.26, y: 0.46 };
   };
 
-  /* scroll → continuous chapter coordinate, eased between centres */
+  /* scroll → continuous chapter coordinate. The camera HOLDS its planet the
+     whole time a chapter occupies the viewport (however tall the panel) and
+     flies only in a window around the boundary to the next chapter — so
+     reading the top of a tall section never drags the focus away */
   const smooth = f => f * f * (3 - 2 * f);
   const chapterAt = () => {
-    const sc = window.scrollY + window.innerHeight / 2;
-    if (!centers.length || sc <= centers[0]) return 0;
-    if (sc >= centers[N - 1]) return N - 1;
-    let k = 0;
-    while (k < N - 2 && sc > centers[k + 1]) k++;
-    return k + smooth((sc - centers[k]) / (centers[k + 1] - centers[k]));
+    const vh = window.innerHeight;
+    const sc = window.scrollY + vh / 2;
+    const w = 0.45 * vh;
+    let c = 0;
+    for (let k = 1; k < N; k++) {
+      const b = bounds[k];
+      if (sc >= b + w) { c = k; continue; }
+      if (sc > b - w) c = k - 1 + smooth((sc - (b - w)) / (2 * w));
+      break;
+    }
+    return c;
   };
 
   const camTargetOf = (k, T) => {
