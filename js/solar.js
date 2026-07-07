@@ -1,10 +1,12 @@
-/* Hero — a working orrery.
+/* Hero — a working orrery, in 3D.
    Planet positions are computed, not drawn: JPL approximate Keplerian
    elements (Standish, valid 1800–2050) propagated to the simulated date,
    Kepler's equation solved by Newton's method each frame, positions
-   rotated from the orbital plane to the ecliptic and projected top-down.
-   Radial distances are compressed with r^0.42 so Mercury and Neptune can
-   share one canvas; angles are true. */
+   rotated from each orbital plane to the ecliptic — including z, so the
+   orbital inclinations are real. A hand-rolled camera (yaw + elevation
+   around the Sun, perspective divide, painter's sort) projects onto the
+   canvas; there is no 3D library. Radial distances are compressed with
+   r^0.42 so Mercury and Neptune share one view; angles are true. */
 (() => {
   const canvas = document.getElementById("solar-canvas");
   if (!canvas) return;
@@ -45,27 +47,27 @@
 
   const centuries = ms => (ms / 86400000 + 2440587.5 - 2451545.0) / 36525;
 
-  const elementsAt = (p, T) => {
-    const e = p.e[0] + p.e[1] * T;
-    return {
-      a: p.a[0] + p.a[1] * T, e,
-      I: (p.I[0] + p.I[1] * T) * D2R,
-      L: p.L[0] + p.L[1] * T,
-      W: p.W[0] + p.W[1] * T,
-      O: p.O[0] + p.O[1] * T,
-    };
-  };
+  const elementsAt = (p, T) => ({
+    a: p.a[0] + p.a[1] * T,
+    e: p.e[0] + p.e[1] * T,
+    I: (p.I[0] + p.I[1] * T) * D2R,
+    L: p.L[0] + p.L[1] * T,
+    W: p.W[0] + p.W[1] * T,
+    O: p.O[0] + p.O[1] * T,
+  });
 
-  /* orbital-plane position for eccentric anomaly E, rotated to the ecliptic */
+  /* orbital-plane position for eccentric anomaly E → 3D ecliptic coords */
   const eclFromE = (el, E) => {
     const xp = el.a * (Math.cos(E) - el.e);
     const yp = el.a * Math.sqrt(1 - el.e * el.e) * Math.sin(E);
     const w = (el.W - el.O) * D2R, Om = el.O * D2R;
     const cw = Math.cos(w), sw = Math.sin(w);
-    const co = Math.cos(Om), so = Math.sin(Om), ci = Math.cos(el.I);
+    const co = Math.cos(Om), so = Math.sin(Om);
+    const ci = Math.cos(el.I), si = Math.sin(el.I);
     return {
       x: (cw * co - sw * so * ci) * xp + (-sw * co - cw * so * ci) * yp,
       y: (cw * so + sw * co * ci) * xp + (-sw * so + cw * co * ci) * yp,
+      z: (sw * si) * xp + (cw * si) * yp,
     };
   };
 
@@ -81,7 +83,7 @@
       if (Math.abs(dE) < 1e-9) break;
     }
     const pos = eclFromE(el, E);
-    return { ...pos, r: Math.hypot(pos.x, pos.y), lon: mod360(Math.atan2(pos.y, pos.x) / D2R) };
+    return { ...pos, r: Math.hypot(pos.x, pos.y, pos.z), lon: mod360(Math.atan2(pos.y, pos.x) / D2R) };
   };
 
   /* orbit paths in AU, cached (element drift is invisible at this scale) */
@@ -100,16 +102,34 @@
   let sel = 2;                                    /* Earth */
   let hover = -1;
 
+  /* ---------- camera: orbit around the Sun ---------- */
+  let yaw = -0.55;                                /* rad, about the ecliptic pole */
+  let elev = 56 * D2R;                            /* elevation above the ecliptic */
+  let autoSpin = !reduced;                        /* gentle drift until the user grabs it */
+  const ELEV_MIN = 8 * D2R, ELEV_MAX = 88 * D2R;
+
   /* ---------- screen mapping ---------- */
   const EXP = 0.42;
   let cw = 0, ch = 0, cx = 0, cy = 0, K = 1, dpr = 1;
   let stars = null;
 
   const mapR = r => K * Math.pow(r, EXP);
-  const toScreen = pt => {
-    const r = Math.hypot(pt.x, pt.y) || 1e-9;
-    const R = mapR(r);
-    return { x: cx + (pt.x / r) * R, y: cy - (pt.y / r) * R };
+
+  /* radial compression is a scale along the Sun direction, so planes
+     through the Sun (every orbit) stay planes */
+  const project = pt => {
+    const r = Math.hypot(pt.x, pt.y, pt.z) || 1e-9;
+    const f = mapR(r) / r;
+    const wx = pt.x * f, wy = pt.y * f, wz = pt.z * f;
+    const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
+    const x1 = wx * cyaw - wy * syaw;
+    const y1 = wx * syaw + wy * cyaw;
+    const se = Math.sin(elev), ce = Math.cos(elev);
+    const y2 = y1 * se + wz * ce;                 /* screen-up */
+    const zd = -y1 * ce + wz * se;                /* toward camera */
+    const D = mapR(30.4) * 3.1;
+    const s = D / (D - zd);
+    return { x: cx + x1 * s, y: cy - y2 * s, s, zd };
   };
 
   const mulberry = s => () => {
@@ -150,7 +170,7 @@
     const wide = window.innerWidth > 780;
     cx = wide ? cw * 0.60 : cw * 0.5;
     cy = ch * 0.52;
-    K = (Math.min(wide ? cw * 0.5 : cw * 0.5, ch * 0.5) - 30) / Math.pow(30.4, EXP);
+    K = (Math.min(cw * 0.5, ch * 0.58) - 30) / Math.pow(30.4, EXP);
     makeStars();
   };
 
@@ -180,8 +200,7 @@
     const p = EL[i];
     panel.glyph.textContent = p.glyph;
     panel.name.textContent = p.name;
-    const T = centuries(simMs);
-    const el = elementsAt(p, T);
+    const el = elementsAt(p, centuries(simMs));
     panel.a.textContent = el.a.toFixed(3) + " AU";
     panel.e.textContent = el.e.toFixed(4);
     const d = periodDays[i];
@@ -192,7 +211,7 @@
   planetBtns.forEach(b => b.addEventListener("click", () => select(Number(b.dataset.planet))));
   document.getElementById("solar-today").addEventListener("click", () => { simMs = Date.now(); });
 
-  /* pointer: hover + click-to-select the nearest planet */
+  /* ---------- pointer: drag rotates the camera, a clean click selects ---------- */
   let screenPos = EL.map(() => ({ x: -99, y: -99 }));
   const nearest = (mx, my) => {
     let best = -1, bd = 26;
@@ -202,17 +221,48 @@
     });
     return best;
   };
+
+  let dragging = false, moved = 0, px0 = 0, py0 = 0;
+
+  canvas.addEventListener("pointerdown", e => {
+    dragging = true;
+    moved = 0;
+    px0 = e.clientX;
+    py0 = e.clientY;
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
+  });
   canvas.addEventListener("pointermove", e => {
     const r = canvas.getBoundingClientRect();
-    hover = nearest(e.clientX - r.left, e.clientY - r.top);
-    canvas.style.cursor = hover >= 0 ? "pointer" : "default";
+    if (dragging) {
+      const dx = e.clientX - px0, dy = e.clientY - py0;
+      moved += Math.abs(dx) + Math.abs(dy);
+      if (moved > 4) {
+        autoSpin = false;
+        yaw += dx * 0.006;
+        elev = Math.min(ELEV_MAX, Math.max(ELEV_MIN, elev + dy * 0.004));
+        canvas.style.cursor = "grabbing";
+      }
+      px0 = e.clientX;
+      py0 = e.clientY;
+    } else {
+      hover = nearest(e.clientX - r.left, e.clientY - r.top);
+      canvas.style.cursor = hover >= 0 ? "pointer" : "grab";
+    }
   });
-  canvas.addEventListener("pointerleave", () => { hover = -1; });
-  canvas.addEventListener("click", e => {
-    const r = canvas.getBoundingClientRect();
-    const i = nearest(e.clientX - r.left, e.clientY - r.top);
-    if (i >= 0) select(i);
-  });
+  const endDrag = e => {
+    if (!dragging) return;
+    dragging = false;
+    canvas.style.cursor = "grab";
+    if (moved <= 4 && e.clientX !== undefined) {
+      const r = canvas.getBoundingClientRect();
+      const i = nearest(e.clientX - r.left, e.clientY - r.top);
+      if (i >= 0) select(i);
+    }
+  };
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", () => { dragging = false; canvas.style.cursor = "grab"; });
+  canvas.addEventListener("pointerleave", () => { if (!dragging) hover = -1; });
+  canvas.style.cursor = "grab";
 
   /* ---------- draw ---------- */
   const fmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -225,11 +275,11 @@
     ctx.clearRect(0, 0, cw, ch);
     if (stars) ctx.drawImage(stars, 0, 0, cw, ch);
 
-    /* orbits */
+    /* orbit paths, behind everything */
     for (let i = 0; i < EL.length; i++) {
       ctx.beginPath();
       paths[i].forEach((pt, j) => {
-        const s = toScreen(pt);
+        const s = project(pt);
         j ? ctx.lineTo(s.x, s.y) : ctx.moveTo(s.x, s.y);
       });
       ctx.strokeStyle = i === sel
@@ -239,47 +289,55 @@
       ctx.stroke();
     }
 
-    /* sun */
-    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
-    glow.addColorStop(0, "oklch(93% 0.08 85)");
-    glow.addColorStop(0.28, "oklch(85% 0.12 80 / 0.55)");
-    glow.addColorStop(1, "oklch(85% 0.12 80 / 0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(cx, cy, 30, 0, TAU); ctx.fill();
-    ctx.fillStyle = "oklch(96% 0.05 90)";
-    ctx.beginPath(); ctx.arc(cx, cy, 5.5, 0, TAU); ctx.fill();
-
-    /* planets */
-    ctx.font = "10.5px " + (css("--font-mono") || "monospace");
-    for (let i = 0; i < EL.length; i++) {
-      const p = EL[i];
+    /* bodies, painter-sorted far → near */
+    const showLabels = Math.min(cw, ch) > 500;
+    const se = Math.sin(elev);
+    const bodies = EL.map((p, i) => {
       const pos = positionAt(p, T);
-      const s = toScreen(pos);
+      const s = project(pos);
       screenPos[i] = s;
+      return { i, p, pos, s };
+    });
+    bodies.push({ sun: true, s: project({ x: 0, y: 0, z: 0 }) });
+    bodies.sort((a, b) => a.s.zd - b.s.zd);
 
+    ctx.font = "10.5px " + (css("--font-mono") || "monospace");
+    for (const b of bodies) {
+      if (b.sun) {
+        const g = ctx.createRadialGradient(b.s.x, b.s.y, 0, b.s.x, b.s.y, 30 * b.s.s);
+        g.addColorStop(0, "oklch(93% 0.08 85)");
+        g.addColorStop(0.28, "oklch(85% 0.12 80 / 0.55)");
+        g.addColorStop(1, "oklch(85% 0.12 80 / 0)");
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(b.s.x, b.s.y, 30 * b.s.s, 0, TAU); ctx.fill();
+        ctx.fillStyle = "oklch(96% 0.05 90)";
+        ctx.beginPath(); ctx.arc(b.s.x, b.s.y, 5.5 * b.s.s, 0, TAU); ctx.fill();
+        continue;
+      }
+      const { i, p, pos, s } = b;
+      const R = p.px * s.s;
       if (p.ring) {
         ctx.strokeStyle = "color-mix(in oklab, " + p.col + " 65%, transparent)";
         ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.ellipse(s.x, s.y, p.px * 2.1, p.px * 0.85, -0.45, 0, TAU);
+        ctx.ellipse(s.x, s.y, R * 2.1, Math.max(R * 0.24, R * 2.1 * se * 0.92), 0, 0, TAU);
         ctx.stroke();
       }
       ctx.fillStyle = p.col;
       ctx.beginPath();
-      ctx.arc(s.x, s.y, p.px + (hover === i ? 1 : 0), 0, TAU);
+      ctx.arc(s.x, s.y, R + (hover === i ? 1 : 0), 0, TAU);
       ctx.fill();
       if (i === sel) {
         ctx.strokeStyle = brass;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, p.px + 4.5, 0, TAU);
+        ctx.arc(s.x, s.y, R + 4.5, 0, TAU);
         ctx.stroke();
       }
-      if (Math.min(cw, ch) > 500 || i === sel || i === hover) {
+      if (showLabels || i === sel || i === hover) {
         ctx.fillStyle = hover === i || sel === i ? ink : muted;
-        ctx.fillText(p.name.toLowerCase(), s.x + p.px + 6, s.y + 3.5);
+        ctx.fillText(p.name.toLowerCase(), s.x + R + 6, s.y + 3.5);
       }
-
       if (i === sel) {
         panel.r.textContent = pos.r.toFixed(3) + " AU";
         panel.lon.textContent = pos.lon.toFixed(1) + "°";
@@ -296,6 +354,7 @@
     const dt = Math.min(0.1, (now - prev) / 1000);
     prev = now;
     simMs += dt * speed * 86400000;
+    if (autoSpin && !dragging) yaw += dt * 0.02;
     draw();
     requestAnimationFrame(tick);
   };
@@ -308,12 +367,13 @@
   /* debug / verification handle — also for the curious */
   window.orrery = {
     date: () => new Date(simMs),
+    view: () => ({ yaw, elevDeg: elev / D2R }),
     state: (name, when) => {
       const i = EL.findIndex(p => p.name.toLowerCase() === String(name).toLowerCase());
       if (i < 0) return null;
       const T = centuries(when ? new Date(when).getTime() : simMs);
       const pos = positionAt(EL[i], T);
-      return { rAU: pos.r, lonDeg: pos.lon, periodDays: periodDays[i] };
+      return { rAU: pos.r, lonDeg: pos.lon, zAU: pos.z, periodDays: periodDays[i] };
     },
   };
 })();
