@@ -1,12 +1,13 @@
-# williamgreenfield — portfolio
+# portfolio
 
-A portfolio that proves instead of claims: the projects on the CV run live in the page.
+A portfolio that proves instead of claims: the site is one live solar system, and the projects on the CV run in the page.
 
-- **Fig. 1** — the MNIST classifier from `nn MNIST/` running its *original trained weights* (784→20→10→10, ReLU + softmax), forward pass re-implemented in vanilla JS. Weights exported to `assets/nn-weights.json` as base64 float32 (96.5% on a 5,000-image sample). Drawing input is preprocessed MNIST-style: bounding-box crop, scale to 20 px, centre-of-mass shift.
-- **Fig. 2** — 5×5 (Gardner) chess engine: iterative-deepening negamax, alpha-beta pruning, quiescence search, MVV-LVA move ordering, ~300 ms per move. Typically reaches depth 8–10, ~500k nodes.
-- **Fig. 3** — maze generation (recursive backtracker, lightly braided) with BFS / DFS / A* animated on the same grid graph.
+- **The system** (`js/solar.js`) — every section lives on a planet. Positions are computed from JPL Keplerian elements (Kepler's equation solved by Newton's method each frame, inclinations included); the camera is a hand-rolled dolly (apparent size = size × focal length ÷ distance) driven by scroll. Planets are mission photographs (MESSENGER, Mariner 10, Apollo 17, Rosetta, Hubble, Cassini, Voyager 2, SDO) over ESO's Milky Way. No 3D library.
+- **Mercury** — the MNIST classifier from `nn MNIST/` running its *original trained weights* (784→20→10→10, ReLU + softmax), forward pass re-implemented in vanilla JS; input preprocessed MNIST-style (crop, scale to 20 px, centre-of-mass shift).
+- **Venus** — the COMP2321 *Chess Fragments* engine ported piece for piece: 25-bit bitboards, Zobrist-hashed transposition table, killer/history ordering, null-move pruning, LMR, check extensions, delta-pruned quiescence. Piece values and square tables verbatim from the Python original.
+- **Earth** — maze generation (recursive backtracker, lightly braided) with BFS / DFS / A* animated on the same grid graph.
 
-No frameworks, no build step, no analytics. Hand-written HTML/CSS/JS.
+No frameworks, no build step, no analytics. Hand-written HTML/CSS/JS, type-checked with `tsc` in strict mode via JSDoc annotations.
 
 ## Run locally
 
@@ -16,13 +17,19 @@ Any static server, e.g.:
 npx serve .
 ```
 
-(A server is needed because the weights load via `fetch`.)
+(A server is needed because weights and sprites load via `fetch`.)
+
+## Type check
+
+```sh
+npx tsc --project jsconfig.json
+```
+
+Zero-emit: `tsc` is used purely as a checker; the JS in `js/` is the code that ships.
 
 ## Deploy to GitHub Pages
 
 ```sh
-git add -A && git commit -m "Portfolio"
-gh repo create Und3fin3d/portfolio --public --source . --push
 gh api repos/Und3fin3d/portfolio/pages -X POST -f "source[branch]=main" -f "source[path]=/"
 ```
 
@@ -32,3 +39,4 @@ Site appears at `https://und3fin3d.github.io/portfolio/`. For the cleaner `https
 
 - New CV: overwrite `assets/WilliamGreenfield_CV.pdf`.
 - Retrained network: re-run the export against `nn MNIST/saved_network/` (see `arch` note inside `assets/nn-weights.json`).
+- Imagery credits: NASA / ESA / ESO (Milky Way panorama: ESO/S. Brunier, CC BY 4.0; Mars: ESA/Rosetta, CC BY-SA 3.0 IGO; rest public domain).

@@ -7,9 +7,14 @@
    ordering, null-move pruning, check extensions, delta-pruned quiescence,
    iterative deepening. Piece values and piece-square tables are copied
    verbatim from the original engine. */
+// @ts-check
 (() => {
   const boardEl = document.getElementById("chess-board");
   if (!boardEl) return;
+
+  /** @typedef {{ f: number, t: number, type: number }} Move */
+  /** @typedef {{ capType: number, capSq: number, oldEp: number, promo: boolean, wasUnmoved: boolean, capUnmoved: boolean, oldHash: number }} Undo */
+  /** @typedef {{ m: Move, u: Undo, color: number }} Played */
 
   /* ---------- bitboard constants (ported) ---------- */
   const MASK = (1 << 25) - 1;
@@ -51,12 +56,16 @@
   // index PST by our type ints: P,N,B,R,Q,K,RIGHT
   const PST_BY_TYPE = [PST[0], PST[1], PST[2], [PST_QUEEN, PST_QUEEN], PST[3], PST[5], PST[6]];
 
+  /** @param {number} x */
   const bitlen = x => 32 - Math.clz32(x);
+  /** @param {number} x */
   const popcnt = x => { let c = 0; while (x) { x &= x - 1; c++; } return c; };
 
   /* ---------- attack tables ---------- */
-  const KNIGHT_ATT = new Array(25), KING_ATT = new Array(25);
-  const PAWN_ATT_W = new Array(25), PAWN_ATT_B = new Array(25);
+  /** @type {number[]} */ const KNIGHT_ATT = new Array(25);
+  /** @type {number[]} */ const KING_ATT = new Array(25);
+  /** @type {number[]} */ const PAWN_ATT_W = new Array(25);
+  /** @type {number[]} */ const PAWN_ATT_B = new Array(25);
   for (let sq = 0; sq < 25; sq++) {
     const bb = 1 << sq;
     let m = (bb << 3) & ~F_DE;
@@ -75,6 +84,7 @@
   }
 
   /* ---------- sliding rays (ported blocker logic) ---------- */
+  /** @param {number} mask  @param {number} occ */
   const rayHigh = (mask, occ) => {       // blocker is the highest set bit
     const blockers = occ & mask;
     if (blockers) {
@@ -83,6 +93,7 @@
     }
     return mask;
   };
+  /** @param {number} mask  @param {number} occ */
   const rayLow = (mask, occ) => {        // blocker is the lowest set bit
     const blockers = occ & mask;
     if (blockers) {
@@ -91,6 +102,7 @@
     }
     return mask;
   };
+  /** @param {number} sq  @param {number} occ */
   const orthAttacks = (sq, occ) => {
     const fileMask = FILE_A << (sq % 5);
     const rankMask = 0b11111 << (((sq / 5) | 0) * 5);
@@ -100,17 +112,21 @@
     const east = rankMask & ~((1 << (sq + 1)) - 1) & MASK;
     return rayHigh(north, occ) | rayLow(south, occ) | rayHigh(west, occ) | rayLow(east, occ);
   };
+  /** @param {number} sq  @param {number} occ */
   const diagAttacks = (sq, occ) =>
     rayHigh(SE_MASKS[sq], occ) | rayHigh(SW_MASKS[sq], occ) | rayLow(NE_MASKS[sq], occ) | rayLow(NW_MASKS[sq], occ);
 
   /* ---------- Zobrist hashing (32-bit) ---------- */
-  const rng = (seed => () => {
-    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  let rngSeed = 42;
+  const rng = () => {
+    rngSeed |= 0; rngSeed = (rngSeed + 0x6D2B79F5) | 0;
+    let t = Math.imul(rngSeed ^ (rngSeed >>> 15), 1 | rngSeed);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return (t ^ (t >>> 14)) | 0;
-  })(42);
-  const Z_PIECE = [], Z_UNMOVED = [[], []], Z_EP = [];
+  };
+  /** @type {number[][][]} */ const Z_PIECE = [];
+  /** @type {number[][]} */ const Z_UNMOVED = [[], []];
+  /** @type {number[]} */ const Z_EP = [];
   for (let p = 0; p < NUM_TYPES; p++) {
     Z_PIECE.push([[], []]);
     for (let sq = 0; sq < 25; sq++) { Z_PIECE[p][0][sq] = rng(); Z_PIECE[p][1][sq] = rng(); }
@@ -120,12 +136,17 @@
 
   /* ---------- position ---------- */
   // bb[type][color], occ[color], unmoved[color] (pawns), ep bit, hash, turn
-  let bb, occ, unmoved, ep, hash, turn, history;
+  /** @type {number[][]} */ let bb = [];
+  /** @type {number[]} */ let occ = [0, 0];
+  /** @type {number[]} */ let unmoved = [0, 0];
+  let ep = 0, hash = 0, turn = WHITE;
+  /** @type {Played[]} */ let history = [];
 
   const startPos = () => {
     bb = Array.from({ length: NUM_TYPES }, () => [0, 0]);
     occ = [0, 0]; unmoved = [0, 0]; ep = 0; hash = 0; turn = WHITE; history = [];
     // sample0: y=0 (top, black): N Q K B Right / y=4 (bottom, white): Right B K Q N
+    /** @param {number} type  @param {number} color  @param {number} sq */
     const place = (type, color, sq) => {
       bb[type][color] |= 1 << sq;
       occ[color] |= 1 << sq;
@@ -139,6 +160,7 @@
     for (let sq = 5; sq < 10; sq++) hash ^= Z_UNMOVED[BLACK][sq];
   };
 
+  /** @param {number} sq  @param {number} color */
   const typeAt = (sq, color) => {
     const bit = 1 << sq;
     for (let t = 0; t < NUM_TYPES; t++) if (bb[t][color] & bit) return t;
@@ -147,6 +169,7 @@
 
   /* ---------- move generation ---------- */
   // white moves toward y=0 (index decreasing), as in the original.
+  /** @param {number} type  @param {number} sq  @param {number} color */
   const pieceTargets = (type, sq, color) => {
     const friend = occ[color], all = occ[0] | occ[1];
     switch (type) {
@@ -173,7 +196,9 @@
     return 0;
   };
 
+  /** @param {number} color  @param {boolean} capturesOnly */
   const genMoves = (color, capturesOnly) => {
+    /** @type {Move[]} */
     const moves = [];
     const enemyOcc = occ[color ^ 1];
     for (let t = 0; t < NUM_TYPES; t++) {
@@ -194,6 +219,7 @@
     return moves;
   };
 
+  /** @param {number} sq  @param {number} byColor */
   const attacked = (sq, byColor) => {
     if (byColor === WHITE ? (PAWN_ATT_B[sq] & bb[P][WHITE]) : (PAWN_ATT_W[sq] & bb[P][BLACK])) return true;
     if (KNIGHT_ATT[sq] & (bb[N][byColor] | bb[RIGHT][byColor])) return true;
@@ -203,16 +229,18 @@
     if (orthAttacks(sq, all) & (bb[Q][byColor] | bb[RIGHT][byColor])) return true;
     return false;
   };
+  /** @param {number} color */
   const inCheck = color => {
     const kbb = bb[K][color];
     return kbb ? attacked(bitlen(kbb) - 1, color ^ 1) : false;
   };
 
   /* ---------- make / unmake ---------- */
+  /** @param {Move} m  @param {number} color  @returns {Undo} */
   const make = (m, color) => {
     const enemy = color ^ 1;
     const fromBit = 1 << m.f, toBit = 1 << m.t;
-    const u = { capType: -1, capSq: -1, oldEp: ep, promo: false, wasUnmoved: false, oldHash: hash };
+    const u = { capType: -1, capSq: -1, oldEp: ep, promo: false, wasUnmoved: false, capUnmoved: false, oldHash: hash };
 
     hash ^= Z_PIECE[m.type][color][m.f];
 
@@ -262,6 +290,7 @@
     return u;
   };
 
+  /** @param {Move} m  @param {number} color  @param {Undo} u */
   const unmake = (m, color, u) => {
     const enemy = color ^ 1;
     const fromBit = 1 << m.f, toBit = 1 << m.t;
@@ -279,6 +308,7 @@
     if (u.wasUnmoved) unmoved[color] |= fromBit;
   };
 
+  /** @param {number} color */
   const legalMoves = color => genMoves(color, false).filter(m => {
     const u = make(m, color);
     const ok = !inCheck(color);
@@ -287,13 +317,14 @@
   });
 
   /* ---------- evaluation (ported evaluate_fast) ---------- */
+  /** @param {number} color */
   const evaluate = color => {
     let score = 0;
     for (let t = 0; t < NUM_TYPES; t++) {
       if (t === K) continue;
       const value = EVAL_VALUES[t];
       let f = bb[t][color], e = bb[t][color ^ 1];
-      const pstF = PST_BY_TYPE[t][color], pstE = PST_BY_TYPE[t][color ^ 1];
+      const pstF = /** @type {number[]} */ (PST_BY_TYPE[t][color]), pstE = /** @type {number[]} */ (PST_BY_TYPE[t][color ^ 1]);
       while (f) { const sq = bitlen(f & -f) - 1; score += value + pstF[sq]; f &= f - 1; }
       while (e) { const sq = bitlen(e & -e) - 1; score -= value + pstE[sq]; e &= e - 1; }
     }
@@ -302,8 +333,12 @@
 
   /* ---------- search (ported: TT, killers, history, null move, LMR, qsearch) ---------- */
   const TT_EXACT = 0, TT_LOWER = 1, TT_UPPER = 2;
+  /** @typedef {{ depth: number, score: number, flag: number, move: Move | null }} TTEntry */
+  /** @type {Map<number, TTEntry>} */
   let tt = new Map();
-  let killers, historyTable, nodes, deadline, aborted;
+  /** @type {(Move | null)[][]} */ let killers = [];
+  /** @type {Int32Array[]} */ let historyTable = [];
+  let nodes = 0, deadline = 0, aborted = false;
 
   const MVV_VICTIM = [85, 385, 465, 0, 545, 10000, 750];
   const MVV_ATTACKER = [85, 385, 465, 0, 545, 800, 750];
@@ -315,6 +350,7 @@
     if (tt.size > 300000) tt = new Map();
   };
 
+  /** @param {Move} m  @param {number} color */
   const mvvLva = (m, color) => {
     const enemy = color ^ 1, toBit = 1 << m.t;
     let victim = -1;
@@ -326,6 +362,7 @@
 
   const checkTime = () => { if (!(nodes & 1023) && performance.now() > deadline) aborted = true; };
 
+  /** @param {number} alpha  @param {number} beta  @param {number} color  @param {number} ply  @returns {number} */
   const qsearch = (alpha, beta, color, ply) => {
     nodes++; checkTime();
     if (aborted) return alpha;
@@ -353,12 +390,14 @@
     return alpha;
   };
 
+  /** @param {number} depth  @param {number} alpha  @param {number} beta  @param {number} color  @param {number} ply  @param {Move[]} pv  @returns {number} */
   const negamax = (depth, alpha, beta, color, ply, pv) => {
     nodes++; checkTime();
     if (aborted) return alpha;
 
     const ttKey = hash ^ (color === BLACK ? Z_SIDE : 0);
     const entry = tt.get(ttKey);
+    /** @type {Move | null} */
     let hashMove = null;
     if (entry) {
       hashMove = entry.move;
@@ -397,8 +436,11 @@
       return { m, s };
     }).sort((a, b) => b.s - a.s);
 
-    let best = -Infinity, bestMove = null, legal = 0;
+    let best = -Infinity, legal = 0;
+    /** @type {Move | null} */
+    let bestMove = null;
     const origAlpha = alpha;
+    /** @type {Move[]} */
     const childPv = [];
     for (const { m, s } of scored) {
       const isQuiet = s < 100000;
@@ -450,13 +492,19 @@
     return best;
   };
 
+  /** @param {number} color  @param {number} ms */
   const search = (color, ms) => {
     nodes = 0; aborted = false;
     deadline = performance.now() + ms;
     resetTables();
     const t0 = performance.now();
-    let best = null, bestScore = 0, bestPv = [], depthDone = 0;
+    let bestScore = 0, depthDone = 0;
+    /** @type {Move | null} */
+    let best = null;
+    /** @type {Move[]} */
+    let bestPv = [];
     for (let depth = 1; depth <= 20 && !aborted; depth++) {
+      /** @type {Move[]} */
       const pv = [];
       const score = negamax(depth, -Infinity, Infinity, color, 0, pv);
       if (!aborted && pv.length) {
@@ -468,34 +516,39 @@
   };
 
   /* ---------- UI ---------- */
-  const statusEl = document.getElementById("chess-status");
+  const statusEl = /** @type {HTMLElement} */ (document.getElementById("chess-status"));
   const readout = {
-    depth: document.getElementById("ce-depth"),
-    nodes: document.getElementById("ce-nodes"),
-    time: document.getElementById("ce-time"),
-    eval: document.getElementById("ce-eval"),
-    line: document.getElementById("ce-line"),
+    depth: /** @type {HTMLElement} */ (document.getElementById("ce-depth")),
+    nodes: /** @type {HTMLElement} */ (document.getElementById("ce-nodes")),
+    time: /** @type {HTMLElement} */ (document.getElementById("ce-time")),
+    eval: /** @type {HTMLElement} */ (document.getElementById("ce-eval")),
+    line: /** @type {HTMLElement} */ (document.getElementById("ce-line")),
   };
 
   const GLYPHS = [
     ["♙", "♟"], ["♘", "♞"], ["♗", "♝"], ["♖", "♜"], ["♕", "♛"], ["♔", "♚"], ["♖", "♜"],
   ];
   const NAMES = ["pawn", "knight", "bishop", "rook", "queen", "king", "right"];
+  /** @param {number} sq */
   const coord = sq => "abcde"[sq % 5] + (5 - ((sq / 5) | 0));
+  /** @param {Move} m  @param {boolean} wasCapture */
   const moveStr = (m, wasCapture) => coord(m.f) + (wasCapture ? "×" : "–") + coord(m.t);
 
+  /** @type {HTMLButtonElement[]} */
   const squares = [];
   for (let sq = 0; sq < 25; sq++) {
     const btn = document.createElement("button");
     btn.type = "button";
     const y = (sq / 5) | 0, x = sq % 5;
     if ((x + y) % 2 === 1) btn.classList.add("sq-dark");
-    btn.dataset.sq = sq;
+    btn.dataset.sq = String(sq);
     boardEl.appendChild(btn);
     squares[sq] = btn;
   }
 
-  let selected = -1, targets = [], thinking = false, lastMove = null, gameOver = false;
+  let selected = -1, thinking = false, gameOver = false;
+  /** @type {Move[]} */ let targets = [];
+  /** @type {Move | null} */ let lastMove = null;
 
   const render = () => {
     for (let sq = 0; sq < 25; sq++) {
@@ -519,8 +572,10 @@
     }
   };
 
+  /** @param {string} txt */
   const setStatus = txt => { statusEl.textContent = txt; };
 
+  /** @param {number} color */
   const endCheck = color => {
     if (legalMoves(color).length === 0) {
       gameOver = true;
@@ -544,7 +599,7 @@
         lastMove = res.move;
         turn = WHITE;
         const whiteEval = -res.score / 100;
-        readout.depth.textContent = res.depth;
+        readout.depth.textContent = String(res.depth);
         readout.nodes.textContent = res.nodes.toLocaleString("en-GB");
         readout.time.textContent = `${(res.ms / 1000).toFixed(2)} s`;
         readout.eval.textContent = Math.abs(res.score) > MATE - 100
@@ -560,7 +615,7 @@
   };
 
   boardEl.addEventListener("click", e => {
-    const btn = e.target.closest("button");
+    const btn = /** @type {HTMLElement} */ (e.target).closest("button");
     if (!btn || thinking || gameOver || turn !== WHITE) return;
     const sq = Number(btn.dataset.sq);
     const chosen = targets.find(m => m.t === sq);
@@ -583,7 +638,7 @@
     render();
   });
 
-  document.getElementById("chess-new").addEventListener("click", () => {
+  /** @type {HTMLElement} */ (document.getElementById("chess-new")).addEventListener("click", () => {
     startPos();
     selected = -1; targets = []; lastMove = null; gameOver = false; thinking = false;
     tt = new Map();
@@ -592,12 +647,12 @@
     render();
   });
 
-  document.getElementById("chess-undo").addEventListener("click", () => {
+  /** @type {HTMLElement} */ (document.getElementById("chess-undo")).addEventListener("click", () => {
     if (thinking || history.length === 0) return;
-    let h = history.pop();
+    let h = /** @type {Played} */ (history.pop());
     unmake(h.m, h.color, h.u);
     if (history.length && h.color === BLACK) {
-      h = history.pop();
+      h = /** @type {Played} */ (history.pop());
       unmake(h.m, h.color, h.u);
     }
     turn = WHITE; gameOver = false;

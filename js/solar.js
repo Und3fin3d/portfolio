@@ -21,15 +21,22 @@
    The scale is pinned to the Sun — Mercury's orbit sits at its true
    40 Sun diameters — with radial distances compressed by r^0.6 in AU
    so Neptune stays within one journey; angles are true. */
+// @ts-check
 (() => {
-  const canvas = document.getElementById("solar-canvas");
+  const canvas = /** @type {HTMLCanvasElement | null} */ (document.getElementById("solar-canvas"));
   if (!canvas) return;
-  const ctx = canvas.getContext("2d");
+  const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"));
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /** @param {string} n */
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
   const D2R = Math.PI / 180, TAU = Math.PI * 2;
+  /** @param {number} x */
   const mod360 = x => ((x % 360) + 360) % 360;
+
+  /** @typedef {{ x: number, y: number, z: number }} Vec3 */
+  /** @typedef {{ a: number, e: number, I: number, L: number, W: number, O: number }} Elements */
+  /** @typedef {{ x: number, y: number, s: number, zd: number, clip: boolean }} Proj */
 
   /* [value at J2000, rate per Julian century] */
   const EL = [
@@ -61,6 +68,7 @@
   const IDX = Object.fromEntries(EL.map((p, i) => [p.name.toLowerCase(), i]));
 
   /* photograph billboards: disc centre + radius measured in the asset */
+  /** @type {Record<string, { w: number, h: number, cx: number, cy: number, discR: number }>} */
   const SPRITES = {
     mercury: { w: 535, h: 640, cx: 267.6, cy: 320,   discR: 260.7 },
     venus:   { w: 591, h: 640, cx: 295.3, cy: 320,   discR: 288 },
@@ -72,12 +80,14 @@
     neptune: { w: 622, h: 640, cx: 310.8, cy: 320,   discR: 303.9 },
     sun:     { w: 640, h: 586, cx: 320,   cy: 293.1, discR: 286.1 },
   };
+  /** @type {Record<string, HTMLImageElement>} */
   const IMG = {};
   for (const name of Object.keys(SPRITES)) {
     const im = new Image();
     im.src = "assets/planets/" + name + ".webp";
     IMG[name] = im;
   }
+  /** @param {string} name  @param {number} x  @param {number} y  @param {number} R  @param {number} [alpha] */
   const drawSprite = (name, x, y, R, alpha) => {
     const im = IMG[name], sp = SPRITES[name];
     if (!im.complete || !im.naturalWidth) return false;
@@ -88,8 +98,10 @@
     return true;
   };
 
+  /** @param {number} ms */
   const centuries = ms => (ms / 86400000 + 2440587.5 - 2451545.0) / 36525;
 
+  /** @param {(typeof EL)[number]} p  @param {number} T  @returns {Elements} */
   const elementsAt = (p, T) => ({
     a: p.a[0] + p.a[1] * T,
     e: p.e[0] + p.e[1] * T,
@@ -100,6 +112,7 @@
   });
 
   /* orbital-plane position for eccentric anomaly E → 3D ecliptic coords */
+  /** @param {Elements} el  @param {number} E  @returns {Vec3} */
   const eclFromE = (el, E) => {
     const xp = el.a * (Math.cos(E) - el.e);
     const yp = el.a * Math.sqrt(1 - el.e * el.e) * Math.sin(E);
@@ -114,6 +127,7 @@
     };
   };
 
+  /** @param {(typeof EL)[number]} p  @param {number} T */
   const positionAt = (p, T) => {
     const el = elementsAt(p, T);
     let M = mod360(el.L - el.W);
@@ -133,6 +147,7 @@
   const T0 = centuries(Date.now());
   const paths = EL.map(p => {
     const el = elementsAt(p, T0);
+    /** @type {Vec3[]} */
     const pts = [];
     for (let i = 0; i <= 360; i++) pts.push(eclFromE(el, (i / 360) * TAU));
     return pts;
@@ -146,18 +161,21 @@
      at system distance the planets really are sub-pixel, so they get
      minimum-size chart dots */
   const SUNPX = 44;                          /* √(real radius) scale, like the planets */
+  /** @param {string} body */
   const distOf = body => {
     if (body === "system") return mapR(31.6) * FL / (0.42 * Math.min(cw, ch));
     const frac = narrow ? 0.20 : 0.30;
     const px = body === "sun" ? SUNPX : EL[IDX[body]].px;
     return px * FL / (frac * Math.min(cw, ch));
   };
+  /** @type {Record<string, number>} */
   const SEMI = { sun: 0, mercury: 0.39, venus: 0.72, earth: 1.0, mars: 1.52,
                  jupiter: 5.2, saturn: 9.54, uranus: 19.19, neptune: 30.07 };
-  const chapters = [...document.querySelectorAll(".chapter")].map(el => ({
-    el, body: el.dataset.body, side: el.dataset.side || "l",
+  const chapters = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".chapter"))].map(el => ({
+    el, body: el.dataset.body || "sun", side: el.dataset.side || "l",
   }));
   const N = chapters.length;
+  /** @type {number[]} */
   let bounds = [];                           /* document Y where each chapter begins */
   const recalcCenters = () => {
     /* getBoundingClientRect — offsetTop would be relative to <main> */
@@ -191,20 +209,24 @@
      stranding the inner system in empty black */
   const K = (15 * 2 * SUNPX) / Math.pow(0.38709927, EXP);
   let cw = 0, ch = 0, FL = 1000, dpr = 1, narrow = false;
-  let backdrop = null;
+  const backdrop = new Image();
 
+  /** @param {number} r */
   const mapR = r => K * Math.pow(r, EXP);
+  /** @param {Vec3} pt */
   const warp = pt => {
     const r = Math.hypot(pt.x, pt.y, pt.z) || 1e-9;
     const f = mapR(r) / r;
     return { x: pt.x * f, y: pt.y * f, z: pt.z * f };
   };
 
+  /** @param {string} body  @param {number} T  @returns {Vec3} */
   const bodyPos = (body, T) => {
     const i = IDX[body];
     return i === undefined ? { x: 0, y: 0, z: 0 } : warp(positionAt(EL[i], T));
   };
 
+  /** @param {{ body: string, side: string }} c */
   const anchorOf = c => {
     if (narrow) return { x: 0.5, y: c.body === "sun" ? 0.26 : c.body === "system" ? 0.55 : 0.22 };
     if (c.body === "sun") return { x: 0.68, y: 0.5 };
@@ -216,6 +238,7 @@
      whole time a chapter occupies the viewport (however tall the panel) and
      flies only in a window around the boundary to the next chapter — so
      reading the top of a tall section never drags the focus away */
+  /** @param {number} f */
   const smooth = f => f * f * (3 - 2 * f);
   const chapterAt = () => {
     const vh = window.innerHeight;
@@ -231,6 +254,7 @@
     return c;
   };
 
+  /** @param {number} k  @param {number} T */
   const camTargetOf = (k, T) => {
     const c = chapters[k];
     const a = anchorOf(c);
@@ -246,7 +270,8 @@
      (where a big focus move costs little on screen), have it locked on
      the target by ~70% — so the final approach is a pure zoom onto an
      already-centred planet, never a last-moment sideways catch-up */
-  let cam = null;
+  let cam = { F: { x: 0, y: 0, z: 0 }, zl: Math.log(1000), ax: 0.5, ay: 0.5 };
+  /** @param {number} c  @param {number} T */
   const camFrom = (c, T) => {
     const k = Math.floor(c);
     const f = c - k;
@@ -276,6 +301,7 @@
 
   /* project a 3D AU point through warp → dolly camera → perspective divide */
   let dCam = 1000;
+  /** @param {Vec3} pt  @returns {Proj} */
   const project = pt => {
     const w = warp(pt);
     const rx = w.x - cam.F.x, ry = w.y - cam.F.y, rz = w.z - cam.F.z;
@@ -304,33 +330,37 @@
     recalcCenters();
   };
 
-  if (!backdrop) {
-    backdrop = new Image();
-    backdrop.src = "assets/space.jpg";
-  }
+  backdrop.src = "assets/space.jpg";
 
   /* ---------- HUD ---------- */
-  const dateEl = document.getElementById("solar-date");
-  const speedBtns = [...document.querySelectorAll(".orrery__speeds button[data-speed]")];
-  const gotoBtns = [...document.querySelectorAll(".orrery__planets button[data-goto]")];
+  const dateEl = /** @type {HTMLElement} */ (document.getElementById("solar-date"));
+  const speedBtns = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".orrery__speeds button[data-speed]"))];
+  const gotoBtns = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".orrery__planets button[data-goto]"))];
 
+  /** @param {number} s */
   const setSpeed = s => {
     speed = s;
     speedBtns.forEach(b => b.classList.toggle("is-active", Number(b.dataset.speed) === s));
   };
   setSpeed(speed);
   speedBtns.forEach(b => b.addEventListener("click", () => setSpeed(Number(b.dataset.speed))));
-  document.getElementById("solar-today").addEventListener("click", () => { simMs = Date.now(); });
+  /** @type {HTMLElement} */ (document.getElementById("solar-today")).addEventListener("click", () => { simMs = Date.now(); });
 
+  /** @param {Element} el */
   const flyTo = el => el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
   gotoBtns.forEach(b => b.addEventListener("click", () => {
-    const t = document.querySelector(b.dataset.goto === "#top" ? "main" : b.dataset.goto);
-    flyTo(b.dataset.goto === "#top" ? chapters[0].el : t);
+    const sel = b.dataset.goto || "#top";
+    const t = sel === "#top" ? chapters[0].el : document.querySelector(sel);
+    if (t) flyTo(t);
   }));
 
   /* ---------- pointer: drag rotates, a clean click flies to a planet ---------- */
-  const screenPos = EL.map(() => ({ x: -99, y: -99, R: 0, clip: true }));
-  let sunPos = { x: -99, y: -99, R: 20 };
+  /** @typedef {Proj & { R: number }} ScreenPt */
+  /** @type {ScreenPt[]} */
+  const screenPos = EL.map(() => ({ x: -99, y: -99, s: 0, zd: 0, clip: true, R: 0 }));
+  /** @type {ScreenPt} */
+  let sunPos = { x: -99, y: -99, s: 0, zd: 0, clip: true, R: 20 };
+  /** @param {number} mx  @param {number} my */
   const nearest = (mx, my) => {
     let best = -1, bd = 22;
     screenPos.forEach((s, i) => {
@@ -341,6 +371,7 @@
     if (Math.hypot(sunPos.x - mx, sunPos.y - my) - sunPos.R < 22) best = 8;
     return best;
   };
+  /** @param {number} body */
   const chapterOfBody = body =>
     chapters.find(c => c.body === (body === 8 ? "sun" : EL[body].name.toLowerCase()));
 
@@ -369,6 +400,7 @@
       canvas.style.cursor = hover >= 0 ? "pointer" : "grab";
     }
   });
+  /** @param {PointerEvent} e */
   const endDrag = e => {
     if (!dragging) return;
     dragging = false;
@@ -400,6 +432,7 @@
     ctx.drawImage(backdrop, (cw - dw) / 2 + ox, (ch - dh) / 2 + oy, dw, dh);
   };
 
+  /** @param {number} T  @param {number} c */
   const draw = (T, c) => {
     const ink = css("--ink"), muted = css("--muted"), brass = css("--red");
     const focusBody = chapters[Math.round(c)].body;
@@ -428,17 +461,18 @@
     /* bodies, painter-sorted far → near */
     const showAll = focusBody === "system" || Math.min(cw, ch) > 500;
     /* one universal size rule — no body gets special treatment */
+    /** @type {{ sun: boolean, i: number, p: (typeof EL)[number] | null, s: Proj, R: number }[]} */
     const bodies = EL.map((p, i) => {
       const pos = positionAt(p, T);
       const s = project(pos);
       const R = Math.min(maxR, p.px * s.s);
       screenPos[i] = { ...s, R };
-      return { i, p, s, R };
+      return { sun: false, i, p, s, R };
     });
     const sunS = project({ x: 0, y: 0, z: 0 });
     const sunR = Math.min(maxR, SUNPX * sunS.s);
     sunPos = { ...sunS, R: sunR };
-    bodies.push({ sun: true, s: sunS, R: sunR });
+    bodies.push({ sun: true, i: -1, p: null, s: sunS, R: sunR });
     bodies.sort((a, b) => a.s.zd - b.s.zd);
 
     ctx.font = "10.5px " + (css("--font-mono") || "monospace");
@@ -463,7 +497,8 @@
         }
         continue;
       }
-      const { i, p, s, R } = b;
+      const { i, s, R } = b;
+      const p = /** @type {(typeof EL)[number]} */ (b.p);
       const name = p.name.toLowerCase();
       if (R < 6 || !drawSprite(name, s.x, s.y, R)) {
         /* sub-pixel at this distance, as in reality: draw a chart dot */
@@ -491,8 +526,10 @@
   };
 
   /* ---------- loop ---------- */
+  /** @type {number | null} */
   let cSm = null;
   let prev = performance.now();
+  /** @param {number} now */
   const tick = now => {
     const dt = Math.min(0.1, (now - prev) / 1000);
     prev = now;
@@ -520,12 +557,14 @@
   requestAnimationFrame(tick);
 
   /* debug / verification handle — also for the curious */
-  window.orrery = {
+  /** @type {any} */ (window).orrery = {
     date: () => new Date(simMs),
     view: () => ({ yaw, elevDeg: elev / D2R, camDist: dCam }),
     scale: () => ({ mercurySunDiameters: mapR(0.38709927) / (2 * SUNPX) }),
     chapter: () => chapterAt(),
+    /** @param {string} name */
     screen: name => name === "sun" ? sunPos : screenPos[IDX[String(name).toLowerCase()]],
+    /** @param {string} name  @param {string | number | Date} [when] */
     state: (name, when) => {
       const i = IDX[String(name).toLowerCase()];
       if (i === undefined) return null;

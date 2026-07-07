@@ -1,14 +1,15 @@
 /* Fig. 1 — live MNIST classifier.
    Runs the exact weights trained by nn.py (784-20-10-10, ReLU + softmax).
    Weights are base64 little-endian float32, row-major. */
+// @ts-check
 (() => {
-  const canvas = document.getElementById("nn-canvas");
+  const canvas = /** @type {HTMLCanvasElement | null} */ (document.getElementById("nn-canvas"));
   if (!canvas) return;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  const hint = document.getElementById("nn-hint");
-  const guessEl = document.getElementById("nn-guess");
-  const confEl = document.getElementById("nn-conf");
-  const barsEl = document.getElementById("nn-bars");
+  const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d", { willReadFrequently: true }));
+  const hint = /** @type {HTMLElement} */ (document.getElementById("nn-hint"));
+  const guessEl = /** @type {HTMLElement} */ (document.getElementById("nn-guess"));
+  const confEl = /** @type {HTMLElement} */ (document.getElementById("nn-conf"));
+  const barsEl = /** @type {HTMLElement} */ (document.getElementById("nn-bars"));
 
   const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#22283f";
 
@@ -25,24 +26,31 @@
   ctx.fillStyle = ink;
 
   /* ---- output DOM ---- */
+  /** @type {{ li: HTMLElement, fill: HTMLElement, pct: HTMLElement }[]} */
   const bars = [];
   for (let d = 0; d <= 9; d++) {
     const li = document.createElement("li");
     li.innerHTML = `<span>${d}</span><span class="bar"><i></i></span><span class="pct">–</span>`;
     barsEl.appendChild(li);
-    bars.push({ li, fill: li.querySelector("i"), pct: li.querySelector(".pct") });
+    bars.push({ li,
+      fill: /** @type {HTMLElement} */ (li.querySelector("i")),
+      pct: /** @type {HTMLElement} */ (li.querySelector(".pct")) });
   }
 
-  const layer1 = document.getElementById("nn-layer1");
-  const layer2 = document.getElementById("nn-layer2");
+  const layer1 = /** @type {HTMLElement} */ (document.getElementById("nn-layer1"));
+  const layer2 = /** @type {HTMLElement} */ (document.getElementById("nn-layer2"));
   layer1.style.gridTemplateColumns = "repeat(2, auto)";
   layer2.style.gridTemplateColumns = "repeat(2, auto)";
-  const dots1 = [], dots2 = [];
-  for (let i = 0; i < 20; i++) { const s = document.createElement("span"); s.className = "nn-net__dot"; s.style.opacity = 0.08; layer1.appendChild(s); dots1.push(s); }
-  for (let i = 0; i < 10; i++) { const s = document.createElement("span"); s.className = "nn-net__dot"; s.style.opacity = 0.08; layer2.appendChild(s); dots2.push(s); }
+  /** @type {HTMLElement[]} */ const dots1 = [];
+  /** @type {HTMLElement[]} */ const dots2 = [];
+  for (let i = 0; i < 20; i++) { const s = document.createElement("span"); s.className = "nn-net__dot"; s.style.opacity = "0.08"; layer1.appendChild(s); dots1.push(s); }
+  for (let i = 0; i < 10; i++) { const s = document.createElement("span"); s.className = "nn-net__dot"; s.style.opacity = "0.08"; layer2.appendChild(s); dots2.push(s); }
 
   /* ---- weights ---- */
+  /** @typedef {{ shape: number[], data: Float32Array }} Layer */
+  /** @type {Record<string, Layer> | null} */
   let net = null;
+  /** @param {string} b64 */
   const b64ToF32 = b64 => {
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
@@ -51,13 +59,14 @@
   };
 
   fetch("assets/nn-weights.json")
-    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
     .then(json => {
       net = {};
       for (const l of json.layers) net[l.name] = { shape: l.shape, data: b64ToF32(l.data) };
     })
     .catch(() => { hint.textContent = "could not load network weights"; });
 
+  /** @param {Layer} w  @param {Float32Array} x  @param {Layer} b  @param {Float32Array} out */
   const matvec = (w, x, b, out) => {
     const [rows, cols] = w.shape;
     const wd = w.data, bd = b.data;
@@ -68,13 +77,16 @@
       out[r] = s;
     }
   };
+  /** @param {Float32Array} v */
   const relu = v => { for (let i = 0; i < v.length; i++) if (v[i] < 0) v[i] = 0; };
 
+  /** @param {Float32Array} x */
   const forward = x => {
+    const n = /** @type {Record<string, Layer>} */ (net);
     const a1 = new Float32Array(20), a2 = new Float32Array(10), a3 = new Float32Array(10);
-    matvec(net.w1, x, net.b1, a1); relu(a1);
-    matvec(net.w2, a1, net.b2, a2); relu(a2);
-    matvec(net.w3, a2, net.b3, a3);
+    matvec(n.w1, x, n.b1, a1); relu(a1);
+    matvec(n.w2, a1, n.b2, a2); relu(a2);
+    matvec(n.w3, a2, n.b3, a3);
     let m = -Infinity;
     for (const v of a3) m = Math.max(m, v);
     let sum = 0;
@@ -105,7 +117,7 @@
     const dw = Math.max(1, Math.round(bw * scale)), dh = Math.max(1, Math.round(bh * scale));
     const off = document.createElement("canvas");
     off.width = 28; off.height = 28;
-    const octx = off.getContext("2d", { willReadFrequently: true });
+    const octx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d", { willReadFrequently: true }));
     octx.drawImage(canvas, minX, minY, bw, bh, (28 - dw) / 2, (28 - dh) / 2, dw, dh);
 
     const img = octx.getImageData(0, 0, 28, 28);
@@ -131,10 +143,11 @@
     return x;
   };
 
+  /** @param {HTMLElement[]} dots  @param {Float32Array} acts */
   const setDots = (dots, acts) => {
     let max = 0;
     for (const v of acts) max = Math.max(max, v);
-    dots.forEach((d, i) => { d.style.opacity = max > 0 ? 0.08 + 0.92 * (acts[i] / max) : 0.08; });
+    dots.forEach((d, i) => { d.style.opacity = String(max > 0 ? 0.08 + 0.92 * (acts[i] / max) : 0.08); });
   };
 
   const predict = () => {
@@ -144,7 +157,7 @@
     const { a1, a2, probs } = forward(x);
     let best = 0;
     for (let i = 1; i < 10; i++) if (probs[i] > probs[best]) best = i;
-    guessEl.textContent = best;
+    guessEl.textContent = String(best);
     confEl.textContent = `p = ${(probs[best] * 100).toFixed(1)}%`;
     bars.forEach((b, i) => {
       b.fill.style.width = `${(probs[i] * 100).toFixed(1)}%`;
@@ -161,12 +174,15 @@
     guessEl.textContent = "·";
     confEl.textContent = "";
     bars.forEach(b => { b.fill.style.width = "0%"; b.pct.textContent = "–"; b.li.classList.remove("is-top"); });
-    [...dots1, ...dots2].forEach(d => (d.style.opacity = 0.08));
+    [...dots1, ...dots2].forEach(d => (d.style.opacity = "0.08"));
     hint.textContent = "draw a digit, 0–9";
   };
 
   /* ---- pointer drawing ---- */
-  let drawing = false, last = null, raf = 0;
+  let drawing = false, raf = 0;
+  /** @type {{ x: number, y: number }} */
+  let last = { x: 0, y: 0 };
+  /** @param {{ clientX: number, clientY: number }} e */
   const pos = e => {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (SIZE / r.width), y: (e.clientY - r.top) * (SIZE / r.height) };
@@ -200,5 +216,5 @@
   canvas.addEventListener("pointerup", stop);
   canvas.addEventListener("pointercancel", stop);
 
-  document.getElementById("nn-clear").addEventListener("click", reset);
+  /** @type {HTMLElement} */ (document.getElementById("nn-clear")).addEventListener("click", reset);
 })();
