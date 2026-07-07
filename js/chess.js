@@ -395,7 +395,11 @@
     nodes++; checkTime();
     if (aborted) return alpha;
 
-    const ttKey = hash ^ (color === BLACK ? Z_SIDE : 0);
+    /* hash already carries side-to-move (make() toggles Z_SIDE), so it IS
+       the key — matching the Python get_tt_key. Do not strip Z_SIDE here:
+       that collapsed white-to-move and black-to-move positions onto one
+       entry, poisoning negamax scores and occasionally hanging material. */
+    const ttKey = hash;
     const entry = tt.get(ttKey);
     /** @type {Move | null} */
     let hashMove = null;
