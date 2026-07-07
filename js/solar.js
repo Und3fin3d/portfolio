@@ -239,22 +239,27 @@
 
   /* the camera is derived EXACTLY from a smoothed chapter coordinate each
      frame — smoothing the scalar, not the position, means the focused
-     planet is tracked with zero lag while it moves along its orbit */
+     planet is tracked with zero lag while it moves along its orbit.
+
+     A transition is phased like a real camera move: dolly OUT with the
+     focus still on the old planet, pan the focus across near the apex
+     (where a big focus move costs little on screen), have it locked on
+     the target by ~70% — so the final approach is a pure zoom onto an
+     already-centred planet, never a last-moment sideways catch-up */
   let cam = null;
   const camFrom = (c, T) => {
     const k = Math.floor(c);
-    /* deadzone: within 5% of a chapter centre the focus locks EXACTLY onto
-       that body — at close-up camera distances even a tiny blend toward the
-       next planet moves the focus thousands of warped px */
-    const f = Math.max(0, Math.min(1, ((c - k) - 0.05) / 0.90));
+    const f = c - k;
     const A = camTargetOf(k, T);
     if (f < 1e-4 || k >= N - 1) return A;
     const B = camTargetOf(k + 1, T);
+    const fF = smooth(Math.max(0, Math.min(1, (f - 0.35) / 0.37)));  /* focus pan */
+    const g = smooth(f);                                             /* dolly, zero-slope ends */
     const out = {
-      F: { x: A.F.x + (B.F.x - A.F.x) * f, y: A.F.y + (B.F.y - A.F.y) * f, z: A.F.z + (B.F.z - A.F.z) * f },
-      zl: A.zl + (B.zl - A.zl) * f,
-      ax: A.ax + (B.ax - A.ax) * f,
-      ay: A.ay + (B.ay - A.ay) * f,
+      F: { x: A.F.x + (B.F.x - A.F.x) * fF, y: A.F.y + (B.F.y - A.F.y) * fF, z: A.F.z + (B.F.z - A.F.z) * fF },
+      zl: A.zl + (B.zl - A.zl) * g,
+      ax: A.ax + (B.ax - A.ax) * fF,
+      ay: A.ay + (B.ay - A.ay) * fF,
     };
     /* dolly out to see both orbits mid-flight, then close in */
     const bodyA = chapters[k].body, bodyB = chapters[k + 1].body;
@@ -263,7 +268,7 @@
       const zlMid = Math.log(mapR(aMax) * FL / (0.40 * Math.min(cw, ch)));
       if (zlMid > Math.max(A.zl, B.zl)) {
         const zlC = 2 * zlMid - (A.zl + B.zl) / 2;
-        out.zl = (1 - f) * (1 - f) * A.zl + 2 * f * (1 - f) * zlC + f * f * B.zl;
+        out.zl = (1 - g) * (1 - g) * A.zl + 2 * g * (1 - g) * zlC + g * g * B.zl;
       }
     }
     return out;
@@ -496,7 +501,7 @@
 
     const cRaw = chapterAt();
     if (cSm === null) cSm = cRaw;
-    cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 5));
+    cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 3.2));
     cam = camFrom(cSm, T);
     dCam = Math.exp(cam.zl);
 
