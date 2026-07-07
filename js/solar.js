@@ -16,8 +16,11 @@
    Scroll drives the camera: it holds close on a chapter's planet,
    pulls out through the orbits between chapters, snaps in on the
    next, and ends on the whole system, where clicking a planet flies
-   you back to its section. Radial distances are compressed with
-   r^0.42 so Mercury and Neptune share one view; angles are true. */
+   you back to its section. The camera is a dolly: apparent size is
+   size × focal length ÷ distance, and "zoom" means moving closer.
+   The scale is pinned to the Sun — Mercury's orbit sits at its true
+   40 Sun diameters — with radial distances compressed by r^0.6 in AU
+   so Neptune stays within one journey; angles are true. */
 (() => {
   const canvas = document.getElementById("solar-canvas");
   if (!canvas) return;
@@ -137,16 +140,17 @@
   const periodDays = EL.map(p => 36525 * 360 / Math.abs(p.L[1]));
 
   /* ---------- chapters: the site's itinerary ---------- */
-  /* honest zoom: a chapter's zoom is whatever makes ITS planet fill the
-     frame under the one universal size rule (px · perspective · zoom),
-     so neighbours keep their true relative scale — from Uranus, Saturn
-     really is the bigger disc */
+  /* honest camera: apparent size is always size × focal length ÷ distance
+     — a dolly, not a scale factor. A chapter's camera distance is whatever
+     makes ITS body fill the frame, so neighbours keep true relative scale;
+     at system distance the planets really are sub-pixel, so they get
+     minimum-size chart dots */
   const SUNPX = 44;                          /* √(real radius) scale, like the planets */
-  const zoomOf = body => {
-    if (body === "system") return 0.95;
+  const distOf = body => {
+    if (body === "system") return mapR(31.6) * FL / (0.42 * Math.min(cw, ch));
     const frac = narrow ? 0.20 : 0.30;
     const px = body === "sun" ? SUNPX : EL[IDX[body]].px;
-    return (frac * Math.min(cw, ch)) / px;
+    return px * FL / (frac * Math.min(cw, ch));
   };
   const SEMI = { sun: 0, mercury: 0.39, venus: 0.72, earth: 1.0, mars: 1.52,
                  jupiter: 5.2, saturn: 9.54, uranus: 19.19, neptune: 30.07 };
@@ -156,7 +160,11 @@
   const N = chapters.length;
   let centers = [];
   const recalcCenters = () => {
-    centers = chapters.map(c => c.el.offsetTop + c.el.offsetHeight / 2);
+    /* document coordinates — offsetTop would be relative to <main> */
+    centers = chapters.map(c => {
+      const r = c.el.getBoundingClientRect();
+      return r.top + window.scrollY + r.height / 2;
+    });
   };
 
   /* fill each chapter's ephemeris line from the real elements */
@@ -180,8 +188,11 @@
   let userSpun = false;
   const ELEV_MIN = 8 * D2R, ELEV_MAX = 88 * D2R;
 
-  const EXP = 0.42;
-  let cw = 0, ch = 0, K = 1, dpr = 1, narrow = false;
+  const EXP = 0.6;                            /* radial compression: r^0.6 in AU */
+  /* scale pinned to the Sun: Mercury's orbit sits at 40 Sun diameters,
+     as it really does; r^0.6 keeps Neptune within one journey */
+  const K = (40 * 2 * SUNPX) / Math.pow(0.38709927, EXP);
+  let cw = 0, ch = 0, FL = 1000, dpr = 1, narrow = false;
   let backdrop = null;
 
   const mapR = r => K * Math.pow(r, EXP);
@@ -217,13 +228,19 @@
   const camTargetOf = (k, T) => {
     const c = chapters[k];
     const a = anchorOf(c);
-    return { F: bodyPos(c.body, T), zl: Math.log(zoomOf(c.body)), ax: a.x, ay: a.y };
+    return { F: bodyPos(c.body, T), zl: Math.log(distOf(c.body)), ax: a.x, ay: a.y };
   };
 
+  /* the camera is derived EXACTLY from a smoothed chapter coordinate each
+     frame — smoothing the scalar, not the position, means the focused
+     planet is tracked with zero lag while it moves along its orbit */
   let cam = null;
-  const camTarget = T => {
-    const c = chapterAt();
-    const k = Math.floor(c), f = c - k;
+  const camFrom = (c, T) => {
+    const k = Math.floor(c);
+    /* deadzone: within 5% of a chapter centre the focus locks EXACTLY onto
+       that body — at close-up camera distances even a tiny blend toward the
+       next planet moves the focus thousands of warped px */
+    const f = Math.max(0, Math.min(1, ((c - k) - 0.05) / 0.90));
     const A = camTargetOf(k, T);
     if (f < 1e-4 || k >= N - 1) return A;
     const B = camTargetOf(k + 1, T);
@@ -233,12 +250,12 @@
       ax: A.ax + (B.ax - A.ax) * f,
       ay: A.ay + (B.ay - A.ay) * f,
     };
-    /* pull out to see both orbits mid-flight, then snap in */
+    /* dolly out to see both orbits mid-flight, then close in */
     const bodyA = chapters[k].body, bodyB = chapters[k + 1].body;
     if (bodyA !== "system" && bodyB !== "system") {
       const aMax = Math.max(SEMI[bodyA] || 0.4, SEMI[bodyB] || 0.4) * 1.06;
-      const zlMid = Math.log((0.42 * Math.min(cw, ch)) / mapR(aMax));
-      if (zlMid < Math.min(A.zl, B.zl)) {
+      const zlMid = Math.log(mapR(aMax) * FL / (0.40 * Math.min(cw, ch)));
+      if (zlMid > Math.max(A.zl, B.zl)) {
         const zlC = 2 * zlMid - (A.zl + B.zl) / 2;
         out.zl = (1 - f) * (1 - f) * A.zl + 2 * f * (1 - f) * zlC + f * f * B.zl;
       }
@@ -246,19 +263,21 @@
     return out;
   };
 
-  /* project a 3D AU point through warp → camera → perspective */
-  let zoom = 1, D = 1000;
+  /* project a 3D AU point through warp → dolly camera → perspective divide */
+  let dCam = 1000;
   const project = pt => {
     const w = warp(pt);
-    const rx = (w.x - cam.F.x) * zoom, ry = (w.y - cam.F.y) * zoom, rz = (w.z - cam.F.z) * zoom;
+    const rx = w.x - cam.F.x, ry = w.y - cam.F.y, rz = w.z - cam.F.z;
     const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
     const x1 = rx * cyaw - ry * syaw;
     const y1 = rx * syaw + ry * cyaw;
     const se = Math.sin(elev), ce = Math.cos(elev);
     const y2 = y1 * se + rz * ce;
-    const zd = -y1 * ce + rz * se;
-    const clip = zd > D * 0.72;
-    const s = D / (D - Math.min(zd, D * 0.72));
+    const zd = -y1 * ce + rz * se;                 /* toward the camera */
+    const den = dCam - zd;
+    const near = dCam * 0.02;                      /* near plane scales with the dolly */
+    const clip = den < near;
+    const s = FL / Math.max(den, near);
     return { x: cam.ax * cw + x1 * s, y: cam.ay * ch - y2 * s, s, zd, clip };
   };
 
@@ -270,8 +289,7 @@
     canvas.width = cw * dpr;
     canvas.height = ch * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    K = (Math.min(cw * 0.5, ch * 0.58) - 30) / Math.pow(30.4, EXP);
-    D = mapR(30.4) * 3.1;
+    FL = 1.1 * Math.min(cw, ch);
     recalcCenters();
   };
 
@@ -402,12 +420,12 @@
     const bodies = EL.map((p, i) => {
       const pos = positionAt(p, T);
       const s = project(pos);
-      const R = Math.min(maxR, p.px * s.s * zoom);
+      const R = Math.min(maxR, p.px * s.s);
       screenPos[i] = { ...s, R };
       return { i, p, s, R };
     });
     const sunS = project({ x: 0, y: 0, z: 0 });
-    const sunR = Math.min(maxR, SUNPX * sunS.s * zoom);
+    const sunR = Math.min(maxR, SUNPX * sunS.s);
     sunPos = { ...sunS, R: sunR };
     bodies.push({ sun: true, s: sunS, R: sunR });
     bodies.sort((a, b) => a.s.zd - b.s.zd);
@@ -416,15 +434,17 @@
     for (const b of bodies) {
       if (b.s.clip) continue;
       if (b.sun) {
-        const g = ctx.createRadialGradient(b.s.x, b.s.y, b.R * 0.55, b.s.x, b.s.y, b.R * 2.4);
+        /* the Sun never quite vanishes: below true size it stays a bright point */
+        const R = Math.max(b.R, 2.2);
+        const g = ctx.createRadialGradient(b.s.x, b.s.y, R * 0.55, b.s.x, b.s.y, R * 2.6);
         g.addColorStop(0, "oklch(85% 0.12 80 / 0.5)");
         g.addColorStop(0.45, "oklch(85% 0.12 80 / 0.14)");
         g.addColorStop(1, "oklch(85% 0.12 80 / 0)");
         ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(b.s.x, b.s.y, b.R * 2.4, 0, TAU); ctx.fill();
-        if (!drawSprite("sun", b.s.x, b.s.y, b.R)) {
+        ctx.beginPath(); ctx.arc(b.s.x, b.s.y, R * 2.6, 0, TAU); ctx.fill();
+        if (R < 6 || !drawSprite("sun", b.s.x, b.s.y, R)) {
           ctx.fillStyle = "oklch(96% 0.05 90)";
-          ctx.beginPath(); ctx.arc(b.s.x, b.s.y, b.R, 0, TAU); ctx.fill();
+          ctx.beginPath(); ctx.arc(b.s.x, b.s.y, R, 0, TAU); ctx.fill();
         }
         if ((focusBody === "system" || focusBody === "sun") && b.R < 60) {
           ctx.fillStyle = focusBody === "sun" ? ink : muted;
@@ -435,9 +455,10 @@
       const { i, p, s, R } = b;
       const name = p.name.toLowerCase();
       if (R < 6 || !drawSprite(name, s.x, s.y, R)) {
+        /* sub-pixel at this distance, as in reality: draw a chart dot */
         ctx.fillStyle = p.col;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, Math.max(R, 2) + (hover === i ? 1 : 0), 0, TAU);
+        ctx.arc(s.x, s.y, Math.max(R, 2.4) + (hover === i ? 1 : 0), 0, TAU);
         ctx.fill();
       }
       if (i === focusIdx && R < 60) {
@@ -459,6 +480,7 @@
   };
 
   /* ---------- loop ---------- */
+  let cSm = null;
   let prev = performance.now();
   const tick = now => {
     const dt = Math.min(0.1, (now - prev) / 1000);
@@ -466,23 +488,17 @@
     simMs += dt * speed * 86400000;
     const T = centuries(simMs);
 
-    const c = chapterAt();
-    const t = camTarget(T);
-    if (!cam) cam = { F: { ...t.F }, zl: t.zl, ax: t.ax, ay: t.ay };
-    const k = 1 - Math.exp(-dt * 5);
-    cam.F.x += (t.F.x - cam.F.x) * k;
-    cam.F.y += (t.F.y - cam.F.y) * k;
-    cam.F.z += (t.F.z - cam.F.z) * k;
-    cam.zl += (t.zl - cam.zl) * k;
-    cam.ax += (t.ax - cam.ax) * k;
-    cam.ay += (t.ay - cam.ay) * k;
-    zoom = Math.exp(cam.zl);
+    const cRaw = chapterAt();
+    if (cSm === null) cSm = cRaw;
+    cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 5));
+    cam = camFrom(cSm, T);
+    dCam = Math.exp(cam.zl);
 
-    if (chapters[Math.round(c)].body === "system" && !userSpun && !dragging && !reduced) yaw += dt * 0.02;
+    if (chapters[Math.round(cSm)].body === "system" && !userSpun && !dragging && !reduced) yaw += dt * 0.02;
 
-    gotoBtns.forEach((b, i) => b.classList.toggle("is-active", i === Math.round(c) && i < gotoBtns.length));
+    gotoBtns.forEach((b, i) => b.classList.toggle("is-active", i === Math.round(cRaw) && i < gotoBtns.length));
 
-    draw(T, c);
+    draw(T, cSm);
     requestAnimationFrame(tick);
   };
 
@@ -495,7 +511,8 @@
   /* debug / verification handle — also for the curious */
   window.orrery = {
     date: () => new Date(simMs),
-    view: () => ({ yaw, elevDeg: elev / D2R, zoom }),
+    view: () => ({ yaw, elevDeg: elev / D2R, camDist: dCam }),
+    scale: () => ({ mercurySunDiameters: mapR(0.38709927) / (2 * SUNPX) }),
     chapter: () => chapterAt(),
     screen: name => name === "sun" ? sunPos : screenPos[IDX[String(name).toLowerCase()]],
     state: (name, when) => {
