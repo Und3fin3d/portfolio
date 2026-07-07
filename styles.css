@@ -93,114 +93,207 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 .site-head__nav a { text-decoration: none; color: var(--muted); }
 .site-head__nav a:hover { color: var(--red); }
 
-/* ---------- orrery hero ---------- */
-
-.orrery {
-  position: relative;
-  height: clamp(620px, 94vh, 960px);
-  border-bottom: 1px solid var(--hairline);
-  overflow: hidden;
-}
+/* ---------- the system is the site ---------- */
 
 #solar-canvas {
-  position: absolute;
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
+  z-index: 0;
   touch-action: pan-y;   /* horizontal drag rotates; vertical still scrolls the page */
 }
 
-.orrery__copy {
-  position: absolute;
-  z-index: 2;
-  top: clamp(2.5rem, 9vh, 6rem);
-  left: var(--gutter);
-  max-width: 36rem;
-  pointer-events: none;
+main {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;  /* the open sky stays draggable between panels */
 }
 
-.orrery__copy > * { pointer-events: auto; }
+.hero__dot { color: var(--red); }
 
-.orrery__kicker {
+/* ---------- chapters ---------- */
+
+.chapter {
+  min-height: 100vh;
+  display: grid;
+  align-items: center;
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding: clamp(5rem, 14vh, 9rem) var(--gutter);
+}
+
+.chapter__inner {
+  pointer-events: auto;
+  width: min(680px, 100%);
+  padding: clamp(1.4rem, 3vw, 2.4rem);
+  border: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--paper) 84%, transparent);
+  backdrop-filter: blur(5px);
+}
+
+.chapter[data-side="r"] .chapter__inner { margin-left: auto; }
+
+.chapter__inner--bare {
+  border: 0;
+  background: none;
+  backdrop-filter: none;
+  padding: 0;
+}
+
+.chapter__eph {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--red);
+  margin-bottom: 1.1rem;
+}
+
+.chapter h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variation-settings: "opsz" 90;
+  font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  letter-spacing: -0.01em;
+  margin-bottom: 1rem;
+}
+
+.chapter__num {
+  font-style: italic;
+  font-weight: 400;
+  font-variation-settings: "opsz" 144;
+  color: color-mix(in oklab, var(--red) 55%, var(--paper));
+  margin-right: 0.6em;
+}
+
+.chapter__lead { max-width: 62ch; }
+
+.chapter .demo { margin: 0; padding-top: 1.6rem; border-top: 0; }
+
+.chapter__kicker {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--muted);
   margin-bottom: 1.4rem;
 }
 
-.orrery__copy h1 {
+/* hero on the Sun */
+
+.chapter--hero .chapter__inner { max-width: 38rem; }
+
+.chapter--hero h1 {
   font-family: var(--font-display);
   font-weight: 560;
   font-variation-settings: "opsz" 130;
-  font-size: clamp(2.5rem, 6.6vw, 4.8rem);
+  font-size: clamp(2.5rem, 6.6vw, 4.6rem);
   line-height: 1.03;
   letter-spacing: -0.015em;
   text-wrap: balance;
 }
 
-.hero__dot { color: var(--red); }
-
-.orrery__sub {
+.chapter__sub {
   margin-top: 1.4rem;
-  max-width: 44ch;
+  max-width: 46ch;
   text-shadow: 0 1px 14px var(--paper);
 }
 
-.orrery__actions {
+.chapter__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
   margin-top: 1.8rem;
 }
 
-.orrery__panel {
-  position: absolute;
-  z-index: 2;
-  top: clamp(2.5rem, 9vh, 6rem);
-  right: var(--gutter);
-  width: 250px;
-  padding: 1rem 1.1rem 1.2rem;
-  border: 1px solid var(--hairline);
-  background: color-mix(in oklab, var(--paper) 74%, transparent);
-  backdrop-filter: blur(4px);
-}
-
-.orrery__panel h2 {
+.chapter__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin-top: 2.2rem;
   font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 0.85rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
-.orrery__panel h2 .glyph { color: var(--red); margin-right: 0.45em; font-size: 1.1em; }
+.chapter__facts b { color: var(--red); font-weight: 500; }
 
-.orrery__bar {
-  position: absolute;
-  z-index: 2;
+/* contact on Neptune */
+
+.contact-mail {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variation-settings: "opsz" 120;
+  font-size: clamp(1.4rem, 3.4vw, 2.4rem);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  border-bottom: 3px solid color-mix(in oklab, var(--ink) 35%, transparent);
+  padding-bottom: 0.12em;
+  transition: border-color 0.2s var(--ease);
+  overflow-wrap: anywhere;
+}
+
+.contact-mail:hover { border-color: var(--red); }
+
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+  margin-top: 1.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.contact-links a { text-underline-offset: 3px; }
+.contact-links a:hover { color: var(--red); }
+
+/* the finale */
+
+.chapter--system {
+  align-items: start;
+  justify-items: center;
+  padding-top: 18vh;
+  text-align: center;
+}
+
+.chapter__inner--system p { color: var(--muted); margin-top: 0.6rem; }
+
+/* demos inside panels */
+
+.chapter .nn-net { display: none; }
+.chapter .demo__stage--nn { grid-template-columns: auto minmax(200px, 1fr); }
+.chapter .demo__stage--chess { grid-template-columns: minmax(230px, 300px) minmax(200px, 1fr); }
+.chapter .demo__stage--maze { grid-template-columns: 1fr; }
+.chapter .ledger__row { grid-template-columns: 110px minmax(0, 1fr); padding: 1.2rem 0; }
+.chapter .ctf { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1.5rem; }
+.chapter .stamp { width: 126px; }
+.chapter .spec__row { grid-template-columns: 110px 1fr; }
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: fixed;
+  z-index: 6;
   left: 0;
   right: 0;
   bottom: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.9rem 1.6rem;
-  padding: 0.75rem var(--gutter);
+  gap: 0.4rem 1.4rem;
+  padding: 0.55rem var(--gutter);
   font-family: var(--font-mono);
   font-size: 0.76rem;
   color: var(--muted);
   border-top: 1px solid var(--hairline);
-  background: color-mix(in oklab, var(--paper) 78%, transparent);
-  backdrop-filter: blur(4px);
+  background: color-mix(in oklab, var(--paper) 80%, transparent);
+  backdrop-filter: blur(5px);
 }
 
 .orrery__clock { color: var(--ink); min-width: 11ch; }
 
 .orrery__speeds, .orrery__planets { display: flex; flex-wrap: wrap; gap: 0.15rem; }
 
-.orrery__bar button {
+.hud button {
   appearance: none;
   border: 0;
   background: none;
@@ -210,28 +303,13 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   cursor: pointer;
 }
 
-.orrery__bar button:hover { color: var(--red); }
+.hud button:hover { color: var(--red); }
 
-.orrery__bar button.is-active { color: var(--red); box-shadow: inset 0 -2px 0 var(--red); }
+.hud button.is-active { color: var(--red); box-shadow: inset 0 -2px 0 var(--red); }
 
 .orrery__planets button { font-size: 1rem; padding: 0.15em 0.4em; }
 
 .orrery__note { margin-left: auto; font-style: italic; }
-
-/* ---------- facts strip ---------- */
-
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.1rem;
-  padding: 0.8rem var(--gutter);
-  border-bottom: 1px solid var(--hairline);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.facts b { color: var(--red); font-weight: 500; }
 
 /* ---------- buttons ---------- */
 
@@ -260,47 +338,6 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 .btn--small { font-size: 0.72rem; padding: 0.5em 0.9em; }
 
 .btn.is-active { background: var(--blue); border-color: var(--blue); color: var(--paper); }
-
-/* ---------- sections ---------- */
-
-.section {
-  max-width: var(--wrap);
-  margin-inline: auto;
-  padding: clamp(4rem, 10vh, 7.5rem) var(--gutter) 0;
-}
-
-.section__head {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: baseline;
-  column-gap: clamp(1rem, 3vw, 2rem);
-  margin-bottom: clamp(2rem, 5vh, 3.5rem);
-}
-
-.section__num {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-variation-settings: "opsz" 144;
-  font-style: italic;
-  font-size: clamp(3.2rem, 6.6vw, 5.2rem);
-  line-height: 0.9;
-  color: color-mix(in oklab, var(--red) 34%, var(--paper));
-}
-
-.section__head h2 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-variation-settings: "opsz" 90;
-  font-size: clamp(1.9rem, 4vw, 2.9rem);
-  letter-spacing: -0.01em;
-}
-
-.section__intro {
-  grid-column: 2;
-  max-width: 62ch;
-  margin-top: 0.9rem;
-  color: var(--ink);
-}
 
 /* ---------- demo figures ---------- */
 
@@ -829,23 +866,19 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 /* ---------- responsive ---------- */
 
 @media (max-width: 940px) {
-  .demo__stage--nn { grid-template-columns: auto minmax(200px, 1fr); }
-  .nn-net { display: none; }
-  .annotation { display: none; }
-  .orrery__panel { display: none; }
   .orrery__note { display: none; }
 }
 
 @media (max-width: 780px) {
-  .orrery { height: auto; }
-  #solar-canvas { position: static; width: 100%; height: min(78vw, 480px); }
-  .orrery__copy { position: static; padding: 2.6rem var(--gutter) 1.8rem; max-width: none; }
-  .orrery__bar { position: static; }
-  .demo__stage--chess,
-  .demo__stage--maze,
-  .demo__stage--nn { grid-template-columns: 1fr; }
-  .chess-board { max-width: 400px; }
-  .ctf { grid-template-columns: 1fr; row-gap: 2rem; }
+  .chapter { align-items: end; }
+  .chapter__inner { margin-top: 42vh; }
+  .chapter--system { align-items: start; }
+  .chapter--system .chapter__inner { margin-top: 0; }
+  .chapter .demo__stage--chess,
+  .chapter .demo__stage--nn { grid-template-columns: 1fr; }
+  .chess-board { max-width: 340px; }
+  .chapter .ctf { grid-template-columns: 1fr; row-gap: 1.6rem; }
+  .chapter .stamp { justify-self: end; }
 }
 
 @media (max-width: 560px) {
@@ -853,6 +886,6 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   .site-head__nav a:nth-child(3),
   .site-head__nav a:nth-child(4) { display: none; }
   .ledger__row { grid-template-columns: 1fr; row-gap: 0.5rem; }
-  .ledger__when br { display: none; }
+  .ledger__when { line-height: 1.4; }
   .spec__row { grid-template-columns: 1fr; row-gap: 0.3rem; }
 }
