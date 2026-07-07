@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Will — Computer Science, University of Southampton</title>
-<meta name="description" content="Second-year CS student at Southampton. The projects run live on this page: a from-scratch neural network, a 5×5 chess engine, and racing graph searches.">
+<meta name="description" content="Second-year CS student at Southampton. The page opens on a working orrery: real planet positions for today. Below it, a from-scratch neural network, a 5×5 chess engine, and racing graph searches, all live.">
 <meta property="og:title" content="Will — built from first principles">
 <meta property="og:description" content="A portfolio where the projects run live in the page: draw a digit for a hand-rolled neural network, play a 5×5 chess engine, race graph searches through a maze.">
 <meta property="og:type" content="website">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
 {
@@ -44,38 +44,65 @@
 
 <main id="top">
 
-  <!-- ============ HERO ============ -->
-  <section class="hero">
-    <p class="hero__kicker reveal">Will&ensp;·&ensp;BSc Computer Science, University of Southampton&ensp;·&ensp;London</p>
-    <h1 class="hero__title">
-      <span class="hero__line reveal">Built from</span>
-      <span class="hero__line reveal"><span class="circled">first principles<span class="hero__dot">.</span><svg class="circled__stroke" viewBox="0 0 340 110" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M22,58 C30,20 210,6 300,26 C338,36 330,84 250,96 C160,109 30,102 18,72 C10,50 60,28 120,24" fill="none" stroke-linecap="round"/></svg></span></span>
-    </h1>
-    <div class="hero__body reveal">
-      <p>Second-year computer scientist, after a <strong>summer 2026 internship</strong>. I learn by building things raw. Scroll down: the projects run.</p>
+  <!-- ============ HERO · ORRERY ============ -->
+  <section class="orrery">
+    <canvas id="solar-canvas" aria-label="An orrery of the solar system. Planet positions are computed for today's date; use the planet buttons below for details."></canvas>
+    <div class="orrery__copy">
+      <p class="orrery__kicker reveal">Will&ensp;·&ensp;BSc Computer Science, University of Southampton&ensp;·&ensp;London</p>
+      <h1 class="reveal">Built from first principles<span class="hero__dot">.</span></h1>
+      <p class="orrery__sub reveal">Second-year computer scientist, after a <strong>summer 2026 internship</strong>. I learn by building things raw. The sky behind this text is computed, not drawn: eight planets where they really are today.</p>
+      <div class="orrery__actions reveal">
+        <a class="btn btn--primary" href="assets/WilliamGreenfield_CV.pdf" download>Download CV</a>
+        <a class="btn" href="https://github.com/Und3fin3d" rel="noopener">GitHub</a>
+        <a class="btn" href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
+        <a class="btn" href="mailto:the.william.greenfield@gmail.com">Email</a>
+      </div>
     </div>
-    <div class="hero__actions reveal">
-      <a class="btn btn--primary" href="assets/WilliamGreenfield_CV.pdf" download>Download CV</a>
-      <a class="btn" href="https://github.com/Und3fin3d" rel="noopener">GitHub</a>
-      <a class="btn" href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
-      <a class="btn" href="mailto:the.william.greenfield@gmail.com">Email</a>
-    </div>
-    <aside class="hero__margin reveal" aria-label="Quick facts">
-      <p class="margin-note">margin notes:</p>
-      <ul>
-        <li>86% in AI module</li>
-        <li>2:1 average (Year 2)</li>
-        <li>1st place, university CTF</li>
-        <li>UK citizen, London</li>
-      </ul>
-      <svg class="margin-arrow" viewBox="0 0 60 90" aria-hidden="true"><path d="M50,6 C20,26 16,52 30,80 M30,80 l-12,-8 M30,80 l14,-4" fill="none" stroke-linecap="round"/></svg>
+    <aside class="orrery__panel" aria-label="Selected planet">
+      <h2><span class="glyph" id="sp-glyph" aria-hidden="true">⊕</span><span id="sp-name">Earth</span></h2>
+      <dl class="engine-readout">
+        <div><dt>a</dt><dd id="sp-a">–</dd></div>
+        <div><dt>e</dt><dd id="sp-e">–</dd></div>
+        <div><dt>period</dt><dd id="sp-period">–</dd></div>
+        <div><dt>r today</dt><dd id="sp-r">–</dd></div>
+        <div><dt>helio. longitude</dt><dd id="sp-lon">–</dd></div>
+      </dl>
     </aside>
+    <div class="orrery__bar">
+      <div class="orrery__clock" id="solar-date">–</div>
+      <div class="orrery__speeds" role="group" aria-label="Simulation speed">
+        <button type="button" data-speed="0">pause</button>
+        <button type="button" data-speed="1">day/s</button>
+        <button type="button" data-speed="7">wk/s</button>
+        <button type="button" data-speed="60">2&thinsp;mo/s</button>
+        <button type="button" data-speed="365">yr/s</button>
+        <button type="button" id="solar-today">today</button>
+      </div>
+      <div class="orrery__planets" role="group" aria-label="Select a planet">
+        <button type="button" data-planet="0" aria-label="Mercury" title="Mercury">☿</button>
+        <button type="button" data-planet="1" aria-label="Venus" title="Venus">♀</button>
+        <button type="button" data-planet="2" aria-label="Earth" title="Earth">⊕</button>
+        <button type="button" data-planet="3" aria-label="Mars" title="Mars">♂</button>
+        <button type="button" data-planet="4" aria-label="Jupiter" title="Jupiter">♃</button>
+        <button type="button" data-planet="5" aria-label="Saturn" title="Saturn">♄</button>
+        <button type="button" data-planet="6" aria-label="Uranus" title="Uranus">♅</button>
+        <button type="button" data-planet="7" aria-label="Neptune" title="Neptune">♆</button>
+      </div>
+      <p class="orrery__note">JPL orbital elements; Kepler's equation solved live in <a href="js/solar.js">js/solar.js</a></p>
+    </div>
   </section>
+
+  <p class="facts reveal" aria-label="Quick facts">
+    <span><b>86%</b> in AI module</span>
+    <span><b>2:1</b> average (Year 2)</span>
+    <span><b>1st</b> place, university CTF</span>
+    <span>UK citizen, London</span>
+  </p>
 
   <!-- ============ 01 · DEMOS ============ -->
   <section class="section" id="demos">
     <div class="section__head reveal">
-      <span class="section__num" aria-hidden="true">01</span>
+      <span class="section__num" aria-hidden="true">I</span>
       <h2>Working demonstrations</h2>
       <p class="section__intro">Not videos or embeds: these run in this page, hand-written in plain JavaScript. View source is encouraged.</p>
     </div>
@@ -165,7 +192,7 @@
   <!-- ============ 02 · RECENT WORK ============ -->
   <section class="section" id="work">
     <div class="section__head reveal">
-      <span class="section__num" aria-hidden="true">02</span>
+      <span class="section__num" aria-hidden="true">II</span>
       <h2>Projects</h2>
     </div>
     <ol class="ledger ledger--lab reveal">
@@ -210,7 +237,7 @@
   <!-- ============ 03 · EXPERIENCE ============ -->
   <section class="section" id="experience">
     <div class="section__head reveal">
-      <span class="section__num" aria-hidden="true">03</span>
+      <span class="section__num" aria-hidden="true">III</span>
       <h2>Experience</h2>
     </div>
     <ol class="ledger reveal">
@@ -241,7 +268,7 @@
   <!-- ============ 04 · BACKGROUND ============ -->
   <section class="section" id="background">
     <div class="section__head reveal">
-      <span class="section__num" aria-hidden="true">04</span>
+      <span class="section__num" aria-hidden="true">IV</span>
       <h2>Background</h2>
     </div>
     <div class="ctf reveal">
@@ -257,7 +284,7 @@
   <!-- ============ 05 · TOOLBOX ============ -->
   <section class="section" id="skills">
     <div class="section__head reveal">
-      <span class="section__num" aria-hidden="true">05</span>
+      <span class="section__num" aria-hidden="true">V</span>
       <h2>Toolbox</h2>
     </div>
     <dl class="spec reveal">
@@ -285,6 +312,7 @@
 </footer>
 
 <script src="js/main.js" defer></script>
+<script src="js/solar.js" defer></script>
 <script src="js/nn-demo.js" defer></script>
 <script src="js/chess.js" defer></script>
 <script src="js/maze.js" defer></script>
