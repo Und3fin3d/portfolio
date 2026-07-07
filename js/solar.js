@@ -33,25 +33,25 @@
     { name: "Mercury", glyph: "☿", col: "oklch(74% 0.015 60)",  px: 2.6,
       a: [0.38709927, 0.00000037],  e: [0.20563593, 0.00001906],  I: [7.00497902, -0.00594749],
       L: [252.25032350, 149472.67411175], W: [77.45779628, 0.16047689],  O: [48.33076593, -0.12534081] },
-    { name: "Venus",   glyph: "♀", col: "oklch(85% 0.055 85)",  px: 4.0,
+    { name: "Venus",   glyph: "♀", col: "oklch(85% 0.055 85)",  px: 4.1,
       a: [0.72333566, 0.00000390],  e: [0.00677672, -0.00004107], I: [3.39467605, -0.00078890],
       L: [181.97909950, 58517.81538729],  W: [131.60246718, 0.00268329], O: [76.67984255, -0.27769418] },
     { name: "Earth",   glyph: "⊕", col: "oklch(72% 0.09 235)",  px: 4.2,
       a: [1.00000261, 0.00000562],  e: [0.01671123, -0.00004392], I: [-0.00001531, -0.01294668],
       L: [100.46457166, 35999.37244981],  W: [102.93768193, 0.32327364], O: [0, 0] },
-    { name: "Mars",    glyph: "♂", col: "oklch(66% 0.13 40)",   px: 3.4,
+    { name: "Mars",    glyph: "♂", col: "oklch(66% 0.13 40)",   px: 3.15,
       a: [1.52371034, 0.00001847],  e: [0.09339410, 0.00007882],  I: [1.84969142, -0.00813131],
       L: [-4.55343205, 19140.30268499],   W: [-23.94362959, 0.44441088], O: [49.55953891, -0.29257343] },
-    { name: "Jupiter", glyph: "♃", col: "oklch(77% 0.065 70)",  px: 9.2,
+    { name: "Jupiter", glyph: "♃", col: "oklch(77% 0.065 70)",  px: 13.9,
       a: [5.20288700, -0.00011607], e: [0.04838624, -0.00013253], I: [1.30439695, -0.00183714],
       L: [34.39644051, 3034.74612775],    W: [14.72847983, 0.21252668],  O: [100.47390909, 0.20469106] },
-    { name: "Saturn",  glyph: "♄", col: "oklch(83% 0.075 90)",  px: 7.6,
+    { name: "Saturn",  glyph: "♄", col: "oklch(83% 0.075 90)",  px: 12.7,
       a: [9.53667594, -0.00125060], e: [0.05386179, -0.00050991], I: [2.48599187, 0.00193609],
       L: [49.95424423, 1222.49362201],    W: [92.59887831, -0.41897216], O: [113.66242448, -0.28867794] },
-    { name: "Uranus",  glyph: "♅", col: "oklch(80% 0.055 200)", px: 5.8,
+    { name: "Uranus",  glyph: "♅", col: "oklch(80% 0.055 200)", px: 8.4,
       a: [19.18916464, -0.00196176], e: [0.04725744, -0.00004397], I: [0.77263783, -0.00242939],
       L: [313.23810451, 428.48202785],    W: [170.95427630, 0.40805281], O: [74.01692503, 0.04240589] },
-    { name: "Neptune", glyph: "♆", col: "oklch(64% 0.10 260)",  px: 5.5,
+    { name: "Neptune", glyph: "♆", col: "oklch(64% 0.10 260)",  px: 8.3,
       a: [30.06992276, 0.00026291], e: [0.00859048, 0.00005105],  I: [1.77004347, 0.00035372],
       L: [-55.12002969, 218.45945325],    W: [44.96476227, -0.32241464], O: [131.78422574, -0.00508664] },
   ];
@@ -131,15 +131,22 @@
   const paths = EL.map(p => {
     const el = elementsAt(p, T0);
     const pts = [];
-    for (let i = 0; i <= 180; i++) pts.push(eclFromE(el, (i / 180) * TAU));
+    for (let i = 0; i <= 360; i++) pts.push(eclFromE(el, (i / 360) * TAU));
     return pts;
   });
   const periodDays = EL.map(p => 36525 * 360 / Math.abs(p.L[1]));
 
   /* ---------- chapters: the site's itinerary ---------- */
-  const ZOOM = {
-    sun: 2.2, mercury: 5.2, venus: 4.8, earth: 4.6, mars: 4.4,
-    jupiter: 3.4, saturn: 3.0, uranus: 2.6, neptune: 2.4, system: 0.95,
+  /* honest zoom: a chapter's zoom is whatever makes ITS planet fill the
+     frame under the one universal size rule (px · perspective · zoom),
+     so neighbours keep their true relative scale — from Uranus, Saturn
+     really is the bigger disc */
+  const SUNPX = 44;                          /* √(real radius) scale, like the planets */
+  const zoomOf = body => {
+    if (body === "system") return 0.95;
+    const frac = narrow ? 0.20 : 0.30;
+    const px = body === "sun" ? SUNPX : EL[IDX[body]].px;
+    return (frac * Math.min(cw, ch)) / px;
   };
   const SEMI = { sun: 0, mercury: 0.39, venus: 0.72, earth: 1.0, mars: 1.52,
                  jupiter: 5.2, saturn: 9.54, uranus: 19.19, neptune: 30.07 };
@@ -147,8 +154,6 @@
     el, body: el.dataset.body, side: el.dataset.side || "l",
   }));
   const N = chapters.length;
-  const chapterK = {};                       /* body name → chapter index */
-  chapters.forEach((c, k) => { chapterK[c.body] = k; });
   let centers = [];
   const recalcCenters = () => {
     centers = chapters.map(c => c.el.offsetTop + c.el.offsetHeight / 2);
@@ -212,7 +217,7 @@
   const camTargetOf = (k, T) => {
     const c = chapters[k];
     const a = anchorOf(c);
-    return { F: bodyPos(c.body, T), zl: Math.log(ZOOM[c.body] || 1), ax: a.x, ay: a.y };
+    return { F: bodyPos(c.body, T), zl: Math.log(zoomOf(c.body)), ax: a.x, ay: a.y };
   };
 
   let cam = null;
@@ -370,14 +375,7 @@
     const ink = css("--ink"), muted = css("--muted"), brass = css("--red");
     const focusBody = chapters[Math.round(c)].body;
     const focusIdx = IDX[focusBody] ?? -1;
-    const rpx = Math.sqrt(zoom);
-    const focusR = Math.min(cw, ch) * (narrow ? 0.20 : 0.30);
-
-    /* how strongly each body is "the current chapter" right now */
-    const focusW = body => {
-      const k = chapterK[body];
-      return k === undefined ? 0 : smooth(Math.max(0, 1 - Math.abs(c - k) * 1.8));
-    };
+    const maxR = Math.min(cw, ch) * 1.4;
 
     drawBackdrop();
 
@@ -400,19 +398,18 @@
 
     /* bodies, painter-sorted far → near */
     const showAll = focusBody === "system" || Math.min(cw, ch) > 500;
+    /* one universal size rule — no body gets special treatment */
     const bodies = EL.map((p, i) => {
       const pos = positionAt(p, T);
       const s = project(pos);
-      const w = focusW(p.name.toLowerCase());
-      const R = Math.min(30, p.px * s.s * rpx) + (focusR - Math.min(30, p.px * s.s * rpx)) * w;
+      const R = Math.min(maxR, p.px * s.s * zoom);
       screenPos[i] = { ...s, R };
-      return { i, p, s, R, w };
+      return { i, p, s, R };
     });
     const sunS = project({ x: 0, y: 0, z: 0 });
-    const sunW = focusW("sun");
-    const sunR = Math.min(26, 9 * sunS.s * rpx) + (Math.min(cw, ch) * (narrow ? 0.22 : 0.32) - Math.min(26, 9 * sunS.s * rpx)) * sunW;
+    const sunR = Math.min(maxR, SUNPX * sunS.s * zoom);
     sunPos = { ...sunS, R: sunR };
-    bodies.push({ sun: true, s: sunS, R: sunR, w: sunW });
+    bodies.push({ sun: true, s: sunS, R: sunR });
     bodies.sort((a, b) => a.s.zd - b.s.zd);
 
     ctx.font = "10.5px " + (css("--font-mono") || "monospace");
@@ -429,13 +426,13 @@
           ctx.fillStyle = "oklch(96% 0.05 90)";
           ctx.beginPath(); ctx.arc(b.s.x, b.s.y, b.R, 0, TAU); ctx.fill();
         }
-        if ((focusBody === "system" || focusBody === "sun") && b.w < 0.5) {
+        if ((focusBody === "system" || focusBody === "sun") && b.R < 60) {
           ctx.fillStyle = focusBody === "sun" ? ink : muted;
           ctx.fillText("sun", b.s.x + b.R + 8, b.s.y + 3.5);
         }
         continue;
       }
-      const { i, p, s, R, w } = b;
+      const { i, p, s, R } = b;
       const name = p.name.toLowerCase();
       if (R < 6 || !drawSprite(name, s.x, s.y, R)) {
         ctx.fillStyle = p.col;
@@ -443,7 +440,7 @@
         ctx.arc(s.x, s.y, Math.max(R, 2) + (hover === i ? 1 : 0), 0, TAU);
         ctx.fill();
       }
-      if (i === focusIdx && w < 0.55) {
+      if (i === focusIdx && R < 60) {
         ctx.strokeStyle = brass;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -451,7 +448,7 @@
         ctx.stroke();
       }
       const overSun = Math.hypot(s.x - sunPos.x, s.y - sunPos.y) < sunPos.R + 14;
-      if (w < 0.5 && !overSun && (showAll || i === focusIdx || i === hover)) {
+      if (R < 60 && !overSun && (showAll || i === focusIdx || i === hover)) {
         ctx.fillStyle = hover === i || i === focusIdx ? ink : muted;
         ctx.fillText(name, s.x + R + 6, s.y + 3.5);
       }
