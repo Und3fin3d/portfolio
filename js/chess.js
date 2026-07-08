@@ -34,6 +34,7 @@
   /* piece values from the original evaluate_fast */
   const EVAL_VALUES = [230, 270, 480, 400, 695, 0, 1310];
   const MATE = 100000;
+  const MATE_BOUND = MATE - 1000;   // |score| above this is a mate score
 
   /* piece-square tables, copied verbatim (sq = y*5+x, y=0 is Black's home rank) */
   const PST_PAWN = [
@@ -333,7 +334,7 @@
 
   /* ---------- search (ported: TT, killers, history, null move, LMR, qsearch) ---------- */
   const TT_EXACT = 0, TT_LOWER = 1, TT_UPPER = 2;
-  /** @typedef {{ depth: number, score: number, flag: number, move: Move | null }} TTEntry */
+  /** @typedef {{ depth: number, score: number, flag: number, move: Move | null, sig: number }} TTEntry */
   /** @type {Map<number, TTEntry>} */
   let tt = new Map();
   /** @type {(Move | null)[][]} */ let killers = [];
@@ -390,6 +391,23 @@
     return alpha;
   };
 
+  /* second, independent signature of the position — the Zobrist keys are only
+     32-bit, so distinct positions collide roughly once per ~10^5 entries and a
+     colliding mate entry can be read as a false mate. Store this alongside and
+     verify on probe; a mismatch means a collision, so ignore the entry. */
+  /** @param {number} color */
+  const posSig = color => {
+    let h = 0x811c9dc5 | 0;
+    for (let t = 0; t < NUM_TYPES; t++) {
+      h = Math.imul(h ^ bb[t][0], 0x01000193);
+      h = Math.imul(h ^ bb[t][1], 0x01000193);
+    }
+    h = Math.imul(h ^ ep, 0x01000193);
+    h = Math.imul(h ^ unmoved[0], 0x01000193);
+    h = Math.imul(h ^ unmoved[1], 0x01000193);
+    return Math.imul(h ^ color, 0x01000193) | 0;
+  };
+
   /** @param {number} depth  @param {number} alpha  @param {number} beta  @param {number} color  @param {number} ply  @param {Move[]} pv  @returns {number} */
   const negamax = (depth, alpha, beta, color, ply, pv) => {
     nodes++; checkTime();
@@ -400,29 +418,45 @@
        that collapsed white-to-move and black-to-move positions onto one
        entry, poisoning negamax scores and occasionally hanging material. */
     const ttKey = hash;
-    const entry = tt.get(ttKey);
+    const rawEntry = tt.get(ttKey);
+    const entry = rawEntry && rawEntry.sig === posSig(color) ? rawEntry : undefined;
     /** @type {Move | null} */
     let hashMove = null;
     if (entry) {
       hashMove = entry.move;
       if (entry.depth >= depth && ply > 0) {
-        if (entry.flag === TT_EXACT) return entry.score;
-        if (entry.flag === TT_LOWER) alpha = Math.max(alpha, entry.score);
-        else if (entry.flag === TT_UPPER) beta = Math.min(beta, entry.score);
-        if (alpha >= beta) return entry.score;
+        /* mate scores are stored node-relative; shift back to this ply so a
+           mate found deep is not reported as a nearer (false) mate here */
+        let sc = entry.score;
+        if (sc > MATE_BOUND) sc -= ply; else if (sc < -MATE_BOUND) sc += ply;
+        if (entry.flag === TT_EXACT) return sc;
+        if (entry.flag === TT_LOWER) alpha = Math.max(alpha, sc);
+        else if (entry.flag === TT_UPPER) beta = Math.min(beta, sc);
+        if (alpha >= beta) return sc;
       }
     }
 
     const checked = inCheck(color);
-    if (checked && depth <= 3) depth += 1;           // check extension
-    if (depth <= 0) { pv.length = 0; return qsearch(alpha, beta, color, 0); }
+    /* check "extension", matching the Python: the effective depth only gates
+       whether we drop into quiescence — recursion and pruning still use the
+       original `depth`. The old code did `depth += 1`, which re-triggered on
+       every checking node so the depth never decreased down a forcing line;
+       that unbounded extension ran the search away and manufactured false
+       mate scores (the engine "saw" mates that were not there and blundered). */
+    const eff = (checked && depth <= 3) ? depth + 1 : depth;
+    if (eff <= 0) { pv.length = 0; return qsearch(alpha, beta, color, 0); }
 
     /* null-move pruning */
     if (depth >= 4 && !checked && ply > 0) {
       const R = depth >= 6 ? 3 : 2;
       const oldEp = ep, oldHash = hash;
       ep = 0; hash ^= Z_SIDE;
-      const nullScore = -negamax(depth - 1 - R, -beta, -beta + 1, color ^ 1, ply + 1, []);
+      /* full-window null search, matching the Python. A null window (-beta,
+         -beta+1) collapses when beta is Infinity (root/PV nodes): -beta+1 is
+         -Infinity, the child returns -Infinity, and the negation becomes a
+         spurious +Infinity >= beta cutoff — the engine hallucinates a forced
+         mate and then blunders. */
+      const nullScore = -negamax(depth - 1 - R, -beta, -alpha, color ^ 1, ply + 1, []);
       ep = oldEp; hash = oldHash;
       if (!aborted && nullScore >= beta) return beta;
     }
@@ -492,7 +526,9 @@
     let flag = TT_EXACT;
     if (best <= origAlpha) flag = TT_UPPER;
     else if (best >= beta) flag = TT_LOWER;
-    tt.set(ttKey, { depth, score: best, flag, move: bestMove });
+    let store = best;
+    if (store > MATE_BOUND) store += ply; else if (store < -MATE_BOUND) store -= ply;
+    tt.set(ttKey, { depth, score: store, flag, move: bestMove, sig: posSig(color) });
     return best;
   };
 
