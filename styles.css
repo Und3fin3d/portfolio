@@ -823,7 +823,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   .site-head__nav a:nth-child(3),
   .site-head__nav a:nth-child(4) { display: none; }
   .ledger__row { grid-template-columns: 1fr; row-gap: 0.5rem; }
-  .ledger__when br { display: none; }
+  .ledger__when { line-height: 1.4; }
   .spec__row { grid-template-columns: 1fr; row-gap: 0.3rem; }
   .marks__table td:nth-child(2), .marks__table th:nth-child(2) { display: none; }
 }

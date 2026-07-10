@@ -3,7 +3,7 @@
 A portfolio that proves instead of claims: the projects on the CV run live in the page.
 
 - **Fig. 1** — the MNIST classifier from `nn MNIST/` running its *original trained weights* (784→20→10→10, ReLU + softmax), forward pass re-implemented in vanilla JS. Weights exported to `assets/nn-weights.json` as base64 float32 (96.5% on a 5,000-image sample). Drawing input is preprocessed MNIST-style: bounding-box crop, scale to 20 px, centre-of-mass shift.
-- **Fig. 2** — 5×5 (Gardner) chess engine: iterative-deepening negamax, alpha-beta pruning, quiescence search, MVV-LVA move ordering, ~300 ms per move. Typically reaches depth 8–10, ~500k nodes.
+- **Fig. 2** — the COMP2321 *Chess Fragments* engine ported piece for piece: 25-bit magic bitboards, Zobrist-hashed transposition table, killer/history ordering, null-move pruning, LMR, check extensions, delta-pruned quiescence. Piece values and square tables verbatim from the Python original. ~350 ms per move, typically depth 10–11.
 - **Fig. 3** — maze generation (recursive backtracker, lightly braided) with BFS / DFS / A* animated on the same grid graph.
 
 No frameworks, no build step, no analytics. Hand-written HTML/CSS/JS.

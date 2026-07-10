@@ -7,9 +7,14 @@
    ordering, null-move pruning, check extensions, delta-pruned quiescence,
    iterative deepening. Piece values and piece-square tables are copied
    verbatim from the original engine. */
+// @ts-check
 (() => {
   const boardEl = document.getElementById("chess-board");
   if (!boardEl) return;
+
+  /** @typedef {{ f: number, t: number, type: number }} Move */
+  /** @typedef {{ capType: number, capSq: number, oldEp: number, promo: boolean, wasUnmoved: boolean, capUnmoved: boolean, oldHash: number }} Undo */
+  /** @typedef {{ m: Move, u: Undo, color: number }} Played */
 
   /* ---------- bitboard constants (ported) ---------- */
   const MASK = (1 << 25) - 1;
@@ -29,6 +34,7 @@
   /* piece values from the original evaluate_fast */
   const EVAL_VALUES = [230, 270, 480, 400, 695, 0, 1310];
   const MATE = 100000;
+  const MATE_BOUND = MATE - 1000;   // |score| above this is a mate score
 
   /* piece-square tables, copied verbatim (sq = y*5+x, y=0 is Black's home rank) */
   const PST_PAWN = [
@@ -51,12 +57,16 @@
   // index PST by our type ints: P,N,B,R,Q,K,RIGHT
   const PST_BY_TYPE = [PST[0], PST[1], PST[2], [PST_QUEEN, PST_QUEEN], PST[3], PST[5], PST[6]];
 
+  /** @param {number} x */
   const bitlen = x => 32 - Math.clz32(x);
+  /** @param {number} x */
   const popcnt = x => { let c = 0; while (x) { x &= x - 1; c++; } return c; };
 
   /* ---------- attack tables ---------- */
-  const KNIGHT_ATT = new Array(25), KING_ATT = new Array(25);
-  const PAWN_ATT_W = new Array(25), PAWN_ATT_B = new Array(25);
+  /** @type {number[]} */ const KNIGHT_ATT = new Array(25);
+  /** @type {number[]} */ const KING_ATT = new Array(25);
+  /** @type {number[]} */ const PAWN_ATT_W = new Array(25);
+  /** @type {number[]} */ const PAWN_ATT_B = new Array(25);
   for (let sq = 0; sq < 25; sq++) {
     const bb = 1 << sq;
     let m = (bb << 3) & ~F_DE;
@@ -75,6 +85,7 @@
   }
 
   /* ---------- sliding rays (ported blocker logic) ---------- */
+  /** @param {number} mask  @param {number} occ */
   const rayHigh = (mask, occ) => {       // blocker is the highest set bit
     const blockers = occ & mask;
     if (blockers) {
@@ -83,6 +94,7 @@
     }
     return mask;
   };
+  /** @param {number} mask  @param {number} occ */
   const rayLow = (mask, occ) => {        // blocker is the lowest set bit
     const blockers = occ & mask;
     if (blockers) {
@@ -91,7 +103,8 @@
     }
     return mask;
   };
-  const orthAttacks = (sq, occ) => {
+  /** @param {number} sq  @param {number} occ */
+  const rayOrth = (sq, occ) => {
     const fileMask = FILE_A << (sq % 5);
     const rankMask = 0b11111 << (((sq / 5) | 0) * 5);
     const north = fileMask & ((1 << sq) - 1);
@@ -100,17 +113,62 @@
     const east = rankMask & ~((1 << (sq + 1)) - 1) & MASK;
     return rayHigh(north, occ) | rayLow(south, occ) | rayHigh(west, occ) | rayLow(east, occ);
   };
-  const diagAttacks = (sq, occ) =>
+  /** @param {number} sq  @param {number} occ */
+  const rayDiag = (sq, occ) =>
     rayHigh(SE_MASKS[sq], occ) | rayHigh(SW_MASKS[sq], occ) | rayLow(NE_MASKS[sq], occ) | rayLow(NW_MASKS[sq], occ);
 
+  /* ---------- magic bitboards (32-bit, Math.imul) ----------
+     The Python original indexes slider attacks with 64-bit magics; that
+     multiply-and-shift needs a wrapping 64-bit product, which JS numbers
+     can't do and BigInt does too slowly for a search loop. But Math.imul IS
+     a wrapping 32-bit multiply, and on 25 squares the relevant occupancy is
+     at most 6 bits, so 32-bit magics exist in abundance. Masks are the
+     Python engine's; the magic constants were found by offline random
+     search and verified exhaustively over every occupancy subset. The
+     attack tables are built here at load from the reference rays above. */
+  const ROOK_MASKS = [33838, 67660, 135306, 270598, 541198, 34240, 67968, 135488, 270528, 541120, 47136, 77888, 141440, 268544, 539136, 459808, 395328, 331904, 205056, 475648, 14713888, 12650560, 10621056, 6562048, 15221248];
+  const BISHOP_MASKS = [266304, 8320, 320, 2176, 69888, 133120, 266240, 10240, 69632, 139264, 65600, 131200, 328000, 131200, 262400, 2176, 4352, 10240, 4160, 8320, 69888, 139264, 327680, 133120, 266304];
+  const ROOK_MAGICS = [-1677623276, 1107828740, 273752072, 539051008, 805573128, 2132000, 9462784, 730013700, 16854026, 84427776, 303104000, 16941190, -2145115136, 37888520, 268698146, 35653635, 125968394, 16912386, 8691857, 69339201, 2101376, 37847168, 84024450, 17893888, 71311488];
+  const BISHOP_MAGICS = [42472209, 9700480, 1099169792, 93323397, 38281728, 1056898, 272900352, 34996544, 268795906, 1074012165, 554074368, 8568968, 71312017, 813781068, 273752064, 17309697, -1853598464, 1345060864, 170791553, -1836834816, 304629772, -2147180544, 1627678210, 885673992, 142877456];
+
+  /** @param {number[]} masks  @param {number[]} magics  @param {(sq: number, occ: number) => number} ref */
+  const buildMagicTables = (masks, magics, ref) => {
+    const shifts = new Int32Array(25);
+    const tables = [];
+    for (let sq = 0; sq < 25; sq++) {
+      const mask = masks[sq], bits = popcnt(mask);
+      shifts[sq] = 32 - bits;
+      const table = new Int32Array(1 << bits);
+      let sub = 0;                                 // Carry-Rippler subset walk
+      do {
+        table[Math.imul(sub, magics[sq]) >>> (32 - bits)] = ref(sq, sub);
+        sub = (sub - mask) & mask;
+      } while (sub);
+      tables.push(table);
+    }
+    return { tables, shifts };
+  };
+  const ROOK_M = buildMagicTables(ROOK_MASKS, ROOK_MAGICS, rayOrth);
+  const BISHOP_M = buildMagicTables(BISHOP_MASKS, BISHOP_MAGICS, rayDiag);
+
+  /** @param {number} sq  @param {number} occ */
+  const orthAttacks = (sq, occ) =>
+    ROOK_M.tables[sq][Math.imul(occ & ROOK_MASKS[sq], ROOK_MAGICS[sq]) >>> ROOK_M.shifts[sq]];
+  /** @param {number} sq  @param {number} occ */
+  const diagAttacks = (sq, occ) =>
+    BISHOP_M.tables[sq][Math.imul(occ & BISHOP_MASKS[sq], BISHOP_MAGICS[sq]) >>> BISHOP_M.shifts[sq]];
+
   /* ---------- Zobrist hashing (32-bit) ---------- */
-  const rng = (seed => () => {
-    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  let rngSeed = 42;
+  const rng = () => {
+    rngSeed |= 0; rngSeed = (rngSeed + 0x6D2B79F5) | 0;
+    let t = Math.imul(rngSeed ^ (rngSeed >>> 15), 1 | rngSeed);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return (t ^ (t >>> 14)) | 0;
-  })(42);
-  const Z_PIECE = [], Z_UNMOVED = [[], []], Z_EP = [];
+  };
+  /** @type {number[][][]} */ const Z_PIECE = [];
+  /** @type {number[][]} */ const Z_UNMOVED = [[], []];
+  /** @type {number[]} */ const Z_EP = [];
   for (let p = 0; p < NUM_TYPES; p++) {
     Z_PIECE.push([[], []]);
     for (let sq = 0; sq < 25; sq++) { Z_PIECE[p][0][sq] = rng(); Z_PIECE[p][1][sq] = rng(); }
@@ -120,12 +178,17 @@
 
   /* ---------- position ---------- */
   // bb[type][color], occ[color], unmoved[color] (pawns), ep bit, hash, turn
-  let bb, occ, unmoved, ep, hash, turn, history;
+  /** @type {number[][]} */ let bb = [];
+  /** @type {number[]} */ let occ = [0, 0];
+  /** @type {number[]} */ let unmoved = [0, 0];
+  let ep = 0, hash = 0, turn = WHITE;
+  /** @type {Played[]} */ let history = [];
 
   const startPos = () => {
     bb = Array.from({ length: NUM_TYPES }, () => [0, 0]);
     occ = [0, 0]; unmoved = [0, 0]; ep = 0; hash = 0; turn = WHITE; history = [];
     // sample0: y=0 (top, black): N Q K B Right / y=4 (bottom, white): Right B K Q N
+    /** @param {number} type  @param {number} color  @param {number} sq */
     const place = (type, color, sq) => {
       bb[type][color] |= 1 << sq;
       occ[color] |= 1 << sq;
@@ -139,6 +202,7 @@
     for (let sq = 5; sq < 10; sq++) hash ^= Z_UNMOVED[BLACK][sq];
   };
 
+  /** @param {number} sq  @param {number} color */
   const typeAt = (sq, color) => {
     const bit = 1 << sq;
     for (let t = 0; t < NUM_TYPES; t++) if (bb[t][color] & bit) return t;
@@ -147,6 +211,7 @@
 
   /* ---------- move generation ---------- */
   // white moves toward y=0 (index decreasing), as in the original.
+  /** @param {number} type  @param {number} sq  @param {number} color */
   const pieceTargets = (type, sq, color) => {
     const friend = occ[color], all = occ[0] | occ[1];
     switch (type) {
@@ -173,7 +238,9 @@
     return 0;
   };
 
+  /** @param {number} color  @param {boolean} capturesOnly */
   const genMoves = (color, capturesOnly) => {
+    /** @type {Move[]} */
     const moves = [];
     const enemyOcc = occ[color ^ 1];
     for (let t = 0; t < NUM_TYPES; t++) {
@@ -194,6 +261,7 @@
     return moves;
   };
 
+  /** @param {number} sq  @param {number} byColor */
   const attacked = (sq, byColor) => {
     if (byColor === WHITE ? (PAWN_ATT_B[sq] & bb[P][WHITE]) : (PAWN_ATT_W[sq] & bb[P][BLACK])) return true;
     if (KNIGHT_ATT[sq] & (bb[N][byColor] | bb[RIGHT][byColor])) return true;
@@ -203,16 +271,18 @@
     if (orthAttacks(sq, all) & (bb[Q][byColor] | bb[RIGHT][byColor])) return true;
     return false;
   };
+  /** @param {number} color */
   const inCheck = color => {
     const kbb = bb[K][color];
     return kbb ? attacked(bitlen(kbb) - 1, color ^ 1) : false;
   };
 
   /* ---------- make / unmake ---------- */
+  /** @param {Move} m  @param {number} color  @returns {Undo} */
   const make = (m, color) => {
     const enemy = color ^ 1;
     const fromBit = 1 << m.f, toBit = 1 << m.t;
-    const u = { capType: -1, capSq: -1, oldEp: ep, promo: false, wasUnmoved: false, oldHash: hash };
+    const u = { capType: -1, capSq: -1, oldEp: ep, promo: false, wasUnmoved: false, capUnmoved: false, oldHash: hash };
 
     hash ^= Z_PIECE[m.type][color][m.f];
 
@@ -262,6 +332,7 @@
     return u;
   };
 
+  /** @param {Move} m  @param {number} color  @param {Undo} u */
   const unmake = (m, color, u) => {
     const enemy = color ^ 1;
     const fromBit = 1 << m.f, toBit = 1 << m.t;
@@ -279,6 +350,7 @@
     if (u.wasUnmoved) unmoved[color] |= fromBit;
   };
 
+  /** @param {number} color */
   const legalMoves = color => genMoves(color, false).filter(m => {
     const u = make(m, color);
     const ok = !inCheck(color);
@@ -287,13 +359,14 @@
   });
 
   /* ---------- evaluation (ported evaluate_fast) ---------- */
+  /** @param {number} color */
   const evaluate = color => {
     let score = 0;
     for (let t = 0; t < NUM_TYPES; t++) {
       if (t === K) continue;
       const value = EVAL_VALUES[t];
       let f = bb[t][color], e = bb[t][color ^ 1];
-      const pstF = PST_BY_TYPE[t][color], pstE = PST_BY_TYPE[t][color ^ 1];
+      const pstF = /** @type {number[]} */ (PST_BY_TYPE[t][color]), pstE = /** @type {number[]} */ (PST_BY_TYPE[t][color ^ 1]);
       while (f) { const sq = bitlen(f & -f) - 1; score += value + pstF[sq]; f &= f - 1; }
       while (e) { const sq = bitlen(e & -e) - 1; score -= value + pstE[sq]; e &= e - 1; }
     }
@@ -302,8 +375,12 @@
 
   /* ---------- search (ported: TT, killers, history, null move, LMR, qsearch) ---------- */
   const TT_EXACT = 0, TT_LOWER = 1, TT_UPPER = 2;
+  /** @typedef {{ depth: number, score: number, flag: number, move: Move | null, sig: number }} TTEntry */
+  /** @type {Map<number, TTEntry>} */
   let tt = new Map();
-  let killers, historyTable, nodes, deadline, aborted;
+  /** @type {(Move | null)[][]} */ let killers = [];
+  /** @type {Int32Array[]} */ let historyTable = [];
+  let nodes = 0, deadline = 0, aborted = false;
 
   const MVV_VICTIM = [85, 385, 465, 0, 545, 10000, 750];
   const MVV_ATTACKER = [85, 385, 465, 0, 545, 800, 750];
@@ -315,6 +392,7 @@
     if (tt.size > 300000) tt = new Map();
   };
 
+  /** @param {Move} m  @param {number} color */
   const mvvLva = (m, color) => {
     const enemy = color ^ 1, toBit = 1 << m.t;
     let victim = -1;
@@ -326,6 +404,7 @@
 
   const checkTime = () => { if (!(nodes & 1023) && performance.now() > deadline) aborted = true; };
 
+  /** @param {number} alpha  @param {number} beta  @param {number} color  @param {number} ply  @returns {number} */
   const qsearch = (alpha, beta, color, ply) => {
     nodes++; checkTime();
     if (aborted) return alpha;
@@ -353,33 +432,72 @@
     return alpha;
   };
 
+  /* second, independent signature of the position — the Zobrist keys are only
+     32-bit, so distinct positions collide roughly once per ~10^5 entries and a
+     colliding mate entry can be read as a false mate. Store this alongside and
+     verify on probe; a mismatch means a collision, so ignore the entry. */
+  /** @param {number} color */
+  const posSig = color => {
+    let h = 0x811c9dc5 | 0;
+    for (let t = 0; t < NUM_TYPES; t++) {
+      h = Math.imul(h ^ bb[t][0], 0x01000193);
+      h = Math.imul(h ^ bb[t][1], 0x01000193);
+    }
+    h = Math.imul(h ^ ep, 0x01000193);
+    h = Math.imul(h ^ unmoved[0], 0x01000193);
+    h = Math.imul(h ^ unmoved[1], 0x01000193);
+    return Math.imul(h ^ color, 0x01000193) | 0;
+  };
+
+  /** @param {number} depth  @param {number} alpha  @param {number} beta  @param {number} color  @param {number} ply  @param {Move[]} pv  @returns {number} */
   const negamax = (depth, alpha, beta, color, ply, pv) => {
     nodes++; checkTime();
     if (aborted) return alpha;
 
-    const ttKey = hash ^ (color === BLACK ? Z_SIDE : 0);
-    const entry = tt.get(ttKey);
+    /* hash already carries side-to-move (make() toggles Z_SIDE), so it IS
+       the key — matching the Python get_tt_key. Do not strip Z_SIDE here:
+       that collapsed white-to-move and black-to-move positions onto one
+       entry, poisoning negamax scores and occasionally hanging material. */
+    const ttKey = hash;
+    const rawEntry = tt.get(ttKey);
+    const entry = rawEntry && rawEntry.sig === posSig(color) ? rawEntry : undefined;
+    /** @type {Move | null} */
     let hashMove = null;
     if (entry) {
       hashMove = entry.move;
       if (entry.depth >= depth && ply > 0) {
-        if (entry.flag === TT_EXACT) return entry.score;
-        if (entry.flag === TT_LOWER) alpha = Math.max(alpha, entry.score);
-        else if (entry.flag === TT_UPPER) beta = Math.min(beta, entry.score);
-        if (alpha >= beta) return entry.score;
+        /* mate scores are stored node-relative; shift back to this ply so a
+           mate found deep is not reported as a nearer (false) mate here */
+        let sc = entry.score;
+        if (sc > MATE_BOUND) sc -= ply; else if (sc < -MATE_BOUND) sc += ply;
+        if (entry.flag === TT_EXACT) return sc;
+        if (entry.flag === TT_LOWER) alpha = Math.max(alpha, sc);
+        else if (entry.flag === TT_UPPER) beta = Math.min(beta, sc);
+        if (alpha >= beta) return sc;
       }
     }
 
     const checked = inCheck(color);
-    if (checked && depth <= 3) depth += 1;           // check extension
-    if (depth <= 0) { pv.length = 0; return qsearch(alpha, beta, color, 0); }
+    /* check "extension", matching the Python: the effective depth only gates
+       whether we drop into quiescence — recursion and pruning still use the
+       original `depth`. The old code did `depth += 1`, which re-triggered on
+       every checking node so the depth never decreased down a forcing line;
+       that unbounded extension ran the search away and manufactured false
+       mate scores (the engine "saw" mates that were not there and blundered). */
+    const eff = (checked && depth <= 3) ? depth + 1 : depth;
+    if (eff <= 0) { pv.length = 0; return qsearch(alpha, beta, color, 0); }
 
     /* null-move pruning */
     if (depth >= 4 && !checked && ply > 0) {
       const R = depth >= 6 ? 3 : 2;
       const oldEp = ep, oldHash = hash;
       ep = 0; hash ^= Z_SIDE;
-      const nullScore = -negamax(depth - 1 - R, -beta, -beta + 1, color ^ 1, ply + 1, []);
+      /* full-window null search, matching the Python. A null window (-beta,
+         -beta+1) collapses when beta is Infinity (root/PV nodes): -beta+1 is
+         -Infinity, the child returns -Infinity, and the negation becomes a
+         spurious +Infinity >= beta cutoff — the engine hallucinates a forced
+         mate and then blunders. */
+      const nullScore = -negamax(depth - 1 - R, -beta, -alpha, color ^ 1, ply + 1, []);
       ep = oldEp; hash = oldHash;
       if (!aborted && nullScore >= beta) return beta;
     }
@@ -397,8 +515,11 @@
       return { m, s };
     }).sort((a, b) => b.s - a.s);
 
-    let best = -Infinity, bestMove = null, legal = 0;
+    let best = -Infinity, legal = 0;
+    /** @type {Move | null} */
+    let bestMove = null;
     const origAlpha = alpha;
+    /** @type {Move[]} */
     const childPv = [];
     for (const { m, s } of scored) {
       const isQuiet = s < 100000;
@@ -446,17 +567,25 @@
     let flag = TT_EXACT;
     if (best <= origAlpha) flag = TT_UPPER;
     else if (best >= beta) flag = TT_LOWER;
-    tt.set(ttKey, { depth, score: best, flag, move: bestMove });
+    let store = best;
+    if (store > MATE_BOUND) store += ply; else if (store < -MATE_BOUND) store -= ply;
+    tt.set(ttKey, { depth, score: store, flag, move: bestMove, sig: posSig(color) });
     return best;
   };
 
+  /** @param {number} color  @param {number} ms */
   const search = (color, ms) => {
     nodes = 0; aborted = false;
     deadline = performance.now() + ms;
     resetTables();
     const t0 = performance.now();
-    let best = null, bestScore = 0, bestPv = [], depthDone = 0;
+    let bestScore = 0, depthDone = 0;
+    /** @type {Move | null} */
+    let best = null;
+    /** @type {Move[]} */
+    let bestPv = [];
     for (let depth = 1; depth <= 20 && !aborted; depth++) {
+      /** @type {Move[]} */
       const pv = [];
       const score = negamax(depth, -Infinity, Infinity, color, 0, pv);
       if (!aborted && pv.length) {
@@ -468,34 +597,39 @@
   };
 
   /* ---------- UI ---------- */
-  const statusEl = document.getElementById("chess-status");
+  const statusEl = /** @type {HTMLElement} */ (document.getElementById("chess-status"));
   const readout = {
-    depth: document.getElementById("ce-depth"),
-    nodes: document.getElementById("ce-nodes"),
-    time: document.getElementById("ce-time"),
-    eval: document.getElementById("ce-eval"),
-    line: document.getElementById("ce-line"),
+    depth: /** @type {HTMLElement} */ (document.getElementById("ce-depth")),
+    nodes: /** @type {HTMLElement} */ (document.getElementById("ce-nodes")),
+    time: /** @type {HTMLElement} */ (document.getElementById("ce-time")),
+    eval: /** @type {HTMLElement} */ (document.getElementById("ce-eval")),
+    line: /** @type {HTMLElement} */ (document.getElementById("ce-line")),
   };
 
   const GLYPHS = [
     ["♙", "♟"], ["♘", "♞"], ["♗", "♝"], ["♖", "♜"], ["♕", "♛"], ["♔", "♚"], ["♖", "♜"],
   ];
   const NAMES = ["pawn", "knight", "bishop", "rook", "queen", "king", "right"];
+  /** @param {number} sq */
   const coord = sq => "abcde"[sq % 5] + (5 - ((sq / 5) | 0));
+  /** @param {Move} m  @param {boolean} wasCapture */
   const moveStr = (m, wasCapture) => coord(m.f) + (wasCapture ? "×" : "–") + coord(m.t);
 
+  /** @type {HTMLButtonElement[]} */
   const squares = [];
   for (let sq = 0; sq < 25; sq++) {
     const btn = document.createElement("button");
     btn.type = "button";
     const y = (sq / 5) | 0, x = sq % 5;
     if ((x + y) % 2 === 1) btn.classList.add("sq-dark");
-    btn.dataset.sq = sq;
+    btn.dataset.sq = String(sq);
     boardEl.appendChild(btn);
     squares[sq] = btn;
   }
 
-  let selected = -1, targets = [], thinking = false, lastMove = null, gameOver = false;
+  let selected = -1, thinking = false, gameOver = false;
+  /** @type {Move[]} */ let targets = [];
+  /** @type {Move | null} */ let lastMove = null;
 
   const render = () => {
     for (let sq = 0; sq < 25; sq++) {
@@ -519,8 +653,10 @@
     }
   };
 
+  /** @param {string} txt */
   const setStatus = txt => { statusEl.textContent = txt; };
 
+  /** @param {number} color */
   const endCheck = color => {
     if (legalMoves(color).length === 0) {
       gameOver = true;
@@ -544,7 +680,7 @@
         lastMove = res.move;
         turn = WHITE;
         const whiteEval = -res.score / 100;
-        readout.depth.textContent = res.depth;
+        readout.depth.textContent = String(res.depth);
         readout.nodes.textContent = res.nodes.toLocaleString("en-GB");
         readout.time.textContent = `${(res.ms / 1000).toFixed(2)} s`;
         readout.eval.textContent = Math.abs(res.score) > MATE - 100
@@ -560,7 +696,7 @@
   };
 
   boardEl.addEventListener("click", e => {
-    const btn = e.target.closest("button");
+    const btn = /** @type {HTMLElement} */ (e.target).closest("button");
     if (!btn || thinking || gameOver || turn !== WHITE) return;
     const sq = Number(btn.dataset.sq);
     const chosen = targets.find(m => m.t === sq);
@@ -583,7 +719,7 @@
     render();
   });
 
-  document.getElementById("chess-new").addEventListener("click", () => {
+  /** @type {HTMLElement} */ (document.getElementById("chess-new")).addEventListener("click", () => {
     startPos();
     selected = -1; targets = []; lastMove = null; gameOver = false; thinking = false;
     tt = new Map();
@@ -592,12 +728,12 @@
     render();
   });
 
-  document.getElementById("chess-undo").addEventListener("click", () => {
+  /** @type {HTMLElement} */ (document.getElementById("chess-undo")).addEventListener("click", () => {
     if (thinking || history.length === 0) return;
-    let h = history.pop();
+    let h = /** @type {Played} */ (history.pop());
     unmake(h.m, h.color, h.u);
     if (history.length && h.color === BLACK) {
-      h = history.pop();
+      h = /** @type {Played} */ (history.pop());
       unmake(h.m, h.color, h.u);
     }
     turn = WHITE; gameOver = false;
