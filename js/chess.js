@@ -104,7 +104,7 @@
     return mask;
   };
   /** @param {number} sq  @param {number} occ */
-  const orthAttacks = (sq, occ) => {
+  const rayOrth = (sq, occ) => {
     const fileMask = FILE_A << (sq % 5);
     const rankMask = 0b11111 << (((sq / 5) | 0) * 5);
     const north = fileMask & ((1 << sq) - 1);
@@ -114,8 +114,49 @@
     return rayHigh(north, occ) | rayLow(south, occ) | rayHigh(west, occ) | rayLow(east, occ);
   };
   /** @param {number} sq  @param {number} occ */
-  const diagAttacks = (sq, occ) =>
+  const rayDiag = (sq, occ) =>
     rayHigh(SE_MASKS[sq], occ) | rayHigh(SW_MASKS[sq], occ) | rayLow(NE_MASKS[sq], occ) | rayLow(NW_MASKS[sq], occ);
+
+  /* ---------- magic bitboards (32-bit, Math.imul) ----------
+     The Python original indexes slider attacks with 64-bit magics; that
+     multiply-and-shift needs a wrapping 64-bit product, which JS numbers
+     can't do and BigInt does too slowly for a search loop. But Math.imul IS
+     a wrapping 32-bit multiply, and on 25 squares the relevant occupancy is
+     at most 6 bits, so 32-bit magics exist in abundance. Masks are the
+     Python engine's; the magic constants were found by offline random
+     search and verified exhaustively over every occupancy subset. The
+     attack tables are built here at load from the reference rays above. */
+  const ROOK_MASKS = [33838, 67660, 135306, 270598, 541198, 34240, 67968, 135488, 270528, 541120, 47136, 77888, 141440, 268544, 539136, 459808, 395328, 331904, 205056, 475648, 14713888, 12650560, 10621056, 6562048, 15221248];
+  const BISHOP_MASKS = [266304, 8320, 320, 2176, 69888, 133120, 266240, 10240, 69632, 139264, 65600, 131200, 328000, 131200, 262400, 2176, 4352, 10240, 4160, 8320, 69888, 139264, 327680, 133120, 266304];
+  const ROOK_MAGICS = [-1677623276, 1107828740, 273752072, 539051008, 805573128, 2132000, 9462784, 730013700, 16854026, 84427776, 303104000, 16941190, -2145115136, 37888520, 268698146, 35653635, 125968394, 16912386, 8691857, 69339201, 2101376, 37847168, 84024450, 17893888, 71311488];
+  const BISHOP_MAGICS = [42472209, 9700480, 1099169792, 93323397, 38281728, 1056898, 272900352, 34996544, 268795906, 1074012165, 554074368, 8568968, 71312017, 813781068, 273752064, 17309697, -1853598464, 1345060864, 170791553, -1836834816, 304629772, -2147180544, 1627678210, 885673992, 142877456];
+
+  /** @param {number[]} masks  @param {number[]} magics  @param {(sq: number, occ: number) => number} ref */
+  const buildMagicTables = (masks, magics, ref) => {
+    const shifts = new Int32Array(25);
+    const tables = [];
+    for (let sq = 0; sq < 25; sq++) {
+      const mask = masks[sq], bits = popcnt(mask);
+      shifts[sq] = 32 - bits;
+      const table = new Int32Array(1 << bits);
+      let sub = 0;                                 // Carry-Rippler subset walk
+      do {
+        table[Math.imul(sub, magics[sq]) >>> (32 - bits)] = ref(sq, sub);
+        sub = (sub - mask) & mask;
+      } while (sub);
+      tables.push(table);
+    }
+    return { tables, shifts };
+  };
+  const ROOK_M = buildMagicTables(ROOK_MASKS, ROOK_MAGICS, rayOrth);
+  const BISHOP_M = buildMagicTables(BISHOP_MASKS, BISHOP_MAGICS, rayDiag);
+
+  /** @param {number} sq  @param {number} occ */
+  const orthAttacks = (sq, occ) =>
+    ROOK_M.tables[sq][Math.imul(occ & ROOK_MASKS[sq], ROOK_MAGICS[sq]) >>> ROOK_M.shifts[sq]];
+  /** @param {number} sq  @param {number} occ */
+  const diagAttacks = (sq, occ) =>
+    BISHOP_M.tables[sq][Math.imul(occ & BISHOP_MASKS[sq], BISHOP_MAGICS[sq]) >>> BISHOP_M.shifts[sq]];
 
   /* ---------- Zobrist hashing (32-bit) ---------- */
   let rngSeed = 42;
