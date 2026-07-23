@@ -1,4 +1,4 @@
-/* Fig. 3 — maze generation + graph search, animated.
+/* Fig. 3: maze generation + graph search, animated.
    Recursive-backtracker maze; BFS, DFS and A* (Manhattan) run on the same
    grid graph so nodes-visited counts are comparable. */
 // @ts-check

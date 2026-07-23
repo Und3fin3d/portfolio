@@ -1,4 +1,4 @@
-/* The site's framework — a solar system the page travels through.
+/* The site's framework: a solar system the page travels through.
    Every planet's position is computed, not drawn: JPL approximate
    Keplerian elements (Standish, valid 1800–2050) propagated to the
    simulated date, Kepler's equation solved by Newton's method each
@@ -17,8 +17,8 @@
    next, and ends on the whole system, where clicking a planet flies
    you back to its section. The camera is a dolly: apparent size is
    size × focal length ÷ distance, and "zoom" means moving closer.
-   The scale is pinned to the Sun — Mercury's orbit sits at its true
-   40 Sun diameters — with radial distances compressed by r^0.6 in AU
+   The scale is pinned to the Sun: Mercury's orbit sits at its true
+   40 Sun diameters: with radial distances compressed by r^0.6 in AU
    so Neptune stays within one journey; angles are true. */
 // @ts-check
 (() => {
@@ -66,18 +66,15 @@
   ];
   const IDX = Object.fromEntries(EL.map((p, i) => [p.name.toLowerCase(), i]));
 
-  /* photograph billboards: disc centre + radius measured in the asset */
+  /* Photograph billboards, for the bodies with no equirectangular map.
+     Bodies that get a projected sphere are deliberately absent: painting a
+     billboard first and swapping it for the sphere is what caused the blink. */
   /** @type {Record<string, { w: number, h: number, cx: number, cy: number, discR: number }>} */
   const SPRITES = {
-    mercury: { w: 535, h: 640, cx: 267.6, cy: 320,   discR: 260.7 },
-    venus:   { w: 591, h: 640, cx: 295.3, cy: 320,   discR: 288 },
     earth:   { w: 640, h: 636, cx: 322.3, cy: 320.3, discR: 313.3 },
     mars:    { w: 629, h: 640, cx: 314.3, cy: 320,   discR: 307.4 },
-    jupiter: { w: 640, h: 610, cx: 320.2, cy: 305.1, discR: 297.8 },
-    saturn:  { w: 640, h: 270, cx: 320,   cy: 135.1, discR: 128.2 },
     uranus:  { w: 640, h: 626, cx: 320,   cy: 312.8, discR: 305.6 },
     neptune: { w: 622, h: 640, cx: 310.8, cy: 320,   discR: 303.9 },
-    sun:     { w: 640, h: 586, cx: 320,   cy: 293.1, discR: 286.1 },
   };
   /** @type {Record<string, HTMLImageElement>} */
   const IMG = {};
@@ -233,7 +230,7 @@
   /** @param {string} name  @param {number} x  @param {number} y  @param {number} R  @param {number} [alpha] */
   const drawSprite = (name, x, y, R, alpha) => {
     const im = IMG[name], sp = SPRITES[name];
-    if (!im.complete || !im.naturalWidth) return false;
+    if (!im || !sp || !im.complete || !im.naturalWidth) return false;
     const sc = R / sp.discR;
     if (alpha !== undefined) ctx.globalAlpha = alpha;
     ctx.drawImage(im, x - sp.cx * sc, y - sp.cy * sc, sp.w * sc, sp.h * sc);
@@ -349,7 +346,7 @@
 
   /* ---------- chapters: the site's itinerary ---------- */
   /* honest camera: apparent size is always size × focal length ÷ distance
-     — a dolly, not a scale factor. A chapter's camera distance is whatever
+    : a dolly, not a scale factor. A chapter's camera distance is whatever
      makes ITS body fill the frame, so neighbours keep true relative scale;
      at system distance the planets really are sub-pixel, so they get
      minimum-size chart dots */
@@ -371,7 +368,7 @@
   /** @type {number[]} */
   let bounds = [];                           /* document Y where each chapter begins */
   const recalcCenters = () => {
-    /* getBoundingClientRect — offsetTop would be relative to <main> */
+    /* getBoundingClientRect: offsetTop would be relative to <main> */
     bounds = chapters.map(c => c.el.getBoundingClientRect().top + window.scrollY);
   };
 
@@ -400,7 +397,7 @@
   const ZOOM_MIN = -1.35, ZOOM_MAX = 1.25;
 
   const EXP = 0.6;                            /* radial compression: r^0.6 in AU */
-  /* Mercury's orbit ≈ 15 Sun diameters — the real figure is ~42, but this is
+  /* Mercury's orbit ≈ 15 Sun diameters: the real figure is ~42, but this is
      enough that the Sun reads as a distant disc from every planet without
      stranding the inner system in empty black */
   const K = (15 * 2 * SUNPX) / Math.pow(0.38709927, EXP);
@@ -432,7 +429,7 @@
 
   /* scroll → continuous chapter coordinate. The camera HOLDS its planet the
      whole time a chapter occupies the viewport (however tall the panel) and
-     flies only in a window around the boundary to the next chapter — so
+     flies only in a window around the boundary to the next chapter: so
      reading the top of a tall section never drags the focus away */
   /** @param {number} f */
   const smooth = f => f * f * (3 - 2 * f);
@@ -458,13 +455,13 @@
   };
 
   /* the camera is derived EXACTLY from a smoothed chapter coordinate each
-     frame — smoothing the scalar, not the position, means the focused
+     frame: smoothing the scalar, not the position, means the focused
      planet is tracked with zero lag while it moves along its orbit.
 
      A transition is phased like a real camera move: dolly OUT with the
      focus still on the old planet, pan the focus across near the apex
      (where a big focus move costs little on screen), have it locked on
-     the target by ~70% — so the final approach is a pure zoom onto an
+     the target by ~70%: so the final approach is a pure zoom onto an
      already-centred planet, never a last-moment sideways catch-up */
   let cam = { F: { x: 0, y: 0, z: 0 }, zl: Math.log(1000), ax: 0.5, ay: 0.5 };
   /** @param {number} c  @param {number} T */
@@ -726,7 +723,7 @@
 
     /* bodies, painter-sorted far → near */
     const showAll = focusBody === "system" || Math.min(cw, ch) > 500;
-    /* one universal size rule — no body gets special treatment */
+    /* one universal size rule: no body gets special treatment */
     /** @type {{ sun: boolean, i: number, p: (typeof EL)[number] | null, s: Proj, R: number }[]} */
     const bodies = EL.map((p, i) => {
       const pos = positionAt(p, T);
@@ -753,7 +750,10 @@
         const R = Math.max(b.R, 2.2);
         drawSunCorona(b.s.x, b.s.y, R);
         const drewSun = R >= 6 && drawSphere("sun", b.s.x, b.s.y, R);
-        if (!drewSun && (R < 6 || !drawSprite("sun", b.s.x, b.s.y, R))) {
+        if (!drewSun) {
+          /* Below point size the Sun is legitimately a bright dot. Any larger
+             and it waits for its own texture: no stand-in is drawn first. */
+          if (R >= 6) continue;
           ctx.fillStyle = "oklch(80% 0.16 48)";
           ctx.beginPath(); ctx.arc(b.s.x, b.s.y, R, 0, TAU); ctx.fill();
         }
@@ -770,12 +770,17 @@
         ? drawSaturn(s.x, s.y, R)
         : drawSphere(name, s.x, s.y, R));
       const photographed = !textured && R >= 4.5 && drawSprite(name, s.x, s.y, R);
-      if (R < 4.5 || (!textured && !photographed)) {
+      if (R < 4.5) {
         /* sub-pixel at this distance, as in reality: draw a chart dot */
         ctx.fillStyle = p.col;
         ctx.beginPath();
         ctx.arc(s.x, s.y, Math.max(R, 2.4) + (hover === i ? 1 : 0), 0, TAU);
         ctx.fill();
+      } else if (!textured && !photographed) {
+        /* Big enough on screen to need a real surface, but its map has not
+           decoded yet: skip the body entirely rather than flashing the flat
+           untextured disc. It appears on the first frame after it loads. */
+        continue;
       }
       if (i === focusIdx && R < 60) {
         ctx.strokeStyle = brass;
@@ -831,7 +836,7 @@
   window.addEventListener("load", recalcCenters);
   requestAnimationFrame(tick);
 
-  /* debug / verification handle — also for the curious */
+  /* debug / verification handle: also for the curious */
   /** @type {any} */ (window).orrery = {
     date: () => new Date(simMs),
     view: () => ({ yaw, elevDeg: elev / D2R, camDist: dCam, zoom: Math.exp(-zoomOffset) }),
