@@ -1,4 +1,4 @@
-/* Fig. 1 — live MNIST classifier.
+/* Fig. 1: live MNIST classifier.
    Runs the exact weights trained by nn.py (784-20-10-10, ReLU + softmax).
    Weights are base64 little-endian float32, row-major. */
 // @ts-check

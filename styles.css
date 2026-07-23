@@ -1,5 +1,5 @@
 /* ============================================================
-   Will — portfolio, "observatory" design
+   Will: portfolio, "observatory" design
    Graphite sky, bronze instruments, celestial chapter signals.
    Hand-written CSS. No framework, no build step.
    ============================================================ */
@@ -18,9 +18,9 @@
   --grid-line:  color-mix(in oklab, var(--blue) 5%, transparent);
   --grid-major: color-mix(in oklab, var(--blue) 8%, transparent);
 
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
-  --font-body: "STIX Two Text", Georgia, serif;
-  --font-mono: "B612 Mono", ui-monospace, "SF Mono", monospace;
+  --font-display: "Young Serif", "Iowan Old Style", Georgia, serif;
+  --font-body: "Literata", Georgia, serif;
+  --font-mono: "Azeret Mono", ui-monospace, "SF Mono", monospace;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --wrap: 1100px;
@@ -74,8 +74,7 @@ strong { font-weight: 700; }
 
 .site-head__name {
   font-family: var(--font-display);
-  font-weight: 640;
-  font-variation-settings: "opsz" 60;
+  font-weight: 400;
   font-size: 1.15rem;
   text-decoration: none;
   letter-spacing: 0.01em;
@@ -165,8 +164,7 @@ main {
 
 .chapter h2 {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-variation-settings: "opsz" 90;
+  font-weight: 400;
   font-size: clamp(1.7rem, 3.4vw, 2.4rem);
   letter-spacing: -0.01em;
   margin-bottom: 1rem;
@@ -190,8 +188,7 @@ main {
 
 .chapter--hero h1 {
   font-family: var(--font-display);
-  font-weight: 560;
-  font-variation-settings: "opsz" 130;
+  font-weight: 400;
   font-size: clamp(2.5rem, 6.6vw, 4.6rem);
   line-height: 1.03;
   letter-spacing: -0.015em;
@@ -203,6 +200,62 @@ main {
   margin-top: 1.4rem;
   max-width: 46ch;
   text-shadow: 0 1px 14px var(--paper);
+}
+
+/* hero hooks: one claim per line, each backed by something further down */
+
+.hero-hooks {
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  max-width: 48ch;
+}
+
+.hero-hooks li {
+  position: relative;
+  padding-left: 1.05rem;
+  text-shadow: 0 1px 14px var(--paper);
+}
+
+.hero-hooks li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.hero-avail {
+  margin-top: 1.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-shadow: 0 1px 14px var(--paper);
+}
+
+.scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.scroll-hint__arrow { animation: scroll-nudge 2.4s var(--ease) infinite; }
+
+@keyframes scroll-nudge {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-hint__arrow { animation: none; }
 }
 
 .chapter__actions {
@@ -229,8 +282,7 @@ main {
 .contact-mail {
   display: inline-block;
   font-family: var(--font-display);
-  font-weight: 600;
-  font-variation-settings: "opsz" 120;
+  font-weight: 400;
   font-size: clamp(1.4rem, 3.4vw, 2.4rem);
   letter-spacing: -0.01em;
   text-decoration: none;
@@ -253,6 +305,33 @@ main {
 
 .contact-links a { text-underline-offset: 3px; }
 .contact-links a:hover { color: var(--red); }
+
+/* colophon: how the orrery cheats, and who the imagery belongs to */
+
+.colophon {
+  margin-top: 2.4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--hairline);
+  max-width: 62ch;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.colophon p + .colophon__head { margin-top: 1rem; }
+
+.colophon__head {
+  color: var(--red);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.colophon sup { font-size: 0.8em; }
+
+.colophon a { text-underline-offset: 3px; }
+.colophon a:hover { color: var(--red); }
 
 /* the finale */
 
@@ -315,8 +394,6 @@ main {
 
 .hud button.is-active { color: var(--red); box-shadow: inset 0 -2px 0 var(--red); }
 
-.orrery__note { margin-left: auto; font-style: italic; }
-
 /* ---------- buttons ---------- */
 
 .btn {
@@ -358,8 +435,7 @@ main {
 
 .demo__header h3 {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-variation-settings: "opsz" 70;
+  font-weight: 400;
   font-size: clamp(1.4rem, 2.6vw, 1.9rem);
   margin-bottom: 0.7rem;
 }
@@ -467,8 +543,7 @@ main {
 
 .nn-out__digit {
   font-family: var(--font-display);
-  font-weight: 560;
-  font-variation-settings: "opsz" 144;
+  font-weight: 400;
   font-size: clamp(3.4rem, 6vw, 5rem);
   line-height: 1;
   color: var(--red);
@@ -606,8 +681,7 @@ main {
 
 .ledger__what h3 {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-variation-settings: "opsz" 70;
+  font-weight: 400;
   font-size: 1.25rem;
   margin-bottom: 0.5rem;
 }
@@ -697,8 +771,7 @@ main {
 
 .stamp span {
   font-family: var(--font-display);
-  font-weight: 640;
-  font-variation-settings: "opsz" 100;
+  font-weight: 400;
   font-size: 1.7rem;
   line-height: 0.95;
   text-transform: uppercase;
@@ -753,8 +826,7 @@ main {
 .footer__mail {
   display: inline-block;
   font-family: var(--font-display);
-  font-weight: 600;
-  font-variation-settings: "opsz" 120;
+  font-weight: 400;
   font-size: clamp(1.5rem, 4.6vw, 3.4rem);
   letter-spacing: -0.01em;
   text-decoration: none;
@@ -805,8 +877,7 @@ main {
 
 .post > h1 {
   font-family: var(--font-display);
-  font-weight: 560;
-  font-variation-settings: "opsz" 130;
+  font-weight: 400;
   font-size: clamp(2rem, 5vw, 3.3rem);
   line-height: 1.05;
   letter-spacing: -0.015em;
@@ -819,8 +890,7 @@ main {
 
 .post__body h2 {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-variation-settings: "opsz" 70;
+  font-weight: 400;
   font-size: 1.4rem;
   margin: 2.4rem 0 0.8rem;
 }
@@ -871,10 +941,6 @@ main {
 }
 
 /* ---------- responsive ---------- */
-
-@media (max-width: 940px) {
-  .orrery__note { display: none; }
-}
 
 @media (max-width: 780px) {
   .chapter { align-items: end; }

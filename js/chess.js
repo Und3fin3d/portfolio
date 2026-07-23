@@ -1,4 +1,4 @@
-/* Fig. 2 — "Chess Fragments" (COMP2321 coursework) ported to JavaScript.
+/* Fig. 2: "Chess Fragments" (COMP2321 coursework) ported to JavaScript.
    5×5 variant: back rank N-Q-K-B-Right, where the Right moves as rook+knight.
    Pawns have double-push from their start, en passant, and promote to queen.
 
@@ -432,7 +432,7 @@
     return alpha;
   };
 
-  /* second, independent signature of the position — the Zobrist keys are only
+  /* second, independent signature of the position: the Zobrist keys are only
      32-bit, so distinct positions collide roughly once per ~10^5 entries and a
      colliding mate entry can be read as a false mate. Store this alongside and
      verify on probe; a mismatch means a collision, so ignore the entry. */
@@ -455,7 +455,7 @@
     if (aborted) return alpha;
 
     /* hash already carries side-to-move (make() toggles Z_SIDE), so it IS
-       the key — matching the Python get_tt_key. Do not strip Z_SIDE here:
+       the key: matching the Python get_tt_key. Do not strip Z_SIDE here:
        that collapsed white-to-move and black-to-move positions onto one
        entry, poisoning negamax scores and occasionally hanging material. */
     const ttKey = hash;
@@ -479,7 +479,7 @@
 
     const checked = inCheck(color);
     /* check "extension", matching the Python: the effective depth only gates
-       whether we drop into quiescence — recursion and pruning still use the
+       whether we drop into quiescence: recursion and pruning still use the
        original `depth`. The old code did `depth += 1`, which re-triggered on
        every checking node so the depth never decreased down a forcing line;
        that unbounded extension ran the search away and manufactured false
@@ -495,7 +495,7 @@
       /* full-window null search, matching the Python. A null window (-beta,
          -beta+1) collapses when beta is Infinity (root/PV nodes): -beta+1 is
          -Infinity, the child returns -Infinity, and the negation becomes a
-         spurious +Infinity >= beta cutoff — the engine hallucinates a forced
+         spurious +Infinity >= beta cutoff: the engine hallucinates a forced
          mate and then blunders. */
       const nullScore = -negamax(depth - 1 - R, -beta, -alpha, color ^ 1, ply + 1, []);
       ep = oldEp; hash = oldHash;
