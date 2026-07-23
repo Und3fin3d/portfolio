@@ -7,10 +7,9 @@
    yaw + elevation, perspective divide, painter's sort) projects onto
    a fixed canvas; there is no 3D library.
 
-   The planets themselves are photographs — MESSENGER, Mariner 10,
-   Apollo 17, Rosetta, Hubble, Cassini, Voyager 2, SDO — with their
-   backgrounds lifted, drawn as billboards scaled to the camera. The
-   backdrop is the Milky Way (ESO/S. Brunier).
+   Close views use texture-mapped spheres for bodies where an evenly lit,
+   high-resolution surface matters, with mission photographs retained for
+   the remaining planets. The backdrop is the Milky Way (ESO/S. Brunier).
 
    Each .chapter element declares the body it lives on (data-body).
    Scroll drives the camera: it holds close on a chapter's planet,
@@ -87,6 +86,150 @@
     im.src = "assets/planets/" + name + ".webp";
     IMG[name] = im;
   }
+
+  /* High-resolution equirectangular maps are projected once into sphere
+     sprites. Illumination stays deliberately broad: these chapter portraits
+     are for recognition and texture, not a simulation of the current phase. */
+  const SPHERE_SIZE = 1024;
+  /** @type {Record<string, HTMLCanvasElement>} */
+  const SPHERES = {};
+  /** @type {HTMLCanvasElement | null} */
+  let sunCorona = null;
+  /** @type {Uint8ClampedArray | null} */
+  let ringPixels = null;
+
+  /** @param {HTMLImageElement} im */
+  const buildSphere = im => {
+    const source = document.createElement("canvas");
+    source.width = im.naturalWidth;
+    source.height = im.naturalHeight;
+    const sctx = /** @type {CanvasRenderingContext2D} */ (source.getContext("2d", { willReadFrequently: true }));
+    sctx.drawImage(im, 0, 0);
+    const src = sctx.getImageData(0, 0, source.width, source.height).data;
+
+    const out = document.createElement("canvas");
+    out.width = out.height = SPHERE_SIZE;
+    const octx = /** @type {CanvasRenderingContext2D} */ (out.getContext("2d"));
+    const image = octx.createImageData(SPHERE_SIZE, SPHERE_SIZE);
+    const dst = image.data;
+    const sw = source.width, sh = source.height;
+
+    for (let y = 0; y < SPHERE_SIZE; y++) {
+      const ny = ((y + 0.5) / SPHERE_SIZE) * 2 - 1;
+      for (let x = 0; x < SPHERE_SIZE; x++) {
+        const nx = ((x + 0.5) / SPHERE_SIZE) * 2 - 1;
+        const r2 = nx * nx + ny * ny;
+        if (r2 >= 1) continue;
+        const nz = Math.sqrt(1 - r2);
+        const lon = Math.atan2(nx, nz);
+        const lat = Math.asin(-ny);
+        const u = Math.min(sw - 1, Math.max(0, Math.round((lon / TAU + 0.5) * (sw - 1))));
+        const v = Math.min(sh - 1, Math.max(0, Math.round((lat / Math.PI + 0.5) * (sh - 1))));
+        const si = (v * sw + u) * 4;
+        const di = (y * SPHERE_SIZE + x) * 4;
+        const light = 0.88 + nz * 0.12;
+        dst[di] = Math.min(255, src[si] * light);
+        dst[di + 1] = Math.min(255, src[si + 1] * light);
+        dst[di + 2] = Math.min(255, src[si + 2] * light);
+        dst[di + 3] = Math.min(255, (1 - r2) * 90 * 255);
+      }
+    }
+    octx.putImageData(image, 0, 0);
+    return out;
+  };
+
+  /** @param {HTMLImageElement} im */
+  const buildSunAssets = im => {
+    const source = document.createElement("canvas");
+    source.width = im.naturalWidth;
+    source.height = im.naturalHeight;
+    const sctx = /** @type {CanvasRenderingContext2D} */ (source.getContext("2d", { willReadFrequently: true }));
+    sctx.drawImage(im, 0, 0);
+    const src = sctx.getImageData(0, 0, source.width, source.height).data;
+
+    const disc = document.createElement("canvas");
+    disc.width = disc.height = SPHERE_SIZE;
+    const octx = /** @type {CanvasRenderingContext2D} */ (disc.getContext("2d"));
+    const image = octx.createImageData(SPHERE_SIZE, SPHERE_SIZE);
+    const dst = image.data;
+    const cx = source.width * 0.5;
+    const cy = source.height * 0.486;
+    const solarR = source.height * 0.398;
+
+    for (let y = 0; y < SPHERE_SIZE; y++) {
+      const ny = ((y + 0.5) / SPHERE_SIZE) * 2 - 1;
+      for (let x = 0; x < SPHERE_SIZE; x++) {
+        const nx = ((x + 0.5) / SPHERE_SIZE) * 2 - 1;
+        const r2 = nx * nx + ny * ny;
+        if (r2 >= 1) continue;
+        const sx = Math.min(source.width - 1, Math.max(0, Math.round(cx + nx * solarR)));
+        const sy = Math.min(source.height - 1, Math.max(0, Math.round(cy + ny * solarR)));
+        const si = (sy * source.width + sx) * 4;
+        const di = (y * SPHERE_SIZE + x) * 4;
+        dst[di] = Math.min(255, src[si] * 1.08);
+        dst[di + 1] = Math.min(255, src[si + 1] * 0.72);
+        dst[di + 2] = Math.min(255, src[si + 2] * 0.38);
+        dst[di + 3] = Math.min(255, (1 - r2) * 180 * 255);
+      }
+    }
+    octx.putImageData(image, 0, 0);
+
+    /* The SDO frame already contains real prominences. Extract them instead
+       of inventing a radial starburst; the solid disc is painted over this. */
+    const corona = document.createElement("canvas");
+    corona.width = corona.height = SPHERE_SIZE;
+    const cctx = /** @type {CanvasRenderingContext2D} */ (corona.getContext("2d"));
+    const coronaImage = cctx.createImageData(SPHERE_SIZE, SPHERE_SIZE);
+    const cdst = coronaImage.data;
+    const coronaR = solarR * 1.52;
+    for (let y = 0; y < SPHERE_SIZE; y++) {
+      const ny = ((y + 0.5) / SPHERE_SIZE) * 2 - 1;
+      for (let x = 0; x < SPHERE_SIZE; x++) {
+        const nx = ((x + 0.5) / SPHERE_SIZE) * 2 - 1;
+        const r = Math.hypot(nx, ny);
+        if (r >= 1) continue;
+        const sx = Math.min(source.width - 1, Math.max(0, Math.round(cx + nx * coronaR)));
+        const sy = Math.min(source.height - 1, Math.max(0, Math.round(cy + ny * coronaR)));
+        const si = (sy * source.width + sx) * 4;
+        const di = (y * SPHERE_SIZE + x) * 4;
+        /* The 171 Å plasma is warm-coloured; neutral pixels are the source
+           frame's timestamp and stars, so exclude them from the extraction. */
+        const plasma = Math.max(0, src[si] - src[si + 2] * 1.2);
+        const outerFade = Math.min(1, (1 - r) * 8);
+        cdst[di] = Math.min(255, src[si] * 1.16);
+        cdst[di + 1] = Math.min(255, src[si + 1] * 0.7);
+        cdst[di + 2] = Math.min(255, src[si + 2] * 0.3);
+        cdst[di + 3] = Math.min(210, Math.max(0, plasma - 4) * 3.35) * outerFade;
+      }
+    }
+    cctx.putImageData(coronaImage, 0, 0);
+    return { disc, corona };
+  };
+
+  for (const name of ["mercury", "venus", "jupiter", "saturn"]) {
+    const im = new Image();
+    im.addEventListener("load", () => { SPHERES[name] = buildSphere(im); });
+    im.src = "assets/planets/textures/" + name + ".jpg";
+  }
+
+  const sunImage = new Image();
+  sunImage.addEventListener("load", () => {
+    const assets = buildSunAssets(sunImage);
+    SPHERES.sun = assets.disc;
+    sunCorona = assets.corona;
+  });
+  sunImage.src = "assets/planets/textures/sun-sdo.jpg";
+
+  const ringMap = new Image();
+  ringMap.addEventListener("load", () => {
+    const c = document.createElement("canvas");
+    c.width = ringMap.naturalWidth;
+    c.height = ringMap.naturalHeight;
+    const cctx = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d", { willReadFrequently: true }));
+    cctx.drawImage(ringMap, 0, 0);
+    ringPixels = cctx.getImageData(0, Math.floor(c.height / 2), c.width, 1).data;
+  });
+  ringMap.src = "assets/planets/textures/saturn-ring.png";
   /** @param {string} name  @param {number} x  @param {number} y  @param {number} R  @param {number} [alpha] */
   const drawSprite = (name, x, y, R, alpha) => {
     const im = IMG[name], sp = SPRITES[name];
@@ -96,6 +239,56 @@
     ctx.drawImage(im, x - sp.cx * sc, y - sp.cy * sc, sp.w * sc, sp.h * sc);
     ctx.globalAlpha = 1;
     return true;
+  };
+
+  /** @param {string} name  @param {number} x  @param {number} y  @param {number} R */
+  const drawSphere = (name, x, y, R) => {
+    const sphere = SPHERES[name];
+    if (!sphere) return false;
+    ctx.drawImage(sphere, x - R, y - R, R * 2, R * 2);
+    return true;
+  };
+
+  /** @param {number} x  @param {number} y  @param {number} R  @param {boolean} front */
+  const drawSaturnRings = (x, y, R, front) => {
+    if (!ringPixels) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x - R * 2.5, front ? y : y - R, R * 5, R);
+    ctx.clip();
+    const samples = ringPixels.length / 4;
+    for (let band = 0; band < 72; band++) {
+      const t = band / 71;
+      const si = Math.min(samples - 1, Math.round(t * (samples - 1))) * 4;
+      const a = ringPixels[si + 3] / 255;
+      if (a < 0.025) continue;
+      const rr = R * (1.2 + t * 1.05);
+      ctx.strokeStyle = `rgba(${ringPixels[si]}, ${ringPixels[si + 1]}, ${ringPixels[si + 2]}, ${a * 0.82})`;
+      ctx.lineWidth = Math.max(0.55, R * 0.018);
+      ctx.beginPath();
+      ctx.ellipse(x, y, rr, rr * 0.24, -0.035, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  /** @param {number} x  @param {number} y  @param {number} R */
+  const drawSaturn = (x, y, R) => {
+    if (!SPHERES.saturn || !ringPixels) return false;
+    drawSaturnRings(x, y, R, false);
+    drawSphere("saturn", x, y, R);
+    drawSaturnRings(x, y, R, true);
+    return true;
+  };
+
+  /** @param {number} x  @param {number} y  @param {number} R */
+  const drawSunCorona = (x, y, R) => {
+    if (R < 8 || !sunCorona) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    const coronaR = R * 1.52;
+    ctx.drawImage(sunCorona, x - coronaR, y - coronaR, coronaR * 2, coronaR * 2);
+    ctx.restore();
   };
 
   /** @param {number} ms */
@@ -189,7 +382,7 @@
     if (!el || i === undefined) return;
     const p = EL[i], e0 = elementsAt(p, T0), d = periodDays[i];
     const T = d < 1000 ? d.toFixed(1) + " d" : (d / 365.25).toFixed(1) + " yr";
-    el.textContent = `${p.glyph} ${p.name} · a ${e0.a.toFixed(3)} AU · e ${e0.e.toFixed(3)} · T ${T}`;
+    el.textContent = `${p.name} · a ${e0.a.toFixed(3)} AU · e ${e0.e.toFixed(3)} · T ${T}`;
   });
 
   /* ---------- sim state ---------- */
@@ -200,8 +393,11 @@
   /* ---------- camera ---------- */
   let yaw = -0.55;
   let elev = 56 * D2R;
+  let zoomOffset = 0;
+  let zoomChapter = -1;
   let userSpun = false;
   const ELEV_MIN = 8 * D2R, ELEV_MAX = 88 * D2R;
+  const ZOOM_MIN = -1.35, ZOOM_MAX = 1.25;
 
   const EXP = 0.6;                            /* radial compression: r^0.6 in AU */
   /* Mercury's orbit ≈ 15 Sun diameters — the real figure is ~42, but this is
@@ -375,15 +571,67 @@
   const chapterOfBody = body =>
     chapters.find(c => c.body === (body === 8 ? "sun" : EL[body].name.toLowerCase()));
 
-  let dragging = false, moved = 0, px0 = 0, py0 = 0;
+  let dragging = false, moved = 0, px0 = 0, py0 = 0, gestureActive = false;
+  let pinchDistance = 0, pinchAngle = 0, pinchX = 0, pinchY = 0;
+  /** @type {Map<number, { x: number, y: number }>} */
+  const pointers = new Map();
+  /** @param {number} value */
+  const setZoom = value => {
+    zoomOffset = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
+  };
+  const pinchState = () => {
+    const [a, b] = [...pointers.values()];
+    if (!a || !b) return null;
+    return {
+      distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+      angle: Math.atan2(b.y - a.y, b.x - a.x),
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+    };
+  };
+  /** @param {number} angle */
+  const shortestAngle = angle => Math.atan2(Math.sin(angle), Math.cos(angle));
   canvas.addEventListener("pointerdown", e => {
-    dragging = true;
-    moved = 0;
-    px0 = e.clientX;
-    py0 = e.clientY;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) {
+      dragging = true;
+      moved = 0;
+      gestureActive = false;
+      px0 = e.clientX;
+      py0 = e.clientY;
+    } else {
+      const pinch = pinchState();
+      if (pinch) {
+        gestureActive = true;
+        dragging = false;
+        moved = 10;
+        pinchDistance = pinch.distance;
+        pinchAngle = pinch.angle;
+        pinchX = pinch.x;
+        pinchY = pinch.y;
+        userSpun = true;
+        canvas.style.cursor = "grabbing";
+      }
+    }
     try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
   });
   canvas.addEventListener("pointermove", e => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size >= 2) {
+      e.preventDefault();
+      const pinch = pinchState();
+      if (!pinch) return;
+      setZoom(zoomOffset + Math.log(pinchDistance / pinch.distance));
+      yaw += shortestAngle(pinch.angle - pinchAngle) * 0.82;
+      yaw += (pinch.x - pinchX) * 0.0025;
+      elev = Math.min(ELEV_MAX, Math.max(ELEV_MIN, elev + (pinch.y - pinchY) * 0.002));
+      pinchDistance = pinch.distance;
+      pinchAngle = pinch.angle;
+      pinchX = pinch.x;
+      pinchY = pinch.y;
+      return;
+    }
+    if (gestureActive) return;
     if (dragging) {
       const dx = e.clientX - px0, dy = e.clientY - py0;
       moved += Math.abs(dx) + Math.abs(dy);
@@ -402,18 +650,35 @@
   });
   /** @param {PointerEvent} e */
   const endDrag = e => {
-    if (!dragging) return;
+    const wasTracked = pointers.has(e.pointerId);
+    pointers.delete(e.pointerId);
+    if (!wasTracked || pointers.size > 0) return;
     dragging = false;
     canvas.style.cursor = "grab";
-    if (moved <= 4 && e.clientX !== undefined) {
+    if (!gestureActive && moved <= 4 && e.clientX !== undefined) {
       const i = nearest(e.clientX, e.clientY);
       const c = i >= 0 && chapterOfBody(i);
       if (c) flyTo(c.el);
     }
+    gestureActive = false;
   };
   canvas.addEventListener("pointerup", endDrag);
-  canvas.addEventListener("pointercancel", () => { dragging = false; canvas.style.cursor = "grab"; });
+  canvas.addEventListener("pointercancel", e => {
+    pointers.delete(e.pointerId);
+    if (!pointers.size) {
+      dragging = false;
+      gestureActive = false;
+      canvas.style.cursor = "grab";
+    }
+  });
   canvas.addEventListener("pointerleave", () => { if (!dragging) hover = -1; });
+  canvas.addEventListener("wheel", e => {
+    /* Trackpad pinch arrives as ctrl+wheel. Ordinary wheel remains page scroll. */
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    userSpun = true;
+    setZoom(zoomOffset + e.deltaY * 0.006);
+  }, { passive: false });
   canvas.style.cursor = "grab";
 
   /* ---------- draw ---------- */
@@ -435,6 +700,7 @@
   /** @param {number} T  @param {number} c */
   const draw = (T, c) => {
     const ink = css("--ink"), muted = css("--muted"), brass = css("--red");
+    const orbitGold = "oklch(78% 0.115 82)";
     const focusBody = chapters[Math.round(c)].body;
     const focusIdx = IDX[focusBody] ?? -1;
     const maxR = Math.min(cw, ch) * 1.4;
@@ -452,9 +718,9 @@
         pen = true;
       }
       ctx.strokeStyle = i === focusIdx
-        ? "color-mix(in oklab, " + brass + " 55%, transparent)"
-        : "color-mix(in oklab, " + ink + " 16%, transparent)";
-      ctx.lineWidth = i === focusIdx ? 1.2 : 1;
+        ? "color-mix(in oklab, " + orbitGold + " 78%, transparent)"
+        : "color-mix(in oklab, " + orbitGold + " 38%, transparent)";
+      ctx.lineWidth = i === focusIdx ? 1.35 : 1;
       ctx.stroke();
     }
 
@@ -465,12 +731,16 @@
     const bodies = EL.map((p, i) => {
       const pos = positionAt(p, T);
       const s = project(pos);
-      const R = Math.min(maxR, p.px * s.s);
+      const trueR = Math.min(maxR, p.px * s.s);
+      const systemR = 4.5 + (p.px / 13.9) * 3.5;
+      const R = focusBody === "system" ? Math.max(trueR, systemR) : trueR;
       screenPos[i] = { ...s, R };
       return { sun: false, i, p, s, R };
     });
     const sunS = project({ x: 0, y: 0, z: 0 });
-    const sunR = Math.min(maxR, SUNPX * sunS.s);
+    const sunTrueR = Math.min(maxR, SUNPX * sunS.s);
+    // Preserve the Sun's visual hierarchy in the compressed whole-system chart.
+    const sunR = focusBody === "system" ? Math.max(sunTrueR, 11.5) : sunTrueR;
     sunPos = { ...sunS, R: sunR };
     bodies.push({ sun: true, i: -1, p: null, s: sunS, R: sunR });
     bodies.sort((a, b) => a.s.zd - b.s.zd);
@@ -481,14 +751,10 @@
       if (b.sun) {
         /* the Sun never quite vanishes: below true size it stays a bright point */
         const R = Math.max(b.R, 2.2);
-        const g = ctx.createRadialGradient(b.s.x, b.s.y, R * 0.55, b.s.x, b.s.y, R * 2.6);
-        g.addColorStop(0, "oklch(85% 0.12 80 / 0.5)");
-        g.addColorStop(0.45, "oklch(85% 0.12 80 / 0.14)");
-        g.addColorStop(1, "oklch(85% 0.12 80 / 0)");
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(b.s.x, b.s.y, R * 2.6, 0, TAU); ctx.fill();
-        if (R < 6 || !drawSprite("sun", b.s.x, b.s.y, R)) {
-          ctx.fillStyle = "oklch(96% 0.05 90)";
+        drawSunCorona(b.s.x, b.s.y, R);
+        const drewSun = R >= 6 && drawSphere("sun", b.s.x, b.s.y, R);
+        if (!drewSun && (R < 6 || !drawSprite("sun", b.s.x, b.s.y, R))) {
+          ctx.fillStyle = "oklch(80% 0.16 48)";
           ctx.beginPath(); ctx.arc(b.s.x, b.s.y, R, 0, TAU); ctx.fill();
         }
         if ((focusBody === "system" || focusBody === "sun") && b.R < 60) {
@@ -500,7 +766,11 @@
       const { i, s, R } = b;
       const p = /** @type {(typeof EL)[number]} */ (b.p);
       const name = p.name.toLowerCase();
-      if (R < 6 || !drawSprite(name, s.x, s.y, R)) {
+      const textured = R >= 4.5 && (name === "saturn"
+        ? drawSaturn(s.x, s.y, R)
+        : drawSphere(name, s.x, s.y, R));
+      const photographed = !textured && R >= 4.5 && drawSprite(name, s.x, s.y, R);
+      if (R < 4.5 || (!textured && !photographed)) {
         /* sub-pixel at this distance, as in reality: draw a chart dot */
         ctx.fillStyle = p.col;
         ctx.beginPath();
@@ -540,9 +810,14 @@
     if (cSm === null) cSm = cRaw;
     cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 3.2));
     cam = camFrom(cSm, T);
-    dCam = Math.exp(cam.zl);
+    const activeChapter = Math.round(cSm);
+    if (activeChapter !== zoomChapter) {
+      zoomChapter = activeChapter;
+      zoomOffset = 0;
+    }
+    dCam = Math.exp(cam.zl + zoomOffset);
 
-    if (chapters[Math.round(cSm)].body === "system" && !userSpun && !dragging && !reduced) yaw += dt * 0.02;
+    if (chapters[activeChapter].body === "system" && !userSpun && !dragging && !reduced) yaw += dt * 0.02;
 
     gotoBtns.forEach((b, i) => b.classList.toggle("is-active", i === Math.round(cRaw) && i < gotoBtns.length));
 
@@ -559,7 +834,7 @@
   /* debug / verification handle — also for the curious */
   /** @type {any} */ (window).orrery = {
     date: () => new Date(simMs),
-    view: () => ({ yaw, elevDeg: elev / D2R, camDist: dCam }),
+    view: () => ({ yaw, elevDeg: elev / D2R, camDist: dCam, zoom: Math.exp(-zoomOffset) }),
     scale: () => ({ mercurySunDiameters: mapR(0.38709927) / (2 * SUNPX) }),
     chapter: () => chapterAt(),
     /** @param {string} name */

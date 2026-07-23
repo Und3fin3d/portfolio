@@ -11,7 +11,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=B612+Mono:wght@400;700&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
 {
@@ -30,7 +30,7 @@
 </head>
 <body>
 
-<canvas id="solar-canvas" aria-label="A live 3D solar system. Planet positions are computed for today's date. Each section of this site lives on a planet; scroll to travel between them, drag the sky to rotate the view."></canvas>
+<canvas id="solar-canvas" aria-label="A live 3D solar system. Planet positions are computed for today's date. Each section of this site lives on a planet; scroll to travel between them, drag to rotate, and pinch to zoom."></canvas>
 
 <header class="site-head">
   <a class="site-head__name" href="#top">Will.</a>
@@ -66,7 +66,7 @@
   <section class="chapter" id="digits" data-body="mercury" data-side="r">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">I</span>Draw a digit</h2>
+      <h2 class="reveal">Draw a digit</h2>
       <p class="chapter__lead reveal">A neural network I wrote from scratch in sixth form: NumPy for the matrix algebra and nothing else, 99% on MNIST. This is <em>that exact network</em>, original trained weights, forward pass ported to JavaScript.</p>
       <figure class="demo reveal" id="fig-nn">
         <div class="demo__stage demo__stage--nn">
@@ -96,7 +96,7 @@
   <section class="chapter" id="chess" data-body="venus" data-side="l">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">II</span>Play the engine</h2>
+      <h2 class="reveal">Play the engine</h2>
       <p class="chapter__lead reveal">My AI-coursework engine, ported piece for piece: the 5×5 <em>Chess Fragments</em> variant, where the corner piece, the Right&thinsp;<span class="right-mark">†</span>, moves as rook plus knight. The search is the Python original's: magic bitboards, a Zobrist-hashed transposition table, killer and history ordering, null-move pruning and quiescence, with its piece values and square tables copied verbatim. You are White.</p>
       <figure class="demo reveal" id="fig-chess">
         <div class="demo__stage demo__stage--chess">
@@ -125,7 +125,7 @@
   <section class="chapter" id="maze" data-body="earth" data-side="r">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">III</span>Race the searches</h2>
+      <h2 class="reveal">Race the searches</h2>
       <p class="chapter__lead reveal">From a first-year team project that solved mazes off a webcam. Breadth-first floods, A* aims for the exit, depth-first takes the first corridor it finds. The counters keep score.</p>
       <figure class="demo reveal" id="fig-maze">
         <div class="demo__stage demo__stage--maze">
@@ -156,7 +156,7 @@
   <section class="chapter" id="projects" data-body="mars" data-side="l">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">IV</span>Projects</h2>
+      <h2 class="reveal">Projects</h2>
       <ol class="ledger ledger--lab reveal">
         <li class="ledger__row">
           <div class="ledger__when">2026<br>ongoing</div>
@@ -201,7 +201,7 @@
   <section class="chapter" id="experience" data-body="jupiter" data-side="r">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">V</span>Experience</h2>
+      <h2 class="reveal">Experience</h2>
       <ol class="ledger reveal">
         <li class="ledger__row">
           <div class="ledger__when">Oct 2022<br>London</div>
@@ -232,7 +232,7 @@
   <section class="chapter" id="background" data-body="saturn" data-side="l">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">VI</span>Background</h2>
+      <h2 class="reveal">Background</h2>
       <div class="ctf reveal">
         <div class="ctf__body">
           <p>BSc Computer Science, University of Southampton, 2024–present: 86% in Artificial Intelligence. Before that, Mathematics A*, Further Mathematics, Computer Science and Physics at A-level.</p>
@@ -248,7 +248,7 @@
   <section class="chapter" id="skills" data-body="uranus" data-side="r">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">VII</span>Toolbox</h2>
+      <h2 class="reveal">Toolbox</h2>
       <dl class="spec reveal">
         <div class="spec__row"><dt>languages</dt><dd>Python · Java · JavaScript / TypeScript · Haskell · C · SQL</dd></div>
         <div class="spec__row"><dt>data &amp; ML</dt><dd>NumPy · Pandas · PyTorch · TensorFlow · Azure Databricks</dd></div>
@@ -262,7 +262,7 @@
   <section class="chapter" id="contact" data-body="neptune" data-side="l">
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
-      <h2 class="reveal"><span class="chapter__num">VIII</span>Contact</h2>
+      <h2 class="reveal">Contact</h2>
       <p class="chapter__kicker reveal">Hiring for summer 2026? You made it to Neptune; say hello.</p>
       <a class="contact-mail reveal" href="mailto:the.william.greenfield@gmail.com">the.william.greenfield<wbr>@gmail.com</a>
       <div class="contact-links reveal">
@@ -275,12 +275,11 @@
   </section>
 
   <!-- the whole system -->
-  <section class="chapter chapter--system" id="system" data-body="system">
-    <div class="chapter__inner chapter__inner--bare chapter__inner--system">
-      <h2 class="reveal">The system, whole<span class="hero__dot">.</span></h2>
-      <p class="reveal">Eight sections, eight planets, positions true to today. Click one to fly back.</p>
-    </div>
-  </section>
+      <section class="chapter chapter--system" id="system" data-body="system">
+        <div class="chapter__inner chapter__inner--bare chapter__inner--system">
+          <p class="reveal">Click a planet to revisit a section.</p>
+        </div>
+      </section>
 
 </main>
 
@@ -294,18 +293,7 @@
     <button type="button" data-speed="365">yr/s</button>
     <button type="button" id="solar-today">today</button>
   </div>
-  <div class="orrery__planets" role="group" aria-label="Travel to a section">
-    <button type="button" data-goto="#top" aria-label="The Sun: introduction" title="Sun — intro">☉</button>
-    <button type="button" data-goto="#digits" aria-label="Mercury: draw a digit" title="Mercury — draw a digit">☿</button>
-    <button type="button" data-goto="#chess" aria-label="Venus: play the chess engine" title="Venus — chess engine">♀</button>
-    <button type="button" data-goto="#maze" aria-label="Earth: race the searches" title="Earth — maze searches">⊕</button>
-    <button type="button" data-goto="#projects" aria-label="Mars: projects" title="Mars — projects">♂</button>
-    <button type="button" data-goto="#experience" aria-label="Jupiter: experience" title="Jupiter — experience">♃</button>
-    <button type="button" data-goto="#background" aria-label="Saturn: background" title="Saturn — background">♄</button>
-    <button type="button" data-goto="#skills" aria-label="Uranus: toolbox" title="Uranus — toolbox">♅</button>
-    <button type="button" data-goto="#contact" aria-label="Neptune: contact" title="Neptune — contact">♆</button>
-  </div>
-  <p class="orrery__note">drag the sky to rotate&ensp;·&ensp;JPL elements; Kepler solved live in <a href="js/solar.js">js/solar.js</a>&ensp;·&ensp;imagery NASA&thinsp;/&thinsp;ESA&thinsp;/&thinsp;ESO</p>
+  <p class="orrery__note">drag to rotate&ensp;·&ensp;pinch to zoom&ensp;·&ensp;JPL elements; Kepler solved live in <a href="js/solar.js">js/solar.js</a>&ensp;·&ensp;imagery NASA&thinsp;/&thinsp;ESA&thinsp;/&thinsp;ESO&thinsp;/&thinsp;<a href="https://www.solarsystemscope.com/textures" rel="noopener">Solar System Scope</a></p>
 </div>
 
 <script src="js/main.js" defer></script>

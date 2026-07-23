@@ -1,25 +1,26 @@
 /* ============================================================
    Will — portfolio, "observatory" design
-   Night ink, brass instrument lines, one warm dawn at the end.
+   Graphite sky, bronze instruments, celestial chapter signals.
    Hand-written CSS. No framework, no build step.
    ============================================================ */
 
 :root {
-  --paper:      oklch(16.5% 0.02 268);
-  --paper-high: oklch(20.5% 0.022 268);
-  --ink:        oklch(90% 0.012 85);
-  --blue:       oklch(72% 0.055 245);
-  --blue-deep:  oklch(62% 0.06 245);
-  --red:        oklch(80% 0.125 85);   /* brass */
-  --muted:      oklch(64% 0.02 260);
-  --dawn:       oklch(93% 0.016 85);
+  --paper:      oklch(15.5% 0.008 250);
+  --paper-high: oklch(20.5% 0.009 250);
+  --ink:        oklch(91% 0.008 235);
+  --blue:       oklch(72% 0.035 220);
+  --blue-deep:  oklch(60% 0.04 220);
+  --bronze:     oklch(74% 0.105 70);
+  --red:        var(--bronze); /* default instrument signal; chapters override it */
+  --muted:      oklch(64% 0.014 240);
+  --dawn:       oklch(92% 0.01 235);
   --hairline:   color-mix(in oklab, var(--ink) 16%, transparent);
   --grid-line:  color-mix(in oklab, var(--blue) 5%, transparent);
   --grid-major: color-mix(in oklab, var(--blue) 8%, transparent);
 
   --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
   --font-body: "STIX Two Text", Georgia, serif;
-  --font-mono: "Spline Sans Mono", ui-monospace, "SF Mono", monospace;
+  --font-mono: "B612 Mono", ui-monospace, "SF Mono", monospace;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --wrap: 1100px;
@@ -102,7 +103,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   height: 100%;
   display: block;
   z-index: 0;
-  touch-action: pan-y;   /* horizontal drag rotates; vertical still scrolls the page */
+  touch-action: pan-y;   /* one-finger page scroll; drag, twist and pinch stay interactive */
 }
 
 main {
@@ -116,6 +117,7 @@ main {
 /* ---------- chapters ---------- */
 
 .chapter {
+  --red: var(--bronze);
   min-height: 100vh;
   display: grid;
   align-items: center;
@@ -123,6 +125,18 @@ main {
   margin-inline: auto;
   padding: clamp(5rem, 14vh, 9rem) var(--gutter);
 }
+
+/* Each chapter borrows its signal color from the body it orbits. The
+   surrounding instrument UI stays bronze, so the palette remains legible. */
+.chapter[data-body="sun"]     { --red: oklch(74% 0.16 48); }
+.chapter[data-body="mercury"] { --red: oklch(79% 0.018 65); }
+.chapter[data-body="venus"]   { --red: oklch(86% 0.07 90); }
+.chapter[data-body="earth"]   { --red: oklch(76% 0.10 235); }
+.chapter[data-body="mars"]    { --red: oklch(71% 0.14 42); }
+.chapter[data-body="jupiter"] { --red: oklch(80% 0.075 72); }
+.chapter[data-body="saturn"]  { --red: oklch(85% 0.08 92); }
+.chapter[data-body="uranus"]  { --red: oklch(83% 0.07 195); }
+.chapter[data-body="neptune"] { --red: oklch(72% 0.12 260); }
 
 .chapter__inner {
   pointer-events: auto;
@@ -156,14 +170,7 @@ main {
   font-size: clamp(1.7rem, 3.4vw, 2.4rem);
   letter-spacing: -0.01em;
   margin-bottom: 1rem;
-}
-
-.chapter__num {
-  font-style: italic;
-  font-weight: 400;
-  font-variation-settings: "opsz" 144;
-  color: color-mix(in oklab, var(--red) 55%, var(--paper));
-  margin-right: 0.6em;
+  color: var(--red);
 }
 
 .chapter__lead { max-width: 62ch; }
@@ -189,6 +196,7 @@ main {
   line-height: 1.03;
   letter-spacing: -0.015em;
   text-wrap: balance;
+  color: var(--red);
 }
 
 .chapter__sub {
@@ -291,7 +299,7 @@ main {
 
 .orrery__clock { color: var(--ink); min-width: 11ch; }
 
-.orrery__speeds, .orrery__planets { display: flex; flex-wrap: wrap; gap: 0.15rem; }
+.orrery__speeds { display: flex; flex-wrap: wrap; gap: 0.15rem; }
 
 .hud button {
   appearance: none;
@@ -306,8 +314,6 @@ main {
 .hud button:hover { color: var(--red); }
 
 .hud button.is-active { color: var(--red); box-shadow: inset 0 -2px 0 var(--red); }
-
-.orrery__planets button { font-size: 1rem; padding: 0.15em 0.4em; }
 
 .orrery__note { margin-left: auto; font-style: italic; }
 
@@ -504,6 +510,7 @@ main {
 .chess-board {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
   width: 100%;
   aspect-ratio: 1;
   border: 1px solid var(--hairline);

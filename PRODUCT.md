@@ -29,6 +29,6 @@ The site reads like an engineer's working notebook: graph paper, ink, figures wi
 0. Public identity is first-name only: the site says "Will", never the surname. Full name lives only in the CV download and contact links. Info density stays josh.software-lean: one line where a paragraph would do; detail belongs in the CV, demos carry the persuasion.
 
 1. Proof over prose. Every major claim on the CV is backed by something interactive or verifiable on the page.
-2. Zero dependencies. Hand-written HTML/CSS/JS, no frameworks, no build step. Fast enough to feel instant; view-source friendly.
+2. Implementation quality over dependency dogma. Keep the site fast and view-source friendly, but use focused libraries when they materially improve fidelity or maintainability.
 3. One page, long scroll, deliberate pacing. One idea per fold.
 4. The neural network demo uses the exact weights from the real project (`nn MNIST/saved_network`), not a re-creation.

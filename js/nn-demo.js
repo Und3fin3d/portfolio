@@ -50,6 +50,7 @@
   /** @typedef {{ shape: number[], data: Float32Array }} Layer */
   /** @type {Record<string, Layer> | null} */
   let net = null;
+  let hasStarterDigit = true;
   /** @param {string} b64 */
   const b64ToF32 = b64 => {
     const bin = atob(b64);
@@ -63,6 +64,7 @@
     .then(json => {
       net = {};
       for (const l of json.layers) net[l.name] = { shape: l.shape, data: b64ToF32(l.data) };
+      if (hasStarterDigit) predict();
     })
     .catch(() => { hint.textContent = "could not load network weights"; });
 
@@ -169,14 +171,51 @@
     hint.textContent = "the network is live: keep drawing";
   };
 
-  const reset = () => {
-    ctx.clearRect(0, 0, SIZE, SIZE);
+  const clearPrediction = () => {
     guessEl.textContent = "·";
     confEl.textContent = "";
     bars.forEach(b => { b.fill.style.width = "0%"; b.pct.textContent = "–"; b.li.classList.remove("is-top"); });
     [...dots1, ...dots2].forEach(d => (d.style.opacity = "0.08"));
+  };
+
+  const drawStarterDigit = () => {
+    ctx.save();
+    ctx.globalAlpha = 0.68;
+    ctx.lineWidth = 18;
+    ctx.beginPath();
+    ctx.moveTo(102, 91);
+    ctx.quadraticCurveTo(119, 75, 137, 65);
+    ctx.quadraticCurveTo(134, 126, 138, 207);
+    ctx.stroke();
+
+    ctx.lineWidth = 15;
+    ctx.beginPath();
+    ctx.moveTo(104, 216);
+    ctx.quadraticCurveTo(137, 211, 171, 216);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.13;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(108, 94);
+    ctx.quadraticCurveTo(121, 81, 134, 74);
+    ctx.moveTo(143, 68);
+    ctx.quadraticCurveTo(140, 132, 144, 204);
+    ctx.moveTo(109, 220);
+    ctx.quadraticCurveTo(138, 216, 168, 221);
+    ctx.stroke();
+    ctx.restore();
+    hint.textContent = "start here: draw a digit, 0–9";
+  };
+
+  const reset = () => {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    hasStarterDigit = false;
+    clearPrediction();
     hint.textContent = "draw a digit, 0–9";
   };
+
+  drawStarterDigit();
 
   /* ---- pointer drawing ---- */
   let drawing = false, raf = 0;
@@ -195,6 +234,12 @@
   canvas.addEventListener("pointerdown", e => {
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
+    if (hasStarterDigit) {
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      hasStarterDigit = false;
+      clearPrediction();
+      hint.textContent = "draw a digit, 0–9";
+    }
     drawing = true;
     last = pos(e);
     ctx.beginPath();
