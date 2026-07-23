@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#f6f3ea"/>
+  <path d="M16 .5v64M32 .5v64M48 .5v64M.5 16h64M.5 32h64M.5 48h64" stroke="#2c437c" stroke-opacity=".22" fill="none"/>
+  <text x="32" y="45" font-family="Archivo, 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="900" text-anchor="middle" fill="#c33b26">W</text>
+</svg>
