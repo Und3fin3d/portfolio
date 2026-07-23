@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Will — Computer Science, University of Southampton</title>
+<meta name="description" content="Second-year CS student at Southampton. The projects run live on this page: a from-scratch neural network, a 5×5 chess engine, and racing graph searches.">
+<meta property="og:title" content="Will — built from first principles">
+<meta property="og:description" content="A portfolio where the projects run live in the page: draw a digit for a hand-rolled neural network, play a 5×5 chess engine, race graph searches through a maze.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Will",
+  "email": "mailto:the.william.greenfield@gmail.com",
+  "sameAs": [
+    "https://github.com/Und3fin3d",
+    "https://www.linkedin.com/in/william-greenfield-431356294/"
+  ],
+  "jobTitle": "Computer Science student",
+  "affiliation": { "@type": "CollegeOrUniversity", "name": "University of Southampton" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-head">
+  <a class="site-head__name" href="#top">Will.</a>
+  <nav class="site-head__nav" aria-label="Sections">
+    <a href="#demos">Demos</a>
+    <a href="#work">Work</a>
+    <a href="#experience">Experience</a>
+    <a href="#background">Background</a>
+    <a href="blog/">Writing</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <p class="hero__kicker reveal">Will&ensp;·&ensp;BSc Computer Science, University of Southampton&ensp;·&ensp;London</p>
+    <h1 class="hero__title">
+      <span class="hero__line reveal">Built from</span>
+      <span class="hero__line reveal"><span class="circled">first principles<span class="hero__dot">.</span><svg class="circled__stroke" viewBox="0 0 340 110" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M22,58 C30,20 210,6 300,26 C338,36 330,84 250,96 C160,109 30,102 18,72 C10,50 60,28 120,24" fill="none" stroke-linecap="round"/></svg></span></span>
+    </h1>
+    <div class="hero__body reveal">
+      <p>Second-year computer scientist, after a <strong>summer 2026 internship</strong>. I learn by building things raw. Scroll down: the projects run.</p>
+    </div>
+    <div class="hero__actions reveal">
+      <a class="btn btn--primary" href="assets/WilliamGreenfield_CV.pdf" download>Download CV</a>
+      <a class="btn" href="https://github.com/Und3fin3d" rel="noopener">GitHub</a>
+      <a class="btn" href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
+      <a class="btn" href="mailto:the.william.greenfield@gmail.com">Email</a>
+    </div>
+    <aside class="hero__margin reveal" aria-label="Quick facts">
+      <p class="margin-note">margin notes:</p>
+      <ul>
+        <li>86% in AI module</li>
+        <li>2:1 average (Year 2)</li>
+        <li>1st place, university CTF</li>
+        <li>UK citizen, London</li>
+      </ul>
+      <svg class="margin-arrow" viewBox="0 0 60 90" aria-hidden="true"><path d="M50,6 C20,26 16,52 30,80 M30,80 l-12,-8 M30,80 l14,-4" fill="none" stroke-linecap="round"/></svg>
+    </aside>
+  </section>
+
+  <!-- ============ 01 · DEMOS ============ -->
+  <section class="section" id="demos">
+    <div class="section__head reveal">
+      <span class="section__num" aria-hidden="true">01</span>
+      <h2>Working demonstrations</h2>
+      <p class="section__intro">Not videos or embeds: these run in this page, hand-written in plain JavaScript. View source is encouraged.</p>
+    </div>
+
+    <!-- Fig. 1 — neural network -->
+    <figure class="demo reveal" id="fig-nn">
+      <div class="demo__header">
+        <h3>Draw a digit</h3>
+        <p>A neural network I wrote from scratch in sixth form: NumPy for the matrix algebra and nothing else, 99% on MNIST. This is <em>that exact network</em>, original trained weights, forward pass ported to JavaScript.</p>
+      </div>
+      <div class="demo__stage demo__stage--nn">
+        <div class="nn-draw">
+          <canvas id="nn-canvas" width="280" height="280" aria-label="Drawing area. Draw a digit from 0 to 9 with your mouse or finger."></canvas>
+          <div class="nn-draw__tools">
+            <button class="btn btn--small" id="nn-clear" type="button">Clear</button>
+            <span class="nn-draw__hint" id="nn-hint">draw a digit, 0–9</span>
+          </div>
+          <div class="annotation annotation--nn" aria-hidden="true"><svg viewBox="0 0 22 30"><path d="M6,28 C8,18 9,12 11,4 M11,4 l-6,7 M11,4 l6,7" fill="none" stroke-linecap="round"/></svg><span>preprocessed like MNIST: cropped to 20&thinsp;px, centred by mass</span></div>
+        </div>
+        <div class="nn-net" aria-hidden="true">
+          <div class="nn-net__layer" id="nn-layer1" data-label="h1 ×20"></div>
+          <div class="nn-net__layer" id="nn-layer2" data-label="h2 ×10"></div>
+        </div>
+        <div class="nn-out">
+          <div class="nn-out__guess"><span class="nn-out__digit" id="nn-guess" aria-live="polite">·</span><span class="nn-out__conf" id="nn-conf"></span></div>
+          <ol class="nn-bars" id="nn-bars"></ol>
+        </div>
+      </div>
+      <figcaption><span class="fig-label">Fig. 1</span> — live forward pass through the original trained weights (784&thinsp;→&thinsp;20&thinsp;→&thinsp;10&thinsp;→&thinsp;10).</figcaption>
+    </figure>
+
+    <!-- Fig. 2 — chess engine -->
+    <figure class="demo reveal" id="fig-chess">
+      <div class="demo__header">
+        <h3>Play the engine</h3>
+        <p>My AI-coursework engine, ported piece for piece: the 5×5 <em>Chess Fragments</em> variant, where the corner piece, the Right&thinsp;<span class="right-mark">†</span>, moves as rook plus knight. The search is the Python original's: magic bitboards, a Zobrist-hashed transposition table, killer and history ordering, null-move pruning and quiescence, with its piece values and square tables copied verbatim. You are White.</p>
+      </div>
+      <div class="demo__stage demo__stage--chess">
+        <div class="chess-board" id="chess-board" role="grid" aria-label="5 by 5 chess board"></div>
+        <div class="chess-panel">
+          <p class="chess-status" id="chess-status" aria-live="polite">Your move.</p>
+          <dl class="engine-readout" id="engine-readout">
+            <div><dt>depth</dt><dd id="ce-depth">–</dd></div>
+            <div><dt>nodes</dt><dd id="ce-nodes">–</dd></div>
+            <div><dt>time</dt><dd id="ce-time">–</dd></div>
+            <div><dt>eval</dt><dd id="ce-eval">–</dd></div>
+            <div><dt>line</dt><dd id="ce-line">–</dd></div>
+          </dl>
+          <div class="chess-tools">
+            <button class="btn btn--small" id="chess-new" type="button">New game</button>
+            <button class="btn btn--small" id="chess-undo" type="button">Undo</button>
+          </div>
+        </div>
+      </div>
+      <figcaption><span class="fig-label">Fig. 2</span> — <span class="right-mark">†</span> the Right, the variant's custom piece. Pawns keep their double-push and en passant. Iterative deepening, ~350&thinsp;ms per move; the readout is live.</figcaption>
+    </figure>
+
+    <!-- Fig. 3 — maze solver -->
+    <figure class="demo reveal" id="fig-maze">
+      <div class="demo__header">
+        <h3>Race the searches</h3>
+        <p>From a first-year team project that solved mazes off a webcam. Breadth-first floods, A* aims for the exit, depth-first takes the first corridor it finds. The counters keep score.</p>
+      </div>
+      <div class="demo__stage demo__stage--maze">
+        <canvas id="maze-canvas" aria-label="Maze being explored by a search algorithm"></canvas>
+        <div class="maze-panel">
+          <div class="maze-algos" role="group" aria-label="Choose algorithm">
+            <button class="btn btn--small is-active" data-algo="astar" type="button">A*</button>
+            <button class="btn btn--small" data-algo="bfs" type="button">BFS</button>
+            <button class="btn btn--small" data-algo="dfs" type="button">DFS</button>
+          </div>
+          <dl class="engine-readout">
+            <div><dt>visited</dt><dd id="maze-visited">–</dd></div>
+            <div><dt>path</dt><dd id="maze-path">–</dd></div>
+            <div><dt>frontier peak</dt><dd id="maze-frontier">–</dd></div>
+          </dl>
+          <div class="maze-tools">
+            <button class="btn btn--small" id="maze-new" type="button">New maze</button>
+            <button class="btn btn--small" id="maze-solve" type="button">Solve</button>
+          </div>
+        </div>
+      </div>
+      <figcaption><span class="fig-label">Fig. 3</span> — recursive-backtracker generation, lightly braided so routes compete; all three searches run on the same grid graph.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ 02 · RECENT WORK ============ -->
+  <section class="section" id="work">
+    <div class="section__head reveal">
+      <span class="section__num" aria-hidden="true">02</span>
+      <h2>Projects</h2>
+    </div>
+    <ol class="ledger ledger--lab reveal">
+      <li class="ledger__row">
+        <div class="ledger__when">2026<br>ongoing</div>
+        <div class="ledger__what">
+          <h3>6n</h3>
+          <p>A fantasy Six Nations prediction engine: a point-in-time data pipeline drawing on player form data, team-level play-shape metrics, world rankings, historical results and weather, feeding gradient-boosted forecasts validated on a sealed 2026 season.</p>
+        </div>
+      </li>
+      <li class="ledger__row">
+        <div class="ledger__when">2026</div>
+        <div class="ledger__what">
+          <h3><a href="https://github.com/Und3fin3d/Chessweb-v2" rel="noopener">chessweb</a></h3>
+          <p>Multiplayer chess in the browser: Flask and WebSockets, user accounts, an object-oriented rules engine.</p>
+        </div>
+      </li>
+      <li class="ledger__row">
+        <div class="ledger__when">2026</div>
+        <div class="ledger__what">
+          <h3>chatgpt-mcp-bridge</h3>
+          <p>Drives the real ChatGPT web app through Chrome so it can work as a headless coding agent.</p>
+        </div>
+      </li>
+      <li class="ledger__row">
+        <div class="ledger__when">2026</div>
+        <div class="ledger__what">
+          <h3>gestures</h3>
+          <p>Webcam hand-gesture tools on MediaPipe hand tracking and OpenCV.</p>
+        </div>
+      </li>
+      <li class="ledger__row">
+        <div class="ledger__when">2026</div>
+        <div class="ledger__what">
+          <h3>bible-memorisation-app</h3>
+          <p>React app for memorising verses with SM-2 spaced repetition.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ 03 · EXPERIENCE ============ -->
+  <section class="section" id="experience">
+    <div class="section__head reveal">
+      <span class="section__num" aria-hidden="true">03</span>
+      <h2>Experience</h2>
+    </div>
+    <ol class="ledger reveal">
+      <li class="ledger__row">
+        <div class="ledger__when">Oct 2022<br>London</div>
+        <div class="ledger__what">
+          <h3>Ibex.ai <span>Software &amp; Data Engineering Intern</span></h3>
+          <p>Pandas pipelines on production data; regression and classification models on Azure Databricks.</p>
+        </div>
+      </li>
+      <li class="ledger__row">
+        <div class="ledger__when">Jul 2022<br>South Africa</div>
+        <div class="ledger__what">
+          <h3>IoT.nxt <span>Data Analysis Intern</span></h3>
+          <p>Performance analytics and reporting for provincial rugby.</p>
+        </div>
+      </li>
+      <li class="ledger__row">
+        <div class="ledger__when">Jul 2022<br>South Africa</div>
+        <div class="ledger__what">
+          <h3>Codehesion <span>Software Development Intern</span></h3>
+          <p>Supply-chain and customer-loyalty systems.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ 04 · BACKGROUND ============ -->
+  <section class="section" id="background">
+    <div class="section__head reveal">
+      <span class="section__num" aria-hidden="true">04</span>
+      <h2>Background</h2>
+    </div>
+    <div class="ctf reveal">
+      <div class="ctf__body">
+        <p>BSc Computer Science, University of Southampton, 2024–present: 86% in Artificial Intelligence. Before that, Mathematics A*, Further Mathematics, Computer Science and Physics at A-level.</p>
+        <p>1st place in the university Cyber Security Society CTF, May 2025.</p>
+        <p class="ctf__flags" aria-hidden="true">crypto&ensp;/&ensp;web&ensp;/&ensp;rev&ensp;/&ensp;pwn&ensp;/&ensp;RFID&ensp;/&ensp;protocols</p>
+      </div>
+      <div class="stamp" aria-hidden="true"><span>1st<br>place</span><em>CTF · SOTON · 2025</em></div>
+    </div>
+  </section>
+
+  <!-- ============ 05 · TOOLBOX ============ -->
+  <section class="section" id="skills">
+    <div class="section__head reveal">
+      <span class="section__num" aria-hidden="true">05</span>
+      <h2>Toolbox</h2>
+    </div>
+    <dl class="spec reveal">
+      <div class="spec__row"><dt>languages</dt><dd>Python · Java · JavaScript / TypeScript · Haskell · C · SQL</dd></div>
+      <div class="spec__row"><dt>data &amp; ML</dt><dd>NumPy · Pandas · PyTorch · TensorFlow · Azure Databricks</dd></div>
+      <div class="spec__row"><dt>web</dt><dd>React · Flask · WebSockets · HTML/CSS</dd></div>
+      <div class="spec__row"><dt>tools</dt><dd>Git · Linux · Bash</dd></div>
+    </dl>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer" id="contact">
+  <div class="footer__inner">
+    <p class="footer__kicker">Hiring for summer 2026?</p>
+    <a class="footer__mail" href="mailto:the.william.greenfield@gmail.com">the.william.greenfield<wbr>@gmail.com</a>
+    <div class="footer__links">
+      <a href="assets/WilliamGreenfield_CV.pdf" download>CV (PDF)</a>
+      <a href="blog/">Writing</a>
+      <a href="https://github.com/Und3fin3d" rel="noopener">github.com/Und3fin3d</a>
+      <a href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js" defer></script>
+<script src="js/nn-demo.js" defer></script>
+<script src="js/chess.js" defer></script>
+<script src="js/maze.js" defer></script>
+</body>
+</html>

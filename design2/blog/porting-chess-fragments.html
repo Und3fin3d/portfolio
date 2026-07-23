@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Porting a chess engine from Python to the browser — Will</title>
+<meta name="description" content="Getting a 5×5 coursework chess engine, bitboards and all, to run in plain JavaScript.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="site-head__name" href="../index.html">Will.</a>
+  <nav class="site-head__nav" aria-label="Sections">
+    <a href="../index.html">Index</a>
+    <a href="index.html">Writing</a>
+    <a href="../index.html#contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <article class="post">
+    <a class="post__back" href="index.html">&larr; all write-ups</a>
+    <p class="post__kicker">July 2026</p>
+    <h1>Porting a chess engine from Python to the browser</h1>
+    <div class="post__body">
+      <p>For my second-year AI coursework I wrote an engine for Chess Fragments, a 5×5 variant whose corner piece, the Right, moves as a rook and a knight combined. The engine that plays on the <a href="../index.html#fig-chess">front page of this site</a> is that coursework, ported line by line from Python to JavaScript.</p>
+
+      <p>Most of it translated mechanically. The board has 25 squares, so a bitboard fits comfortably inside the 32 bits that JavaScript's bitwise operators actually use; a plain number does the job with no BigInt in sight. Move generation, make and unmake, the piece values, the piece-square tables and the whole search stack came across unchanged: negamax with alpha-beta, a Zobrist-hashed transposition table, killer and history move ordering, null-move pruning, late move reductions, check extensions and a delta-pruned quiescence search.</p>
+
+      <h2>What needed re-deriving</h2>
+      <p>Magic bitboards. The Python engine indexes sliding attacks with the multiply-and-shift trick: mask off the occupancy, multiply by a magic constant, shift down, and read the attack set straight out of a table. The constants are 64-bit, and that is the snag. JavaScript numbers are doubles, its bitwise operators truncate to 32 bits, there is no fast wrapping 64-bit multiply, and BigInt is far too slow to sit inside a search loop. The 64-bit magics could not come across, so the first port fell back to classic ray lookups.</p>
+
+      <p>The way back in is <code>Math.imul</code>, which is a wrapping 32-bit integer multiply: exactly the semantics magic indexing wants, just at width 32. On a 25-square board the occupancy that matters is at most 6 bits for a rook's rays and 4 for a bishop's, so each square's attack table holds at most 64 entries, and 32-bit magics for tables that small are plentiful. I found a fresh set by offline random search (the worst square took about a thousand candidates) and verified each one exhaustively over every occupancy subset of every square.</p>
+
+      <p>The occupancy masks are the Python engine's verbatim; the tables are built in the browser at load time from reference ray functions, so the hot path is one <code>Math.imul</code>, one shift, one table read. To be sure it was right I differential-tested the JavaScript attack sets against the Python engine's 64-bit lookups: bit-identical across 75,000 random rook lookups and 75,000 random bishop lookups, and perft matches the Python exactly to depth 4 (7, 44, 362, 3087).</p>
+
+      <p>On a 5×5 board this buys fidelity, not speed. The ray lookups it replaces were already proven equivalent and quick enough. The point is that the browser engine now indexes sliders the same way the original does.</p>
+
+      <h2>Keeping it honest</h2>
+      <p>The point of the port was faithfulness. It would have been much easier to drop in a generic small-board engine, but then the demo would be a lie. Piece values and square tables are copied verbatim from the Python source, the Right generates the same rook-plus-knight moves, pawns keep their double-push and en passant, and the move ordering follows the same hash-move, capture, killer, history sequence.</p>
+
+      <p>With 350&thinsp;ms per move the JavaScript version reaches depth 10 to 11, searching roughly 400,000 nodes. The source is unminified: view source, and <code>js/chess.js</code> is all there.</p>
+    </div>
+  </article>
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <p class="footer__kicker">Hiring for summer 2026?</p>
+    <a class="footer__mail" href="mailto:the.william.greenfield@gmail.com">the.william.greenfield<wbr>@gmail.com</a>
+    <div class="footer__links">
+      <a href="../assets/WilliamGreenfield_CV.pdf" download>CV (PDF)</a>
+      <a href="index.html">Writing</a>
+      <a href="https://github.com/Und3fin3d" rel="noopener">github.com/Und3fin3d</a>
+      <a href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
