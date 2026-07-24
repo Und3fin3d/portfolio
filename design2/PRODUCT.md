@@ -8,7 +8,7 @@ A personal portfolio site whose single job is to convert a skim into an intervie
 
 ## Users
 
-- Recruiters and university-talent screeners at UK tech, finance and security firms, skimming dozens of intern candidates in browser tabs. They give a page 20 seconds.
+- Recruiters and university-talent screeners at UK tech, finance and security firms, skimming dozens of graduate candidates in browser tabs. They give a page 20 seconds.
 - Engineers doing the second-round look. They will open dev tools and view source. The code of the site is itself an exhibit.
 
 ## Brand voice
