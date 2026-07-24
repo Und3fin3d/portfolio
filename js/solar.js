@@ -801,11 +801,16 @@
   };
 
   /* ---------- loop ---------- */
+  let initialised = false;
   /** @type {number | null} */
   let cSm = null;
   let prev = performance.now();
   /** @param {number} now */
   const tick = now => {
+    if (!initialised) {
+      requestAnimationFrame(tick);
+      return;
+    }
     const dt = Math.min(0.1, (now - prev) / 1000);
     prev = now;
     simMs += dt * speed * 86400000;
@@ -813,7 +818,11 @@
 
     const cRaw = chapterAt();
     if (cSm === null) cSm = cRaw;
-    cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 3.2));
+    /* a jump this big is an anchor navigation or a late layout shift, not a
+       scroll: snap, so the camera never flies through every planet to get
+       there. A smooth in-page scroll moves well under a chapter per frame. */
+    if (Math.abs(cRaw - cSm) > 1.2) cSm = cRaw;
+    else cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 3.2));
     cam = camFrom(cSm, T);
     const activeChapter = Math.round(cSm);
     if (activeChapter !== zoomChapter) {
@@ -835,12 +844,25 @@
   if (window.ResizeObserver) new ResizeObserver(recalcCenters).observe(document.body);
   window.addEventListener("load", () => {
     recalcCenters();
-    if (location.hash) {
-      const target = document.querySelector(location.hash);
-      if (target) target.scrollIntoView({ block: "center" });
+    const hash = location.hash;
+    if (hash) {
+      const target = document.querySelector(hash);
+      if (target) {
+        /* behavior "auto" defers to CSS, and styles.css sets
+           scroll-behavior: smooth, so this animated up from the top and
+           dragged the camera through every planet on its way. Force a real
+           jump by suspending smooth scrolling for the duration. */
+        const root = document.documentElement;
+        const prevBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = "auto";
+        target.scrollIntoView({ behavior: "instant", block: "center" });
+        root.style.scrollBehavior = prevBehavior;
+      }
     }
     cSm = chapterAt();
     cam = camFrom(cSm, centuries(simMs));
+    dCam = Math.exp(cam.zl + zoomOffset);
+    initialised = true;
   });
   requestAnimationFrame(tick);
 
