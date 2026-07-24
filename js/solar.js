@@ -833,7 +833,15 @@
   resize();
   window.addEventListener("resize", resize);
   if (window.ResizeObserver) new ResizeObserver(recalcCenters).observe(document.body);
-  window.addEventListener("load", recalcCenters);
+  window.addEventListener("load", () => {
+    recalcCenters();
+    if (location.hash) {
+      const target = document.querySelector(location.hash);
+      if (target) target.scrollIntoView({ block: "center" });
+    }
+    cSm = chapterAt();
+    cam = camFrom(cSm, centuries(simMs));
+  });
   requestAnimationFrame(tick);
 
   /* debug / verification handle: also for the curious */
