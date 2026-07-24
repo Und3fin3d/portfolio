@@ -470,9 +470,10 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 .chess-board {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
   width: 100%;
   aspect-ratio: 1;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--hairline);
   background: var(--paper-high);
 }
 
@@ -491,7 +492,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   position: relative;
 }
 
-.chess-board button.sq-dark { background: color-mix(in oklab, var(--blue) 16%, var(--paper-high)); }
+.chess-board button.sq-dark { background: color-mix(in oklab, var(--blue) 13%, var(--paper-high)); }
 .chess-board button.sq-last { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--red) 45%, transparent); }
 .chess-board button.sq-selected { box-shadow: inset 0 0 0 3px var(--red); }
 .chess-board button.sq-move::after {
