@@ -696,7 +696,7 @@
 
   /** @param {number} T  @param {number} c */
   const draw = (T, c) => {
-    const ink = css("--ink"), muted = css("--muted"), brass = css("--red");
+    const ink = css("--ink"), muted = css("--muted");
     const orbitGold = "oklch(78% 0.115 82)";
     const focusBody = chapters[Math.round(c)].body;
     const focusIdx = IDX[focusBody] ?? -1;
@@ -782,13 +782,8 @@
            untextured disc. It appears on the first frame after it loads. */
         continue;
       }
-      if (i === focusIdx && R < 60) {
-        ctx.strokeStyle = brass;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, R + 5, 0, TAU);
-        ctx.stroke();
-      }
+      /* No ring around the focused planet: the label alone marks it, set in
+         ink against the muted labels of the others. */
       const overSun = Math.hypot(s.x - sunPos.x, s.y - sunPos.y) < sunPos.R + 14;
       if (R < 60 && !overSun && (showAll || i === focusIdx || i === hover)) {
         ctx.fillStyle = hover === i || i === focusIdx ? ink : muted;
