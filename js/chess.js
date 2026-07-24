@@ -606,8 +606,9 @@
     line: /** @type {HTMLElement} */ (document.getElementById("ce-line")),
   };
 
+
   const GLYPHS = [
-    ["♙", "♟"], ["♘", "♞"], ["♗", "♝"], ["♖", "♜"], ["♕", "♛"], ["♔", "♚"], ["♖", "♜"],
+    ["♟", "♙"], ["♞", "♘"], ["♝", "♗"], ["♜", "♖"], ["♛", "♕"], ["♚", "♔"], ["♜", "♖"],
   ];
   const NAMES = ["pawn", "knight", "bishop", "rook", "queen", "king", "right"];
   /** @param {number} sq */
