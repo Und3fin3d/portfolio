@@ -3,11 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Will — Computer Science, University of Southampton</title>
-<meta name="description" content="Second-year CS student at Southampton. The projects run live on this page: a from-scratch neural network, a 5×5 chess engine, and racing graph searches.">
-<meta property="og:title" content="Will — built from first principles">
-<meta property="og:description" content="A portfolio where the projects run live in the page: draw a digit for a hand-rolled neural network, play a 5×5 chess engine, race graph searches through a maze.">
-<meta property="og:type" content="website">
+<title>William Greenfield</title>
+<meta name="description" content="William Greenfield, computer science student at the University of Southampton. Software engineering portfolio: machine learning, chess engines, graph algorithms. Open to graduate roles from 2027.">
+<meta name="author" content="William Greenfield">
+<link rel="canonical" href="https://williamgreenfield.com/design2/">
+<meta property="og:title" content="William Greenfield">
+<meta property="og:description" content="Computer science at the University of Southampton. Software engineering portfolio: machine learning, chess engines, graph algorithms. Open to graduate roles from 2027.">
+<meta property="og:type" content="profile">
+<meta property="og:url" content="https://williamgreenfield.com/design2/">
+<meta property="og:site_name" content="William Greenfield">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="William Greenfield">
+<meta name="twitter:description" content="Computer science at the University of Southampton. Software engineering portfolio: machine learning, chess engines, graph algorithms.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,13 +24,19 @@
 {
   "@context": "https://schema.org",
   "@type": "Person",
-  "name": "Will",
-  "email": "mailto:the.william.greenfield@gmail.com",
+  "name": "William Greenfield",
+  "givenName": "William",
+  "familyName": "Greenfield",
+  "alternateName": "Will",
+  "url": "https://williamgreenfield.com/",
+  "email": "mailto:mail@williamgreenfield.com",
   "sameAs": [
     "https://github.com/Und3fin3d",
     "https://www.linkedin.com/in/william-greenfield-431356294/"
   ],
   "jobTitle": "Computer Science student",
+  "knowsAbout": ["Software Engineering", "Machine Learning", "Algorithms", "Python", "C", "Haskell", "JavaScript"],
+  "address": { "@type": "PostalAddress", "addressLocality": "London", "addressCountry": "GB" },
   "affiliation": { "@type": "CollegeOrUniversity", "name": "University of Southampton" }
 }
 </script>
@@ -46,20 +59,27 @@
 
   <!-- ============ HERO ============ -->
   <section class="hero">
-    <p class="hero__kicker reveal">Will&ensp;·&ensp;BSc Computer Science, University of Southampton&ensp;·&ensp;London</p>
+    <p class="hero__kicker reveal">Will&ensp;·&ensp;BSc Computer Science, University of Southampton</p>
     <h1 class="hero__title">
       <span class="hero__line reveal">Built from</span>
-      <span class="hero__line reveal"><span class="circled">first principles<span class="hero__dot">.</span><svg class="circled__stroke" viewBox="0 0 340 110" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M22,58 C30,20 210,6 300,26 C338,36 330,84 250,96 C160,109 30,102 18,72 C10,50 60,28 120,24" fill="none" stroke-linecap="round"/></svg></span></span>
+      <span class="hero__line reveal"><span class="circled">scratch<span class="hero__dot">.</span><svg class="circled__stroke" viewBox="0 0 340 110" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M22,58 C30,20 210,6 300,26 C338,36 330,84 250,96 C160,109 30,102 18,72 C10,50 60,28 120,24" fill="none" stroke-linecap="round"/></svg></span></span>
     </h1>
     <div class="hero__body reveal">
-      <p>Second-year computer scientist, building software from first principles. I learn by building things raw. Scroll down: the projects run.</p>
+      <ul class="hero-hooks">
+        <li>A neural network written in NumPy alone that reads handwriting at 99% on MNIST.</li>
+        <li>A fantasy rugby prediction engine running gradient-boosted forecasts off a point-in-time data pipeline.</li>
+        <li>A 5×5 chess engine built on bitboards and Zobrist hashing that plays you in the browser.</li>
+        <li>First place in the university Cyber Security Society CTF, with the most flags captured.</li>
+      </ul>
+      <p class="hero-avail">Open to graduate roles from 2027.</p>
     </div>
     <div class="hero__actions reveal">
       <a class="btn btn--primary" href="assets/WilliamGreenfield_CV.pdf" download>Download CV</a>
       <a class="btn" href="https://github.com/Und3fin3d" rel="noopener">GitHub</a>
       <a class="btn" href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
-      <a class="btn" href="mailto:the.william.greenfield@gmail.com">Email</a>
+      <a class="btn" href="mailto:mail@williamgreenfield.com">Email</a>
     </div>
+    <p class="hero__hint reveal" aria-hidden="true">More below <span class="hero__hint-arrow">&darr;</span></p>
     <aside class="hero__margin reveal" aria-label="Quick facts">
       <p class="margin-note">margin notes:</p>
       <ul>
@@ -84,7 +104,7 @@
     <figure class="demo reveal" id="fig-nn">
       <div class="demo__header">
         <h3>Draw a digit</h3>
-        <p>A neural network I wrote from scratch in sixth form: NumPy for the matrix algebra and nothing else, 99% on MNIST. This is <em>that exact network</em>, original trained weights, forward pass ported to JavaScript.</p>
+        <p>A neural network I wrote from scratch in sixth form: NumPy for the matrix algebra and nothing else, 99% on MNIST. What runs below is the original network, its trained weights unchanged, with the forward pass ported to JavaScript.</p>
       </div>
       <div class="demo__stage demo__stage--nn">
         <div class="nn-draw">
@@ -104,14 +124,14 @@
           <ol class="nn-bars" id="nn-bars"></ol>
         </div>
       </div>
-      <figcaption><span class="fig-label">Fig. 1</span> — live forward pass through the original trained weights (784&thinsp;→&thinsp;20&thinsp;→&thinsp;10&thinsp;→&thinsp;10).</figcaption>
+      <figcaption><span class="fig-label">Fig. 1</span>: live forward pass through the original trained weights (784&thinsp;→&thinsp;20&thinsp;→&thinsp;10&thinsp;→&thinsp;10).</figcaption>
     </figure>
 
     <!-- Fig. 2 — chess engine -->
     <figure class="demo reveal" id="fig-chess">
       <div class="demo__header">
         <h3>Play the engine</h3>
-        <p>My AI-coursework engine, ported piece for piece: the 5×5 <em>Chess Fragments</em> variant, where the corner piece, the Right&thinsp;<span class="right-mark">†</span>, moves as rook plus knight. The search is the Python original's: magic bitboards, a Zobrist-hashed transposition table, killer and history ordering, null-move pruning and quiescence, with its piece values and square tables copied verbatim. You are White.</p>
+        <p>My AI-coursework engine, ported piece for piece: the 5×5 <em>Chess Fragments</em> variant, where the corner piece, the Right&thinsp;<span class="right-mark">†</span>, moves as rook plus knight. The search is the Python original's: magic bitboards, a Zobrist-hashed transposition table, killer and history ordering, null-move pruning and quiescence, with its piece values and square tables copied verbatim. You play as White.</p>
       </div>
       <div class="demo__stage demo__stage--chess">
         <div class="chess-board" id="chess-board" role="grid" aria-label="5 by 5 chess board"></div>
@@ -130,14 +150,14 @@
           </div>
         </div>
       </div>
-      <figcaption><span class="fig-label">Fig. 2</span> — <span class="right-mark">†</span> the Right, the variant's custom piece. Pawns keep their double-push and en passant. Iterative deepening, ~350&thinsp;ms per move; the readout is live.</figcaption>
+      <figcaption><span class="fig-label">Fig. 2</span>: <span class="right-mark">†</span> the Right, the variant's custom piece. Pawns keep their double-push and en passant.</figcaption>
     </figure>
 
     <!-- Fig. 3 — maze solver -->
     <figure class="demo reveal" id="fig-maze">
       <div class="demo__header">
         <h3>Race the searches</h3>
-        <p>From a first-year team project that solved mazes off a webcam. Breadth-first floods, A* aims for the exit, depth-first takes the first corridor it finds. The counters keep score.</p>
+        <p>From a team project I led in my penultimate year of school, built for a STEM fair, that solved mazes off a webcam. Breadth-first floods, A* aims for the exit, depth-first takes the first corridor it finds.</p>
       </div>
       <div class="demo__stage demo__stage--maze">
         <canvas id="maze-canvas" aria-label="Maze being explored by a search algorithm"></canvas>
@@ -158,11 +178,11 @@
           </div>
         </div>
       </div>
-      <figcaption><span class="fig-label">Fig. 3</span> — recursive-backtracker generation, lightly braided so routes compete; all three searches run on the same grid graph.</figcaption>
+      <figcaption><span class="fig-label">Fig. 3</span>: recursive-backtracker generation with a few extra openings so routes compete. All three searches run on the same grid graph.</figcaption>
     </figure>
   </section>
 
-  <!-- ============ 02 · RECENT WORK ============ -->
+  <!-- ============ 02 · PROJECTS ============ -->
   <section class="section" id="work">
     <div class="section__head reveal">
       <span class="section__num" aria-hidden="true">02</span>
@@ -173,7 +193,7 @@
         <div class="ledger__when">2026<br>ongoing</div>
         <div class="ledger__what">
           <h3>6n</h3>
-          <p>A fantasy Six Nations prediction engine: a point-in-time data pipeline drawing on player form data, team-level play-shape metrics, world rankings, historical results and weather, feeding gradient-boosted forecasts validated on a sealed 2026 season.</p>
+          <p>A fantasy rugby prediction engine, now running on competitions beyond the Six Nations: a point-in-time data pipeline drawing on player form data, team-level play-shape metrics, world rankings, historical results and weather, feeding gradient-boosted forecasts.</p>
         </div>
       </li>
       <li class="ledger__row">
@@ -181,20 +201,6 @@
         <div class="ledger__what">
           <h3><a href="https://github.com/Und3fin3d/Chessweb-v2" rel="noopener">chessweb</a></h3>
           <p>Multiplayer chess in the browser: Flask and WebSockets, user accounts, an object-oriented rules engine.</p>
-        </div>
-      </li>
-      <li class="ledger__row">
-        <div class="ledger__when">2026</div>
-        <div class="ledger__what">
-          <h3>chatgpt-mcp-bridge</h3>
-          <p>Drives the real ChatGPT web app through Chrome so it can work as a headless coding agent.</p>
-        </div>
-      </li>
-      <li class="ledger__row">
-        <div class="ledger__when">2026</div>
-        <div class="ledger__what">
-          <h3>gestures</h3>
-          <p>Webcam hand-gesture tools on MediaPipe hand tracking and OpenCV.</p>
         </div>
       </li>
       <li class="ledger__row">
@@ -246,7 +252,7 @@
     </div>
     <div class="ctf reveal">
       <div class="ctf__body">
-        <p>BSc Computer Science, University of Southampton, 2024–present: 86% in Artificial Intelligence. Before that, Mathematics A*, Further Mathematics, Computer Science and Physics at A-level.</p>
+        <p>BSc Computer Science, University of Southampton, 2024–present: 86% in Artificial Intelligence. Before that, A-levels in Mathematics at A*, with Further Mathematics, Computer Science and Physics all at A.</p>
         <p>1st place in the university Cyber Security Society CTF, May 2025.</p>
         <p class="ctf__flags" aria-hidden="true">crypto&ensp;/&ensp;web&ensp;/&ensp;rev&ensp;/&ensp;pwn&ensp;/&ensp;RFID&ensp;/&ensp;protocols</p>
       </div>
@@ -263,7 +269,7 @@
     <dl class="spec reveal">
       <div class="spec__row"><dt>languages</dt><dd>Python · Java · JavaScript / TypeScript · Haskell · C · SQL</dd></div>
       <div class="spec__row"><dt>data &amp; ML</dt><dd>NumPy · Pandas · PyTorch · TensorFlow · Azure Databricks</dd></div>
-      <div class="spec__row"><dt>web</dt><dd>React · Flask · WebSockets · HTML/CSS</dd></div>
+      <div class="spec__row"><dt>web</dt><dd>React · Next.js · Flask · WebSockets · HTML/CSS</dd></div>
       <div class="spec__row"><dt>tools</dt><dd>Git · Linux · Bash</dd></div>
     </dl>
   </section>
@@ -274,9 +280,9 @@
 <footer class="footer" id="contact">
   <div class="footer__inner">
     <p class="footer__kicker">Open to graduate roles from 2027.</p>
-    <a class="footer__mail" href="mailto:the.william.greenfield@gmail.com">the.william.greenfield<wbr>@gmail.com</a>
+    <a class="footer__mail" href="mailto:mail@williamgreenfield.com">mail@williamgreenfield.com</a>
     <div class="footer__links">
-      <a href="assets/WilliamGreenfield_CV.pdf" download>CV (PDF)</a>
+      <a href="assets/WilliamGreenfield_CV.pdf" download>CV</a>
       <a href="blog/">Blog</a>
       <a href="https://github.com/Und3fin3d" rel="noopener">github.com/Und3fin3d</a>
       <a href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>

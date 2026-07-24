@@ -104,7 +104,8 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
     "kicker  margin"
     "title   margin"
     "body    margin"
-    "actions margin";
+    "actions margin"
+    "hint    margin";
   column-gap: clamp(2rem, 5vw, 4rem);
 }
 
@@ -162,6 +163,47 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   display: grid;
   gap: 0.9rem;
 }
+
+/* the four hooks, set as ruled notebook lines with a red-pen tick */
+.hero-hooks {
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.hero-hooks li {
+  position: relative;
+  padding-left: 1.5rem;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.55rem;
+}
+
+.hero-hooks li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.hero-hooks li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--red);
+  font-family: var(--font-mono);
+}
+
+.hero-avail {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--blue);
+  margin-top: 0.4rem;
+}
+
+.hero__hint {
+  grid-area: hint;
+  margin-top: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.hero__hint-arrow { color: var(--red); }
 
 .hero__actions {
   grid-area: actions;
@@ -807,7 +849,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 @media (max-width: 780px) {
   .hero {
     grid-template-columns: 1fr;
-    grid-template-areas: "kicker" "title" "body" "actions" "margin";
+    grid-template-areas: "kicker" "title" "body" "actions" "hint" "margin";
   }
   .hero__margin { margin-top: 2.6rem; align-self: start; }
   .margin-arrow { display: none; }

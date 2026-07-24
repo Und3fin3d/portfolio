@@ -1,10 +1,12 @@
 /* Reveal-on-scroll with document-order stagger.
    Falls back to manual scroll checks if IntersectionObserver is missing
    or never reports (some in-app webviews). */
+// @ts-check
 (() => {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const targets = new Set(document.querySelectorAll(".reveal"));
+  const targets = new Set(/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".reveal")));
 
+  /** @param {HTMLElement} el  @param {number} [delay] */
   const show = (el, delay = 0) => {
     if (!targets.has(el)) return;
     targets.delete(el);
@@ -26,7 +28,7 @@
       .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
     incoming.forEach((entry, i) => {
       io.unobserve(entry.target);
-      show(entry.target, Math.min(i * 90, 450));
+      show(/** @type {HTMLElement} */ (entry.target), Math.min(i * 90, 450));
     });
   }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
 
