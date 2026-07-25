@@ -11,12 +11,25 @@
   --blue:       oklch(72% 0.035 220);
   --blue-deep:  oklch(60% 0.04 220);
   --bronze:     oklch(74% 0.105 70);
-  --red:        var(--bronze); /* default instrument signal; chapters override it */
   --muted:      oklch(64% 0.014 240);
   --dawn:       oklch(92% 0.01 235);
   --hairline:   color-mix(in oklab, var(--ink) 16%, transparent);
   --grid-line:  color-mix(in oklab, var(--blue) 5%, transparent);
   --grid-major: color-mix(in oklab, var(--blue) 8%, transparent);
+
+  /* Signal colours: the accent a chapter borrows from the body it orbits,
+     each drawn from that body's own surface. --signal is whichever one is
+     currently in play; bronze is the instrument default away from a body. */
+  --signal:         var(--bronze);
+  --signal-sun:     oklch(74% 0.16 48);
+  --signal-mercury: oklch(79% 0.018 65);
+  --signal-venus:   oklch(86% 0.07 90);
+  --signal-earth:   oklch(76% 0.10 235);
+  --signal-mars:    oklch(71% 0.14 42);
+  --signal-jupiter: oklch(80% 0.075 72);
+  --signal-saturn:  oklch(85% 0.08 92);
+  --signal-uranus:  oklch(83% 0.07 195);
+  --signal-neptune: oklch(72% 0.12 260);
 
   --font-display: "Young Serif", "Iowan Old Style", Georgia, serif;
   --font-body: "Literata", Georgia, serif;
@@ -48,9 +61,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: var(--red); color: var(--paper); }
+::selection { background: var(--signal); color: var(--paper); }
 
-:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
 a { color: inherit; }
 
@@ -91,7 +104,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 }
 
 .site-head__nav a { text-decoration: none; color: var(--muted); }
-.site-head__nav a:hover { color: var(--red); }
+.site-head__nav a:hover { color: var(--signal); }
 
 /* ---------- the system is the site ---------- */
 
@@ -111,12 +124,11 @@ main {
   pointer-events: none;  /* the open sky stays draggable between panels */
 }
 
-.hero__dot { color: var(--red); }
+.hero__dot { color: var(--signal); }
 
 /* ---------- chapters ---------- */
 
 .chapter {
-  --red: var(--bronze);
   min-height: 100vh;
   display: grid;
   align-items: center;
@@ -125,17 +137,17 @@ main {
   padding: clamp(5rem, 14vh, 9rem) var(--gutter);
 }
 
-/* Each chapter borrows its signal color from the body it orbits. The
-   surrounding instrument UI stays bronze, so the palette remains legible. */
-.chapter[data-body="sun"]     { --red: oklch(74% 0.16 48); }
-.chapter[data-body="mercury"] { --red: oklch(79% 0.018 65); }
-.chapter[data-body="venus"]   { --red: oklch(86% 0.07 90); }
-.chapter[data-body="earth"]   { --red: oklch(76% 0.10 235); }
-.chapter[data-body="mars"]    { --red: oklch(71% 0.14 42); }
-.chapter[data-body="jupiter"] { --red: oklch(80% 0.075 72); }
-.chapter[data-body="saturn"]  { --red: oklch(85% 0.08 92); }
-.chapter[data-body="uranus"]  { --red: oklch(83% 0.07 195); }
-.chapter[data-body="neptune"] { --red: oklch(72% 0.12 260); }
+/* Which signal each chapter flies. The colours themselves live in :root;
+   this is only the lookup from body to signal. */
+.chapter[data-body="sun"]     { --signal: var(--signal-sun); }
+.chapter[data-body="mercury"] { --signal: var(--signal-mercury); }
+.chapter[data-body="venus"]   { --signal: var(--signal-venus); }
+.chapter[data-body="earth"]   { --signal: var(--signal-earth); }
+.chapter[data-body="mars"]    { --signal: var(--signal-mars); }
+.chapter[data-body="jupiter"] { --signal: var(--signal-jupiter); }
+.chapter[data-body="saturn"]  { --signal: var(--signal-saturn); }
+.chapter[data-body="uranus"]  { --signal: var(--signal-uranus); }
+.chapter[data-body="neptune"] { --signal: var(--signal-neptune); }
 
 .chapter__inner {
   pointer-events: auto;
@@ -158,7 +170,7 @@ main {
 .chapter__eph {
   font-family: var(--font-mono);
   font-size: 0.74rem;
-  color: var(--red);
+  color: var(--signal);
   margin-bottom: 1.1rem;
 }
 
@@ -168,7 +180,7 @@ main {
   font-size: clamp(1.7rem, 3.4vw, 2.4rem);
   letter-spacing: -0.01em;
   margin-bottom: 1rem;
-  color: var(--red);
+  color: var(--signal);
 }
 
 .chapter__lead { max-width: 62ch; }
@@ -193,7 +205,7 @@ main {
   line-height: 1.03;
   letter-spacing: -0.015em;
   text-wrap: balance;
-  color: var(--red);
+  color: var(--signal);
 }
 
 .chapter__sub {
@@ -226,7 +238,7 @@ main {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--red);
+  background: var(--signal);
 }
 
 .hero-avail {
@@ -275,7 +287,7 @@ main {
   color: var(--muted);
 }
 
-.chapter__facts b { color: var(--red); font-weight: 500; }
+.chapter__facts b { color: var(--signal); font-weight: 500; }
 
 /* contact on Neptune */
 
@@ -292,7 +304,7 @@ main {
   overflow-wrap: anywhere;
 }
 
-.contact-mail:hover { border-color: var(--red); }
+.contact-mail:hover { border-color: var(--signal); }
 
 .contact-links {
   display: flex;
@@ -304,7 +316,7 @@ main {
 }
 
 .contact-links a { text-underline-offset: 3px; }
-.contact-links a:hover { color: var(--red); }
+.contact-links a:hover { color: var(--signal); }
 
 /* colophon: how the orrery cheats, and who the imagery belongs to */
 
@@ -322,7 +334,7 @@ main {
 .colophon p + .colophon__head { margin-top: 1rem; }
 
 .colophon__head {
-  color: var(--red);
+  color: var(--signal);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 0.35rem;
@@ -331,7 +343,7 @@ main {
 .colophon sup { font-size: 0.8em; }
 
 .colophon a { text-underline-offset: 3px; }
-.colophon a:hover { color: var(--red); }
+.colophon a:hover { color: var(--signal); }
 
 /* the finale */
 
@@ -390,9 +402,9 @@ main {
   cursor: pointer;
 }
 
-.hud button:hover { color: var(--red); }
+.hud button:hover { color: var(--signal); }
 
-.hud button.is-active { color: var(--red); box-shadow: inset 0 -2px 0 var(--red); }
+.hud button.is-active { color: var(--signal); box-shadow: inset 0 -2px 0 var(--signal); }
 
 /* ---------- buttons ---------- */
 
@@ -413,9 +425,9 @@ main {
               border-color 0.18s var(--ease), transform 0.18s var(--ease);
 }
 
-.btn:hover { background: var(--red); border-color: var(--red); color: var(--paper); transform: translateY(-1px); }
+.btn:hover { background: var(--signal); border-color: var(--signal); color: var(--paper); transform: translateY(-1px); }
 
-.btn--primary { background: var(--red); border-color: var(--red); color: var(--paper); }
+.btn--primary { background: var(--signal); border-color: var(--signal); color: var(--paper); }
 .btn--primary:hover { background: var(--ink); border-color: var(--ink); }
 
 .btn--small { font-size: 0.72rem; padding: 0.5em 0.9em; }
@@ -455,13 +467,13 @@ main {
   max-width: 68ch;
 }
 
-.fig-label { font-style: normal; font-weight: 700; color: var(--red); }
+.fig-label { font-style: normal; font-weight: 700; color: var(--signal); }
 
 .annotation {
   position: absolute;
   font-family: var(--font-mono);
   font-size: 0.76rem;
-  color: var(--red);
+  color: var(--signal);
   transform: rotate(-2deg);
   max-width: 15ch;
   line-height: 1.4;
@@ -470,7 +482,7 @@ main {
 .annotation svg { display: block; width: 56px; }
 
 .annotation svg path, .margin-arrow path {
-  stroke: var(--red);
+  stroke: var(--signal);
   stroke-width: 2.4;
   fill: none;
 }
@@ -529,8 +541,8 @@ main {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  border: 1px solid var(--red);
-  background: var(--red);
+  border: 1px solid var(--signal);
+  background: var(--signal);
   transition: opacity 0.12s linear;
 }
 
@@ -546,7 +558,7 @@ main {
   font-weight: 400;
   font-size: clamp(3.4rem, 6vw, 5rem);
   line-height: 1;
-  color: var(--red);
+  color: var(--signal);
   min-width: 1.2ch;
 }
 
@@ -574,7 +586,7 @@ main {
   transition: width 0.25s var(--ease);
 }
 
-.nn-bars li.is-top .bar i { background: var(--red); }
+.nn-bars li.is-top .bar i { background: var(--signal); }
 .nn-bars li.is-top { color: var(--ink); font-weight: 500; }
 .nn-bars li span:last-child { text-align: right; }
 
@@ -608,15 +620,15 @@ main {
 }
 
 .chess-board button.sq-dark { background: color-mix(in oklab, var(--blue) 13%, var(--paper-high)); }
-.chess-board button.sq-last { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--red) 45%, transparent); }
-.chess-board button.sq-selected { box-shadow: inset 0 0 0 3px var(--red); }
+.chess-board button.sq-last { box-shadow: inset 0 0 0 3px color-mix(in oklab, var(--signal) 45%, transparent); }
+.chess-board button.sq-selected { box-shadow: inset 0 0 0 3px var(--signal); }
 .chess-board button.sq-move::after {
   content: "";
   position: absolute;
   width: 22%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: color-mix(in oklab, var(--red) 55%, transparent);
+  background: color-mix(in oklab, var(--signal) 55%, transparent);
 }
 .chess-board button.sq-capture::after {
   content: "";
@@ -626,7 +638,7 @@ main {
   aspect-ratio: auto;
   border-radius: 50%;
   background: none;
-  border: 3px solid color-mix(in oklab, var(--red) 55%, transparent);
+  border: 3px solid color-mix(in oklab, var(--signal) 55%, transparent);
 }
 
 .chess-status {
@@ -707,12 +719,12 @@ main {
 }
 
 .ledger--lab .ledger__what h3 a { text-decoration: none; border-bottom: 1px solid var(--hairline); }
-.ledger--lab .ledger__what h3 a:hover { color: var(--red); border-color: var(--red); }
+.ledger--lab .ledger__what h3 a:hover { color: var(--signal); border-color: var(--signal); }
 
 .right-mark {
   font-style: normal;
   font-family: var(--font-mono);
-  color: var(--red);
+  color: var(--signal);
   font-size: 0.6em;
   vertical-align: super;
   margin-left: 0.05em;
@@ -759,12 +771,12 @@ main {
 .stamp {
   width: 148px;
   aspect-ratio: 1;
-  border: 3px double var(--red);
+  border: 3px double var(--signal);
   border-radius: 50%;
   display: grid;
   place-content: center;
   text-align: center;
-  color: var(--red);
+  color: var(--signal);
   transform: rotate(-8deg);
   opacity: 0.9;
 }
@@ -866,7 +878,7 @@ main {
   color: var(--muted);
 }
 
-.post__back:hover { color: var(--red); }
+.post__back:hover { color: var(--signal); }
 
 .post__kicker {
   font-family: var(--font-mono);
@@ -896,7 +908,7 @@ main {
 }
 
 .post__body a { text-underline-offset: 3px; }
-.post__body a:hover { color: var(--red); }
+.post__body a:hover { color: var(--signal); }
 
 .post__body code {
   font-family: var(--font-mono);
