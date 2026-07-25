@@ -672,7 +672,9 @@ main {
   width: 100%;
   height: auto;
   border: 1px solid var(--hairline);
-  background: var(--paper-high);
+  /* matches COL.bg in js/maze.js: the canvas is blank until the maze scrolls
+     into view, and a mismatch here reads as a flash when it first paints */
+  background: #050E17;
 }
 
 .maze-algos { display: flex; gap: 0.5rem; margin-bottom: 1.1rem; }
