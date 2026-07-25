@@ -13,27 +13,25 @@
   /** @param {number} x  @param {number} y */
   const idx = (x, y) => y * W + x;
 
-  /* On theme for Earth, the body this chapter orbits: ocean blues for the
-     board, and the route in the same gold the orrery draws its orbits with,
-     since it is an instrument reading rather than part of the terrain. Blue
-     alone would collapse the hierarchy, so the one warm colour is spent on
-     the answer. Hex, not oklch: canvas silently ignores a colour string it
-     cannot parse, which would leave the previous fill in place.
+  /* On theme for Earth, the body this chapter orbits. Walls are the dark
+     mass and the corridors read as open water, which is the way round a
+     maze wants to be read: you trace the light channels. The route keeps
+     the red it has always been, the one warm note against the blue.
+     Hex, not oklch: canvas silently ignores a colour string it cannot
+     parse, which would leave the previous fill in place.
      Written as oklch for the record:
-       bg   16% 0.025 245   wall    42% 0.055 240
-       path 82% 0.14   80   visited 76% 0.11  235  (Earth's own signal) */
+       wall  20% 0.045 242    corridor 89% 0.04  225
+       flood 48% 0.115 238    route    50% 0.20   27 */
   const COL = {
-    bg: "#050E17",        /* deep ocean, corridor not yet reached */
-    wall: "#305168",      /* slate shelf, the structure */
-    visited: "#64BCED",   /* the flood, drawn at VISITED_ALPHA */
-    path: "#F3B94C",      /* the found route */
-    mark: "#F3B94C",      /* start and goal, tied to the route */
+    wall: "#011828",      /* deep navy, the mass */
+    bg: "#C0E1EF",        /* pale ocean, corridor not yet reached */
+    visited: "#006596",   /* the flood, drawn at VISITED_ALPHA */
+    path: "#BB0916",      /* the found route */
+    mark: "#BB0916",      /* start and goal, tied to the route */
   };
-  /* Raised from 0.45: back when visited and path were the same red, alpha was
-     the only thing keeping them apart. Hue does that job now, so alpha is
-     free to buy legibility instead. Composited over bg this lands at #4788AD,
-     which clears both the wall below it and the gold above. */
-  const VISITED_ALPHA = 0.7;
+  /* Composites to #569DBE over the corridor: dark enough to read as explored,
+     light enough to leave the red route the strongest thing on the board. */
+  const VISITED_ALPHA = 0.55;
 
   const statVisited = /** @type {HTMLElement} */ (document.getElementById("maze-visited"));
   const statPath = /** @type {HTMLElement} */ (document.getElementById("maze-path"));
