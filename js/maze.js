@@ -13,17 +13,27 @@
   /** @param {number} x  @param {number} y */
   const idx = (x, y) => y * W + x;
 
-  /* Keep the maze's original design2 paper/indigo/red palette even when it is
-     embedded in the dark solar theme. Visited cells use the same red at
-     partial opacity, leaving the completed route visually strongest. */
+  /* On theme for Earth, the body this chapter orbits: ocean blues for the
+     board, and the route in the same gold the orrery draws its orbits with,
+     since it is an instrument reading rather than part of the terrain. Blue
+     alone would collapse the hierarchy, so the one warm colour is spent on
+     the answer. Hex, not oklch: canvas silently ignores a colour string it
+     cannot parse, which would leave the previous fill in place.
+     Written as oklch for the record:
+       bg   16% 0.025 245   wall    42% 0.055 240
+       path 82% 0.14   80   visited 76% 0.11  235  (Earth's own signal) */
   const COL = {
-  wall: "#123D7B",
-  bg: "#FBF9F5",
-  visited: "#BE2323",
-  path: "#BE2323",
-  mark: "#BE2323",
+    bg: "#050E17",        /* deep ocean, corridor not yet reached */
+    wall: "#305168",      /* slate shelf, the structure */
+    visited: "#64BCED",   /* the flood, drawn at VISITED_ALPHA */
+    path: "#F3B94C",      /* the found route */
+    mark: "#F3B94C",      /* start and goal, tied to the route */
   };
-  const VISITED_ALPHA = 0.45;
+  /* Raised from 0.45: back when visited and path were the same red, alpha was
+     the only thing keeping them apart. Hue does that job now, so alpha is
+     free to buy legibility instead. Composited over bg this lands at #4788AD,
+     which clears both the wall below it and the gold above. */
+  const VISITED_ALPHA = 0.7;
 
   const statVisited = /** @type {HTMLElement} */ (document.getElementById("maze-visited"));
   const statPath = /** @type {HTMLElement} */ (document.getElementById("maze-path"));
