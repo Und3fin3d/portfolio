@@ -179,28 +179,26 @@
   };
 
   const drawStarterDigit = async () => {
-    ctx.save();
-   
     const response = await fetch("firstdraw.json");
-    const p = await response.json();
-
-
-    let [last, ... points] = p;
-    ctx.beginPath();
-    for (const point of points) {
-      ctx.moveTo(last.x, last.y);
-      ctx.lineTo(point.x, point.y);
-      ctx.stroke();
-      last = point;
+    if (!response.ok) {
+      throw new Error(`Failed to load firstdraw.json: ${response.status}`);
     }
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(p.x, p.y);
-    console.log(last.x, last.y);
-    ctx.stroke();
-    last = p;
+
+    const [first, ...points] = await response.json();
+    if (!first) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(first.x, first.y);
+
+    for (const point of points) {
+      ctx.lineTo(point.x, point.y);
+    }
 
     ctx.stroke();
     ctx.restore();
+
+    predict();
     hint.textContent = "start here: draw a digit, 0–9";
   };
 

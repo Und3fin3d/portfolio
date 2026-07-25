@@ -46,7 +46,7 @@
 <canvas id="solar-canvas" aria-label="A live 3D solar system. Planet positions are computed for today's date. Each section of this site lives on a planet; scroll to travel between them, drag to rotate, and pinch to zoom."></canvas>
 
 <header class="site-head">
-  <a class="site-head__name" href="#top">Will.</a>
+  <a class="site-head__name" href="#top" data-goto="#top">Will.</a>
   <nav class="site-head__nav" aria-label="Sections">
     <a href="#digits">Demos</a>
     <a href="#projects">Work</a>
@@ -57,9 +57,8 @@
   </nav>
 </header>
 
-<main id="top">
-
-  <section class="chapter chapter--hero" data-body="sun" data-side="l">
+<main>
+  <section class="chapter chapter--hero" id="top" data-body="sun" data-side="l">
     <div class="chapter__inner chapter__inner--bare">
       <p class="chapter__kicker reveal">Will&ensp;·&ensp;BSc Computer Science, University of Southampton</p>
       <h1 class="reveal">Built from scratch<span class="hero__dot">.</span></h1>

@@ -39,28 +39,28 @@
 
   /* [value at J2000, rate per Julian century] */
   const EL = [
-    { name: "Mercury", glyph: "☿", col: "oklch(74% 0.015 60)",  px: 2.6,
+    { name: "Mercury", col: "oklch(74% 0.015 60)",  px: 2.6,
       a: [0.38709927, 0.00000037],  e: [0.20563593, 0.00001906],  I: [7.00497902, -0.00594749],
       L: [252.25032350, 149472.67411175], W: [77.45779628, 0.16047689],  O: [48.33076593, -0.12534081] },
-    { name: "Venus",   glyph: "♀", col: "oklch(85% 0.055 85)",  px: 4.1,
+    { name: "Venus", col: "oklch(85% 0.055 85)",  px: 4.1,
       a: [0.72333566, 0.00000390],  e: [0.00677672, -0.00004107], I: [3.39467605, -0.00078890],
       L: [181.97909950, 58517.81538729],  W: [131.60246718, 0.00268329], O: [76.67984255, -0.27769418] },
-    { name: "Earth",   glyph: "⊕", col: "oklch(72% 0.09 235)",  px: 4.2,
+    { name: "Earth", col: "oklch(72% 0.09 235)",  px: 4.2,
       a: [1.00000261, 0.00000562],  e: [0.01671123, -0.00004392], I: [-0.00001531, -0.01294668],
       L: [100.46457166, 35999.37244981],  W: [102.93768193, 0.32327364], O: [0, 0] },
-    { name: "Mars",    glyph: "♂", col: "oklch(66% 0.13 40)",   px: 3.15,
+    { name: "Mars",  col: "oklch(66% 0.13 40)",   px: 3.15,
       a: [1.52371034, 0.00001847],  e: [0.09339410, 0.00007882],  I: [1.84969142, -0.00813131],
       L: [-4.55343205, 19140.30268499],   W: [-23.94362959, 0.44441088], O: [49.55953891, -0.29257343] },
-    { name: "Jupiter", glyph: "♃", col: "oklch(77% 0.065 70)",  px: 13.9,
+    { name: "Jupiter", col: "oklch(77% 0.065 70)",  px: 13.9,
       a: [5.20288700, -0.00011607], e: [0.04838624, -0.00013253], I: [1.30439695, -0.00183714],
       L: [34.39644051, 3034.74612775],    W: [14.72847983, 0.21252668],  O: [100.47390909, 0.20469106] },
-    { name: "Saturn",  glyph: "♄", col: "oklch(83% 0.075 90)",  px: 12.7,
+    { name: "Saturn", col: "oklch(83% 0.075 90)",  px: 12.7,
       a: [9.53667594, -0.00125060], e: [0.05386179, -0.00050991], I: [2.48599187, 0.00193609],
       L: [49.95424423, 1222.49362201],    W: [92.59887831, -0.41897216], O: [113.66242448, -0.28867794] },
-    { name: "Uranus",  glyph: "♅", col: "oklch(80% 0.055 200)", px: 8.4,
+    { name: "Uranus", col: "oklch(80% 0.055 200)", px: 8.4,
       a: [19.18916464, -0.00196176], e: [0.04725744, -0.00004397], I: [0.77263783, -0.00242939],
       L: [313.23810451, 428.48202785],    W: [170.95427630, 0.40805281], O: [74.01692503, 0.04240589] },
-    { name: "Neptune", glyph: "♆", col: "oklch(64% 0.10 260)",  px: 8.3,
+    { name: "Neptune", col: "oklch(64% 0.10 260)",  px: 8.3,
       a: [30.06992276, 0.00026291], e: [0.00859048, 0.00005105],  I: [1.77004347, 0.00035372],
       L: [-55.12002969, 218.45945325],    W: [44.96476227, -0.32241464], O: [131.78422574, -0.00508664] },
   ];
@@ -528,7 +528,11 @@
   /* ---------- HUD ---------- */
   const dateEl = /** @type {HTMLElement} */ (document.getElementById("solar-date"));
   const speedBtns = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".orrery__speeds button[data-speed]"))];
-  const gotoBtns = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".orrery__planets button[data-goto]"))];
+  const planetBtns = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".orrery__planets button[data-goto]"))];
+  const gotoBtns = [
+    .../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".site-head__name[data-goto]")),
+    ...planetBtns,
+  ];
 
   /** @param {number} s */
   const setSpeed = s => {
@@ -541,9 +545,22 @@
 
   /** @param {Element} el */
   const flyTo = el => el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
-  gotoBtns.forEach(b => b.addEventListener("click", () => {
-    const sel = b.dataset.goto || "#top";
-    const t = sel === "#top" ? chapters[0].el : document.querySelector(sel);
+  gotoBtns.forEach(b => b.addEventListener("click", event => {
+    /* Keep the anchor's native Cmd/Ctrl-click and context-menu behaviour so
+       opening it in a new tab still loads /#top. */
+    if (event instanceof MouseEvent &&
+        (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
+
+    const sel = b.dataset.goto;
+    if (!sel) return;
+
+    event.preventDefault();
+    if (sel === "#top") {
+      window.scrollTo({ top: 0, left: 0, behavior: reduced ? "auto" : "smooth" });
+      return;
+    }
+
+    const t = document.querySelector(sel);
     if (t) flyTo(t);
   }));
 
@@ -828,7 +845,7 @@
 
     if (chapters[activeChapter].body === "system" && !userSpun && !dragging && !reduced) yaw += dt * 0.02;
 
-    gotoBtns.forEach((b, i) => b.classList.toggle("is-active", i === Math.round(cRaw) && i < gotoBtns.length));
+    planetBtns.forEach((b, i) => b.classList.toggle("is-active", i === Math.round(cRaw)));
 
     draw(T, cSm);
     requestAnimationFrame(tick);
@@ -840,7 +857,11 @@
   window.addEventListener("load", () => {
     recalcCenters();
     const hash = location.hash;
-    if (hash) {
+    if (hash === "#top") {
+      /* #top means the document origin, not the centre of the full-height
+         hero chapter. Keep the fragment for new-tab fallback semantics. */
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    } else if (hash) {
       const target = document.querySelector(hash);
       if (target) {
         /* behavior "auto" defers to CSS, and styles.css sets

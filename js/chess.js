@@ -584,7 +584,7 @@
     let best = null;
     /** @type {Move[]} */
     let bestPv = [];
-    for (let depth = 1; depth <= 20 && !aborted; depth++) {
+    for (let depth = 1; depth <= 30 && !aborted; depth++) {
       /** @type {Move[]} */
       const pv = [];
       const score = negamax(depth, -Infinity, Infinity, color, 0, pv);
@@ -673,7 +673,7 @@
     thinking = true;
     setStatus("Engine is thinking…");
     setTimeout(() => {
-      const res = search(BLACK, 350);
+      const res = search(BLACK, 500);
       if (res.move) {
         const wasCapture = !!(occ[WHITE] & (1 << res.move.t)) || (res.move.type === P && (1 << res.move.t) === ep);
         const u = make(res.move, BLACK);
