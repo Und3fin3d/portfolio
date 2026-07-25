@@ -15,6 +15,13 @@
     el.addEventListener("transitionend", () => (el.style.transitionDelay = ""), { once: true });
   };
 
+  /* The hero is the initial screen, so it must not depend on each individual
+     child crossing the observer threshold. In a short viewport the lower
+     actions and facts can begin below the fold. */
+  document.querySelectorAll(".chapter--hero .reveal").forEach((el, i) => {
+    show(/** @type {HTMLElement} */ (el), Math.min(i * 90, 450));
+  });
+
   if (reduced || !("IntersectionObserver" in window)) {
     targets.forEach(el => show(el));
     return;
