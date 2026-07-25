@@ -178,33 +178,27 @@
     [...dots1, ...dots2].forEach(d => (d.style.opacity = "0.08"));
   };
 
-  const drawStarterDigit = () => {
+  const drawStarterDigit = async () => {
+    const response = await fetch("firstdraw.json");
+    if (!response.ok) {
+      throw new Error(`Failed to load firstdraw.json: ${response.status}`);
+    }
+
+    const [first, ...points] = await response.json();
+    if (!first) return;
+
     ctx.save();
-    ctx.globalAlpha = 0.68;
-    ctx.lineWidth = 18;
     ctx.beginPath();
-    ctx.moveTo(102, 91);
-    ctx.quadraticCurveTo(119, 75, 137, 65);
-    ctx.quadraticCurveTo(134, 126, 138, 207);
-    ctx.stroke();
+    ctx.moveTo(first.x, first.y);
 
-    ctx.lineWidth = 15;
-    ctx.beginPath();
-    ctx.moveTo(104, 216);
-    ctx.quadraticCurveTo(137, 211, 171, 216);
-    ctx.stroke();
+    for (const point of points) {
+      ctx.lineTo(point.x, point.y);
+    }
 
-    ctx.globalAlpha = 0.13;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(108, 94);
-    ctx.quadraticCurveTo(121, 81, 134, 74);
-    ctx.moveTo(143, 68);
-    ctx.quadraticCurveTo(140, 132, 144, 204);
-    ctx.moveTo(109, 220);
-    ctx.quadraticCurveTo(138, 216, 168, 221);
     ctx.stroke();
     ctx.restore();
+
+    predict();
     hint.textContent = "start here: draw a digit, 0–9";
   };
 
