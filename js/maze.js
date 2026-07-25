@@ -13,15 +13,17 @@
   /** @param {number} x  @param {number} y */
   const idx = (x, y) => y * W + x;
 
-  /** @param {string} name */
-  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  /* Keep the maze's original design2 paper/indigo/red palette even when it is
+     embedded in the dark solar theme. Visited cells use the same red at
+     partial opacity, leaving the completed route visually strongest. */
   const COL = {
-    wall: css("--blue") || "#2c437c",
-    bg: css("--paper-high") || "#faf8f2",
-    visited: "color-mix(in oklab, " + (css("--blue") || "#2c437c") + " 22%, " + (css("--paper-high") || "#faf8f2") + ")",
-    path: css("--red") || "#c33b26",
-    mark: css("--red") || "#c33b26",
+    wall: "oklch(37% 0.115 258)",
+    bg: "oklch(98.2% 0.006 85)",
+    visited: "oklch(52% 0.19 27)",
+    path: "oklch(52% 0.19 27)",
+    mark: "oklch(52% 0.19 27)",
   };
+  const VISITED_ALPHA = 0.45;
 
   const statVisited = /** @type {HTMLElement} */ (document.getElementById("maze-visited"));
   const statPath = /** @type {HTMLElement} */ (document.getElementById("maze-path"));
@@ -146,10 +148,13 @@
   };
 
   /* ---------- drawing ---------- */
-  /** @param {number} i  @param {string} color  @param {number} [inset] */
-  const rect = (i, color, inset = 0) => {
+  /** @param {number} i  @param {string} color  @param {number} [inset]  @param {number} [alpha] */
+  const rect = (i, color, inset = 0, alpha = 1) => {
+    const prevAlpha = ctx.globalAlpha;
+    ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.fillRect((i % W) * cell + inset, ((i / W) | 0) * cell + inset, cell - 2 * inset, cell - 2 * inset);
+    ctx.globalAlpha = prevAlpha;
   };
 
   const drawBase = () => {
@@ -195,7 +200,7 @@
     drawBase();
 
     if (reduced) {
-      result.order.forEach(i => { if (i !== idx(START.x, START.y)) rect(i, COL.visited); });
+      result.order.forEach(i => { if (i !== idx(START.x, START.y)) rect(i, COL.visited, 0, VISITED_ALPHA); });
       drawMarks();
       drawPathSegment(result.path);
       setStats(result.order.length, result.path.length, result.frontierPeak);
@@ -207,7 +212,7 @@
     let i = 0;
     const stepVisit = () => {
       if (my !== token) return;
-      for (let k = 0; k < batch && i < result.order.length; k++, i++) rect(result.order[i], COL.visited);
+      for (let k = 0; k < batch && i < result.order.length; k++, i++) rect(result.order[i], COL.visited, 0, VISITED_ALPHA);
       drawMarks();
       setStats(i, 0, result.frontierPeak);
       if (i < result.order.length) requestAnimationFrame(stepVisit);
@@ -273,7 +278,7 @@
       size();
       drawBase();
       if (lastResult) {
-        lastResult.order.forEach(i => rect(i, COL.visited));
+        lastResult.order.forEach(i => rect(i, COL.visited, 0, VISITED_ALPHA));
         drawMarks();
         drawPathSegment(lastResult.path);
       }
