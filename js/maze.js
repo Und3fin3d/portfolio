@@ -17,11 +17,11 @@
      embedded in the dark solar theme. Visited cells use the same red at
      partial opacity, leaving the completed route visually strongest. */
   const COL = {
-    wall: "oklch(37% 0.115 258)",
-    bg: "oklch(98.2% 0.006 85)",
-    visited: "oklch(52% 0.19 27)",
-    path: "oklch(52% 0.19 27)",
-    mark: "oklch(52% 0.19 27)",
+  wall: "#123D7B",
+  bg: "#FBF9F5",
+  visited: "#BE2323",
+  path: "#BE2323",
+  mark: "#BE2323",
   };
   const VISITED_ALPHA = 0.45;
 
