@@ -940,11 +940,20 @@ main {
 
 .post__body p + p { margin-top: 1rem; }
 
+/* Section headings have to win against a 1.15rem serif body. At 1.4rem in
+   the same colour they were only a fifth larger than the text they were
+   meant to be breaking, so they read as emphasis rather than as a new
+   section. Bigger, in the signal colour, sitting under a rule, with more
+   air above than below so each one binds to the text it introduces. */
 .post__body h2 {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 1.4rem;
-  margin: 2.4rem 0 0.8rem;
+  font-size: clamp(1.6rem, 2.5vw, 1.95rem);
+  line-height: 1.15;
+  color: var(--signal);
+  border-top: 1px solid var(--hairline);
+  padding-top: 1.5rem;
+  margin: 3.2rem 0 0.9rem;
 }
 
 .post__body a { text-underline-offset: 3px; }
