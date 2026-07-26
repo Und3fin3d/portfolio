@@ -785,12 +785,20 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 
 .post__body p + p { margin-top: 1rem; }
 
+/* Same treatment as the solar sheet: at 1.4rem in the body colour these
+   read as emphasis rather than as a section break. Ink blue is the
+   notebook's structural colour, used by the hero title and the project
+   names, so headings borrow it rather than the red pen. */
 .post__body h2 {
   font-family: var(--font-display);
   font-weight: 750;
   font-variation-settings: "wdth" 118;
-  font-size: 1.4rem;
-  margin: 2.4rem 0 0.8rem;
+  font-size: clamp(1.6rem, 2.5vw, 1.95rem);
+  line-height: 1.15;
+  color: var(--blue);
+  border-top: 1px solid var(--hairline);
+  padding-top: 1.5rem;
+  margin: 3.2rem 0 0.9rem;
 }
 
 .post__body a { text-underline-offset: 3px; }
