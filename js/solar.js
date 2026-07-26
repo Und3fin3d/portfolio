@@ -593,6 +593,15 @@
   const setZoom = value => {
     zoomOffset = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
   };
+  const ZOOM_STEP = 0.28;
+  /** @type {HTMLElement} */ (document.getElementById("solar-zoom-in")).addEventListener("click", () => {
+    userSpun = true;
+    setZoom(zoomOffset - ZOOM_STEP);
+  });
+  /** @type {HTMLElement} */ (document.getElementById("solar-zoom-out")).addEventListener("click", () => {
+    userSpun = true;
+    setZoom(zoomOffset + ZOOM_STEP);
+  });
   const pinchState = () => {
     const [a, b] = [...pointers.values()];
     if (!a || !b) return null;
