@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A 5×5 chess engine, and the three bugs that hid in the port — Will</title>
+<meta name="description" content="Magic bitboards, Zobrist hashing and a pruned negamax search on a 25-square board, then porting it to JavaScript and differential-testing it against the original.">
+<meta name="author" content="William Greenfield">
+<link rel="canonical" href="https://williamgreenfield.com/design2/blog/chess-fragments-engine.html">
+<meta property="og:title" content="A 5×5 chess engine, and the three bugs that hid in the port">
+<meta property="og:description" content="Magic bitboards, Zobrist hashing and a pruned negamax search on a 25-square board.">
+<meta property="og:type" content="article">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="site-head__name" href="../">Will.</a>
+  <nav class="site-head__nav" aria-label="Sections">
+    <a href="../">Home</a>
+    <a href="index.html">Blog</a>
+    <a href="../#contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <article class="post">
+    <a class="post__back" href="index.html">&larr; all posts</a>
+    <p class="post__kicker">July 2026</p>
+    <h1>A 5×5 chess engine, and the three bugs that hid in the port</h1>
+    <div class="post__body">
+      <p>My second-year AI coursework was to write an agent for Chess Fragments, a 5×5 variant. Five files of board, five pieces a side, and the corner piece is the Right, which moves as a rook and a knight combined. Pawns keep their double-push, en passant and promotion. Agents were graded by playing each other, so this was not an exercise in getting the rules right; it was an exercise in searching deeper than the other person in the same amount of time.</p>
+
+      <p>It is the engine you can <a href="../#fig-chess">play on the front page</a>, ported to JavaScript. That port is the second half of this post, and it went less smoothly than the first.</p>
+
+      <h2>Bitboards</h2>
+      <p>Twenty-five squares means a position fits in 25 bits, so every piece type for every colour is one integer, and the questions you ask constantly become single instructions. Which squares do I occupy? An OR of my boards. Is that square empty? One AND. Where can this knight go? A table lookup masked against my own pieces.</p>
+
+      <p>Sliding pieces are the difficult case, because a rook's moves depend on what is in the way. The trick is magic bitboards. For each square, mask the occupancy down to the squares that could possibly block a ray, multiply by a carefully chosen constant so the scattered bits collapse into a dense index, shift down, and read the answer out of a precomputed table. One multiply, one shift, one lookup, and the blockers are handled.</p>
+
+      <p>Those constants are not derived. They are found by trying random numbers until one produces no harmful collisions, checked exhaustively against every occupancy the square can see, and then baked into the source.</p>
+
+      <h2>Search</h2>
+      <p>The search is negamax with alpha-beta, run under iterative deepening: search to depth one, then two, then three, until the clock runs out, and play the best move from the deepest search that finished.</p>
+
+      <p>Searching shallow first sounds wasteful and is the opposite. Alpha-beta only prunes well if good moves are tried early, and the previous iteration tells you exactly which move looked best. Each pass makes the next one cheaper by more than it costs.</p>
+
+      <p>Time is budgeted per move from the clock remaining and how many moves are likely left, with a reserve held back so the engine never flags.</p>
+
+      <h2>Search enhancements</h2>
+      <p>Everything above is textbook. The depth comes from the pruning stacked on top.</p>
+
+      <p><strong>Null-move pruning.</strong> Let the opponent move twice. If their position is still bad, mine was so good that the real move will beat the window too, and the whole subtree can be skipped.</p>
+
+      <p><strong>Late move reductions.</strong> After the first few moves at a node, the rest are unlikely to be best, given they were ordered last. Search them shallower, and only pay for a full search if one unexpectedly beats alpha.</p>
+
+      <p><strong>Check extensions.</strong> When in check, the position is forcing and the evaluation is unreliable, so search one ply further before trusting it.</p>
+
+      <p><strong>Futility and late move pruning.</strong> Near the leaves, if the static evaluation is far enough below alpha that no quiet move plausibly recovers, skip the quiet moves.</p>
+
+      <p><strong>Quiescence search.</strong> The one that matters most. Stopping the search at a fixed depth means stopping mid-exchange, and an engine that counts material after capturing a queen but before losing its own will hang pieces cheerfully. So at the leaves, keep searching captures only until the position is quiet, with delta pruning to skip captures that cannot recover the deficit.</p>
+
+      <p>A Zobrist-hashed transposition table sits underneath all of it. Every position gets a hash built by XOR, so making a move updates it incrementally, and positions reached by different move orders collide into the same entry and reuse the earlier result.</p>
+
+      <h2>Move ordering</h2>
+      <p>Alpha-beta's efficiency depends almost entirely on move ordering, so the ordering is a small priority scheme: the transposition table's best move first, then captures by most valuable victim and least valuable attacker, then killer moves, which are quiet moves that caused a cutoff at the same depth elsewhere, then counter-moves, then a history heuristic that scores moves by how often they have caused cutoffs anywhere.</p>
+
+      <h2>Evaluation</h2>
+      <p>Material plus piece-square tables. Each piece has a value, and a 25-entry table nudging it toward squares that are good for that piece. The Right is worth roughly twice a queen here, which is not a typo: on a board this small, a piece that moves as a rook and a knight covers a huge fraction of the squares.</p>
+
+      <h2>Porting it, and being wrong three times</h2>
+      <p>I wanted the engine on this site, which meant JavaScript. Most of it translated mechanically, but the magics did not: magic indexing needs a wrapping 64-bit multiply, JavaScript numbers are doubles, its bitwise operators truncate to 32 bits, and BigInt is far too slow to sit in a search loop.</p>
+
+      <p>The fix is <code>Math.imul</code>, which is a wrapping 32-bit multiply, exactly the right semantics at half the width. On 25 squares the relevant occupancy is at most six bits, so the tables are tiny and 32-bit magics are plentiful. I searched for a fresh set and verified each one exhaustively.</p>
+
+      <p>Then the browser engine started hanging pieces. It would drop a knight, or the Right, and occasionally a queen. The Python original never did.</p>
+
+      <p>Two engines that should agree is a gift, because the original is an oracle. I ran the JavaScript one headless under Node and compared it against the Python directly: attack sets bit-identical across 150,000 random lookups, perft matching exactly to depth four, evaluation identical on hundreds of random positions. That cleared move generation, make and unmake, and evaluation, which was the useful half of the answer. The bug was in the search.</p>
+
+      <p>There were three.</p>
+
+      <p><strong>The null-move window.</strong> I had implemented the null-move search with a null window, which is standard. But at the root the window is infinite, and negating infinity to build the child's window produced a degenerate bound that the child satisfied instantly. The negation came back as positive infinity, cleared beta, and the engine concluded that doing nothing was already winning by force. It then played whatever move fell out of a search poisoned with fictional mate scores.</p>
+
+      <p><strong>The check extension.</strong> The Python computes an effective depth to decide whether to drop into quiescence, but recurses on the original depth. My port incremented the depth itself, so along a forcing sequence every check bumped it back up and it never decreased. An extension that never terminates is not an extension, it is an infinite search, and it manufactured mates that were not there.</p>
+
+      <p><strong>Mate scores in the table.</strong> The Python stores mate as positive or negative infinity, which survives being stored at one depth and read at another. I had replaced it with a finite score counting distance to mate, which does not, unless you adjust it by the current ply on the way in and on the way out. I had not, so a mate found deep came back looking much closer than it was.</p>
+
+      <p>All three shared a shape. Each was a place where the Python leaned on a property I had quietly dropped in translation, and none of them was visible in the diff.</p>
+
+      <h2>What is left</h2>
+      <p>After the fixes the browser engine still disagrees with the Python on roughly one position in forty, choosing a move a few hundred centipawns worse. That is not a bug. The Python has pruning refinements the port never received, so it is simply the stronger searcher at equal depth, and I would rather say that than quietly claim they are equivalent.</p>
+
+      <p>At 350 milliseconds a move the JavaScript version reaches depth ten or eleven, around 400,000 nodes. The source is unminified, so <code>js/chess.js</code> is all there if you want to read it.</p>
+    </div>
+  </article>
+</main>
+
+<footer class="footer" id="contact">
+  <div class="footer__inner">
+    <p class="footer__kicker">Open to graduate roles from 2027.</p>
+    <a class="footer__mail" href="mailto:mail@williamgreenfield.com">mail@williamgreenfield.com</a>
+    <div class="footer__links">
+      <a href="../assets/WilliamGreenfield_CV.pdf" download>CV</a>
+      <a href="index.html">Blog</a>
+      <a href="https://github.com/Und3fin3d" rel="noopener">github.com/Und3fin3d</a>
+      <a href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/main.js" defer></script>
+</body>
+</html>
