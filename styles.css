@@ -953,16 +953,18 @@ main {
    meant to be breaking, so they read as emphasis rather than as a new
    section. Size, the signal colour, and a clear step of space do the work.
 
-   Deliberately no rule above: the page sits on a 120px grid, so a full
-   width line lands at an arbitrary offset from the grid's own horizontals
-   and reads as a misalignment. Space separates without competing. */
+   The divider is back now that .post is a panel: the grid sits behind
+   glass, so a rule no longer has the background's own horizontals to be
+   mistaken against. It matches the ledger and spec rows elsewhere. */
 .post__body h2 {
   font-family: var(--font-display);
   font-weight: 400;
   font-size: clamp(1.6rem, 2.5vw, 1.95rem);
   line-height: 1.15;
   color: var(--signal);
-  margin: 3.6rem 0 0.9rem;
+  border-top: 1px solid var(--hairline);
+  padding-top: 1.6rem;
+  margin: 3.2rem 0 0.9rem;
 }
 
 .post__body a { text-underline-offset: 3px; }

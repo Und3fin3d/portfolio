@@ -748,10 +748,16 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 
 /* ---------- writing / blog ---------- */
 
+/* A sheet laid on the graph paper, sized to the reading column. Long-form
+   text sat directly on the 24px grid, which is denser here than on the
+   solar side, so rules and gridlines were competing. On its own sheet the
+   dividers read cleanly and the grid stays as the surface underneath. */
 .post {
-  max-width: var(--wrap);
-  margin-inline: auto;
-  padding: clamp(3.5rem, 9vh, 6rem) var(--gutter) 0;
+  width: min(72ch, 100%);
+  margin: clamp(2rem, 6vh, 4rem) auto clamp(3rem, 8vh, 5rem);
+  padding: clamp(1.75rem, 4vw, 3rem);
+  border: 1px solid var(--hairline);
+  background: var(--paper-high);
 }
 
 .post__back {
@@ -796,7 +802,9 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   font-size: clamp(1.6rem, 2.5vw, 1.95rem);
   line-height: 1.15;
   color: var(--blue);
-  margin: 3.6rem 0 0.9rem;
+  border-top: 1px solid var(--hairline);
+  padding-top: 1.6rem;
+  margin: 3.2rem 0 0.9rem;
 }
 
 .post__body a { text-underline-offset: 3px; }
