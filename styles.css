@@ -901,6 +901,11 @@ main {
 /* ---------- writing / blog ---------- */
 
 .post {
+  /* main is pointer-events: none so the orrery stays draggable between the
+     chapter panels, and each .chapter__inner opts back in. The blog has no
+     orrery and no chapters, so it has to opt in here or every link in the
+     post body is unclickable. */
+  pointer-events: auto;
   max-width: var(--wrap);
   margin-inline: auto;
   padding: clamp(3.5rem, 9vh, 6rem) var(--gutter) 0;
