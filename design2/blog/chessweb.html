@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A chess server for a friend group — Will</title>
+<meta name="description" content="Building a multiplayer chess platform on Flask and WebSockets: an object-oriented rules engine, real-time pairing, and the awkward rules nobody warns you about.">
+<meta name="author" content="William Greenfield">
+<link rel="canonical" href="https://williamgreenfield.com/design2/blog/chessweb.html">
+<meta property="og:title" content="A chess server for a friend group">
+<meta property="og:description" content="Building a multiplayer chess platform on Flask and WebSockets, rules engine and all.">
+<meta property="og:type" content="article">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="site-head__name" href="../">Will.</a>
+  <nav class="site-head__nav" aria-label="Sections">
+    <a href="../">Home</a>
+    <a href="index.html">Blog</a>
+    <a href="../#contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <article class="post">
+    <a class="post__back" href="index.html">&larr; all posts</a>
+    <p class="post__kicker">July 2026</p>
+    <h1>A chess server for a friend group</h1>
+    <div class="post__body">
+      <p>My friends and I played a lot of chess, and the platforms we used were built for millions of strangers rather than for six people who already know each other. Most of what we wanted was either behind a subscription or buried under features aimed at a global user base. So I wrote our own. It started as my A-level coursework and I have rebuilt it since.</p>
+
+      <p>Before writing anything I surveyed the people who would actually use it and compared the ten most popular platforms feature by feature. That exercise was mostly useful for what it ruled out. I deliberately left out game chat and public forums, which sound like obvious wins and are not: a group of friends already talks on WhatsApp or a voice call while playing, chat on large platforms turns abusive often enough that everyone ends up building word filters, and a forum needs a big user base before it is worth anything at all. Cutting them was the first real design decision.</p>
+
+      <h2>The rules are the hard part</h2>
+      <p>Chess is deceptively awkward to implement. Six pieces move six different ways, which is tedious but easy. The trouble is the exceptions.</p>
+
+      <p>Castling is the only move where two pieces move at once, and it is legal only if neither the king nor that rook has moved before, the squares between them are empty, and the king is neither in check nor passing through a square under attack. The rook, oddly, is allowed to pass through an attacked square. En passant needs a memory: when a pawn advances two squares I set a flag on the square it skipped, and that flag has to be cleared exactly one move later, because the capture is available for that move and no longer. Promotion changes the piece object underneath you mid-move.</p>
+
+      <p>The engine is a <code>Board</code> holding <code>Square</code> objects, with the pieces as a class hierarchy so each one answers the same <code>legalmoves</code> question in its own way. Legality is two-stage: generate the pseudo-legal moves for a piece, then, for each one, deep-copy the board, play it, and discard the move if it leaves my own king in check. That is the honest, obvious way to do it and it is correct. It is also the slowest part of the whole program, and I will come back to it.</p>
+
+      <p>The whole module leans on two functions from the standard library and nothing else: <code>deepcopy</code>, for exactly the check test above, and <code>split</code>, for parsing FEN strings so a position can be loaded from notation.</p>
+
+      <h2>Two players, one board, no refreshing</h2>
+      <p>A chess game is two browsers that have to agree on one board, so the server pushes rather than waits to be asked. Flask handles routing and Flask-SocketIO carries the moves over WebSockets.</p>
+
+      <p>When a client connects, if it is signed in, it joins a room named after its own user id. That one line is what makes direct challenges possible: to invite someone, the server emits into the room named after them, wherever they happen to be on the site. Pairing works the same way. A player emits a request carrying a time control and an increment, and the server either matches them against someone already waiting on identical settings or opens a new board and puts them in a waiting room until somebody arrives.</p>
+
+      <p>Sessions use Flask-Login with remember-me set, which matters more than it sounds. Closing a tab by accident in the middle of a game should not lose the game.</p>
+
+      <h2>Storing it</h2>
+      <p>SQLAlchemy over MySQL. A <code>Player</code> carries the username, email, a hashed password, rating and a win, loss and draw count. Passwords go through werkzeug's <code>generate_password_hash</code>, so the database never sees one.</p>
+
+      <p>Friendship is the interesting table. It is a many-to-many relationship from players to players, which means a self-referential association table with both sides joining back to the same primary key. The relationship loads lazily, so asking for a player does not drag their entire friend list along with it.</p>
+
+      <p>I tested the rules engine rather than the framework, because the framework is not the part I wrote: eighteen unit tests over the square and board objects, covering FEN loading, check detection, promotion, pseudo-legal and legal move generation, and en passant capture. They run in 0.169 seconds, which is the sort of number that means you actually run them.</p>
+
+      <h2>What the rebuild added</h2>
+      <p>The second version added the feature I most wanted and had listed as optional the first time round: bughouse. Four players on two boards, and a piece you capture is handed to your partner, who may drop it onto their own board as a move. It is the best answer I know to a group with mismatched strength, because the weaker pair can still win on the other board.</p>
+
+      <p>It is also a neat inheritance problem. The bughouse board subclasses the ordinary one and adds a pool of held pieces, extending the FEN string to carry it, so everything that was already true about legal moves stays true and only the new drop move has to be described. Friend lists, direct challenges, rematches and clock timeouts came with it.</p>
+
+      <h2>What I would change</h2>
+      <p>The deep copy. Copying the entire board for every pseudo-legal move, just to ask whether the king ends up in check, is the wrong shape of solution: it allocates a whole position to answer a yes or no question. Two years later I wrote a chess engine on <a href="chess-fragments-engine.html">bitboards with make and unmake</a>, where testing a move means flipping a few bits and flipping them back. That engine searches hundreds of thousands of positions a second. This one copies the board to look at one.</p>
+
+      <p>It never mattered here, because a human takes seconds per move and the server only ever evaluates the position in front of it. But it is the clearest example I have of the same problem being solved twice, badly and then well, and knowing why the second one is faster is most of what I got out of writing both.</p>
+    </div>
+  </article>
+</main>
+
+<footer class="footer" id="contact">
+  <div class="footer__inner">
+    <p class="footer__kicker">Open to graduate roles from 2027.</p>
+    <a class="footer__mail" href="mailto:mail@williamgreenfield.com">mail@williamgreenfield.com</a>
+    <div class="footer__links">
+      <a href="../assets/WilliamGreenfield_CV.pdf" download>CV</a>
+      <a href="index.html">Blog</a>
+      <a href="https://github.com/Und3fin3d" rel="noopener">github.com/Und3fin3d</a>
+      <a href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/main.js" defer></script>
+</body>
+</html>

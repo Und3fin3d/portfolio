@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A neural network in NumPy and nothing else — Will</title>
+<meta name="description" content="Deriving backpropagation by hand and training a 784-20-10-10 network on MNIST with NumPy alone, then running those same weights in the browser.">
+<meta name="author" content="William Greenfield">
+<link rel="canonical" href="https://williamgreenfield.com/blog/mnist-from-scratch.html">
+<meta property="og:title" content="A neural network in NumPy and nothing else">
+<meta property="og:description" content="Deriving backpropagation by hand, training on MNIST, and shipping the weights to a browser.">
+<meta property="og:type" content="article">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Literata:ital,opsz,wght@0,7..72,300..700;1,7..72,300..700&family=Azeret+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="site-head__name" href="../">Will.</a>
+  <nav class="site-head__nav" aria-label="Sections">
+    <a href="../">Home</a>
+    <a href="index.html">Blog</a>
+    <a href="../#contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <article class="post">
+    <a class="post__back" href="index.html">&larr; all posts</a>
+    <p class="post__kicker">July 2026</p>
+    <h1>A neural network in NumPy and nothing else</h1>
+    <div class="post__body">
+      <p>I wrote this in sixth form to find out whether I could derive backpropagation rather than import it. The rule I set myself was that NumPy could do the matrix algebra and nothing else was allowed to do the learning. No autograd, no layers class, no optimiser. If a gradient appeared in the code it was because I had worked it out on paper first.</p>
+
+      <p>It is the network you can <a href="../#fig-nn">draw on from the front page</a>. Those are the original trained weights, not a retrained copy.</p>
+
+      <h2>The shape of it</h2>
+      <p>784 inputs, one for each pixel of a 28 by 28 image, then a hidden layer of 20, then 10, then 10 outputs for the ten digits. ReLU between the hidden layers, softmax at the end, cross-entropy as the loss.</p>
+
+      <p>Weights start from a normal distribution scaled by the square root of two over the number of inputs to that layer. That factor is not decoration. Initialise a deep ReLU network from a plain unit normal and the variance of the activations shrinks layer by layer until the gradients arriving at the early weights are too small to move them. The scaling keeps the variance roughly constant on the way through.</p>
+
+      <h2>The one piece of maths worth knowing</h2>
+      <p>Deriving the backward pass by hand is mostly patient chain rule, and it produces one genuinely satisfying result. The gradient of the loss with respect to the final pre-activation is:</p>
+
+      <pre><code>dC_dz3 = a3 - y</code></pre>
+
+      <p>The prediction minus the truth. That is all. Softmax has an awkward derivative, cross-entropy has an awkward derivative, and when you compose them the awkward parts cancel exactly. I would have taken that on faith from a textbook; having ground through it, I know why the two are always paired.</p>
+
+      <p>From there it is mechanical. Push the error back through the weight matrix with a transpose, multiply by the derivative of ReLU, which is just a boolean mask of where the input was positive, and repeat. Every gradient is averaged over the batch, and the batch is the entire training set, so this is plain full-batch gradient descent at a learning rate of 0.1.</p>
+
+      <h2>Being careful with the data</h2>
+      <p>The images arrive as a CSV of 42,000 rows. I shuffle, hold back the first thousand as a test set, train on the rest, and divide every pixel by 255 so the inputs sit between zero and one.</p>
+
+      <p>Holding back that thousand is the only thing standing between you and fooling yourself. A network that has seen an image can classify it, and that tells you nothing about whether it has learned to read digits.</p>
+
+      <h2>Changing one thing at a time</h2>
+      <p>Once it trained, the interesting part was the arguing with it. There is an <code>experiments</code> folder where each file changes exactly one thing and keeps the rest fixed: sigmoid instead of ReLU, a 16 by 16 hidden pair instead of 20 and 10, one hidden layer, three hidden layers, no biases at all, mini-batches instead of full batch, and a deliberately undersized training set.</p>
+
+      <p>That last one is the most instructive to run. Starve it of examples and the training accuracy climbs beautifully while the test accuracy stalls, which is overfitting shown to you rather than described at you.</p>
+
+      <h2>Getting it into a browser</h2>
+      <p>The demo on this site runs the same network. I exported the six arrays as base64 float32 in a JSON file and reimplemented the forward pass in JavaScript, which is three matrix multiplies and is not the hard part.</p>
+
+      <p>The hard part is that what you draw is not what MNIST looks like. MNIST digits were size-normalised to fit a 20 pixel box and then centred by their centre of mass inside a 28 pixel frame. A stroke drawn anywhere on a canvas is a different distribution entirely, and a network trained on one and shown the other will guess badly while being entirely correct. So the canvas is cropped to the ink's bounding box, scaled so the longest side is 20 pixels, and shifted so the centre of mass lands in the middle. Only then does it go in.</p>
+
+      <p>The saved weights score 95.8% across all 42,000 labelled images, and 96.8% on the thousand it never trained on. It is a small network trained by the simplest method there is, and I would rather quote the number I can reproduce than the best one I ever saw on screen.</p>
+
+      <h2>Was it worth not using a library</h2>
+      <p>For learning, entirely. I have since used PyTorch, and it is better at this in every measurable way. But <code>loss.backward()</code> means something different to me now than it would have if I had started there, because I have written the loop it replaces, and I know which line it stands in for.</p>
+    </div>
+  </article>
+</main>
+
+<footer class="footer" id="contact">
+  <div class="footer__inner">
+    <p class="footer__kicker">Open to graduate roles from 2027.</p>
+    <a class="footer__mail" href="mailto:mail@williamgreenfield.com">mail@williamgreenfield.com</a>
+    <div class="footer__links">
+      <a href="../assets/WilliamGreenfield_CV.pdf" download>CV</a>
+      <a href="index.html">Blog</a>
+      <a href="https://github.com/Und3fin3d" rel="noopener">github.com/Und3fin3d</a>
+      <a href="https://www.linkedin.com/in/william-greenfield-431356294/" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/main.js" defer></script>
+</body>
+</html>
