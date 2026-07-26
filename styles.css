@@ -906,9 +906,17 @@ main {
      orrery and no chapters, so it has to opt in here or every link in the
      post body is unclickable. */
   pointer-events: auto;
-  max-width: var(--wrap);
-  margin-inline: auto;
-  padding: clamp(3.5rem, 9vh, 6rem) var(--gutter) 0;
+
+  /* The same panel the chapters use, sized to hug the reading column rather
+     than the full wrap: long-form text sat directly on the 120px grid, with
+     gridlines running through the paragraphs. Behind glass the grid reads as
+     texture instead of interference. */
+  width: min(72ch, 100%);
+  margin: clamp(2rem, 6vh, 4rem) auto clamp(3rem, 8vh, 5rem);
+  padding: clamp(1.75rem, 4vw, 3rem);
+  border: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--paper) 84%, transparent);
+  backdrop-filter: blur(5px);
 }
 
 .post__back {
