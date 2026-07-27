@@ -36,70 +36,68 @@
     <p class="post__kicker">July 2026</p>
     <h1>A 5×5 chess engine, and porting it to JS</h1>
     <div class="post__body">
-      <p>My second-year AI coursework was to write an agent for Chess Fragments, which is a 5×5 variant. Five files of board, five pieces a side, and the piece in the corner is the Right, which moves as a rook and a knight put together. Pawns keep their double push, en passant and promotion. The agents were graded by playing each other, so it was never really an exercise in getting the rules right, it was an exercise in searching deeper than whoever you were playing in the same amount of time.</p>
+      <p>For my second-year artificial intelligence coursework, I developed an agent for Chess Fragments, a 5×5 chess variant. Each player has five pieces, including the Right: a piece combining the movement of a rook and a knight. Pawns retain their double move, en passant and promotion. The agents were evaluated by playing against each other, so performance depended on searching accurately within a fixed time.</p>
 
-      <p>It is the engine you can <a href="../#fig-chess">play on the front page</a>, ported over to JavaScript. That port is the second half of this post and it went a lot less smoothly than the first.</p>
+      <p>The <a href="../#fig-chess">version on the front page</a> is a later JavaScript port of the original Python engine. The first part of this post describes the design presented for the coursework; the second covers the differences and errors found during the port.</p>
 
       <h2>Bitboards</h2>
-      <p>With twenty-five squares a position fits into 25 bits, so every piece type for each colour is one integer and most of the questions you end up asking constantly turn into single instructions. Which squares do I occupy is an OR across my boards, whether a square is empty is one AND, and where a knight can go is a table lookup masked against my own pieces.</p>
+      <p>As the board contains only 25 squares, the position of each piece type can be represented by a single 25-bit integer. Combining piece positions becomes a bitwise OR operation, testing occupancy becomes a bitwise AND, and the available moves for a knight can be found from a precomputed table masked against friendly pieces.</p>
 
-      <p>Sliding pieces are the harder case because a rook's moves depend on whatever is in the way. The usual answer is magic bitboards, where for each square you mask the occupancy down to only the squares that could block a ray, multiply that by a constant chosen so the scattered bits collapse into a dense index, shift it down, and use the result to look up the attack set in a table you built in advance. That is one multiply, one shift and one lookup, and the blockers are dealt with.</p>
+      <p>Sliding pieces require a different method because their moves depend on the occupied squares along each ray. Magic bitboards reduce the relevant occupancy to a table index. For each square, the possible blockers are masked, multiplied by a selected constant and shifted to produce an index into a precomputed attack table. A sliding-piece attack can therefore be found with one multiplication, one shift and one lookup.</p>
 
-      <p>The constants themselves are not derived from anything. You find them by trying random numbers until one of them happens to produce no harmful collisions, check it exhaustively against every occupancy that square can see, and then paste it into the source.</p>
+      <p>The magic constants are found by testing random values. Each candidate is checked against every relevant occupancy for that square and retained only when any collisions map to the same attack set.</p>
 
-      <h2>Search</h2>
-      <p>The search is negamax with alpha-beta under iterative deepening, so it searches to depth one, then depth two, then three, and carries on until the clock runs out, and then plays the best move from whichever depth finished last.</p>
+      <h2>Search algorithm</h2>
+      <p>The engine uses negamax with alpha-beta pruning and iterative deepening. It completes a search at depth one, then depth two, followed by increasing depths until the time limit is reached. The selected move is taken from the deepest completed iteration.</p>
 
-      <p>Searching shallow first sounds like it wastes time and it does the opposite. Alpha-beta only prunes properly when good moves get tried early on, and the previous iteration tells you which move looked best, so each pass makes the next one cheaper by more than the pass itself cost.</p>
+      <p>Although the earlier searches repeat some work, they improve move ordering for the next iteration. Alpha-beta pruning is most effective when strong moves are examined first, and the previous principal variation provides that ordering.</p>
 
-      <p>Time gets budgeted per move out of the clock that is left and roughly how many moves are still to play, with a bit held in reserve so it never flags.</p>
+      <p>The time allocated to a move is calculated from the remaining clock and the estimated number of moves left in the game, with a reserve kept to reduce the risk of losing on time.</p>
 
       <h2>Search enhancements</h2>
-      <p>All of the above is textbook, and the depth really comes from the pruning that gets stacked on top of it.</p>
+      <p>Several additional methods reduce the number of positions that must be searched:</p>
 
-      <p><strong>Null-move pruning.</strong> You let the opponent move twice, and if their position is still bad after that then yours was good enough that the real move is going to beat the window anyway, so the whole subtree can be skipped.</p>
+      <p><strong>Null-move pruning.</strong> The engine temporarily gives the opponent an extra move. If the position still exceeds beta, the current player is assumed to have a move strong enough to cause a cutoff and the remaining subtree is skipped.</p>
 
-      <p><strong>Late move reductions.</strong> After the first few moves at a node the remaining ones are unlikely to be best, given the ordering put them last, so they get searched shallower and only get a full search if one of them unexpectedly beats alpha.</p>
+      <p><strong>Late move reductions.</strong> Moves examined later in an ordered move list are less likely to be best. They are first searched at a reduced depth and receive a full search only if the reduced search improves alpha.</p>
 
-      <p><strong>Check extensions.</strong> When you are in check the position is forcing and the evaluation is not worth much, so it searches a ply further before believing it.</p>
+      <p><strong>Check extensions.</strong> Positions in check are forcing and are searched for an additional ply before the static evaluation is accepted.</p>
 
-      <p><strong>Futility and late move pruning.</strong> Close to the leaves, if the static evaluation is far enough below alpha that no quiet move is plausibly going to recover it, the quiet moves get skipped.</p>
+      <p><strong>Futility and late move pruning.</strong> Near the leaves, quiet moves are omitted when the static evaluation is sufficiently below alpha that they are unlikely to improve the result.</p>
 
-      <p><strong>Quiescence search.</strong> This is the one that matters most. Stopping at a fixed depth means you sometimes stop in the middle of an exchange, and an engine that counts up the material after taking a queen but before losing its own will give pieces away all day. So at the leaves it carries on searching captures only, until the position is quiet, with delta pruning to skip the captures that could not recover the deficit anyway.</p>
+      <p><strong>Quiescence search.</strong> A fixed-depth search may stop part-way through an exchange and evaluate an unstable position. At the leaves, the engine therefore continues searching captures until the position is quiet. Delta pruning omits captures that cannot recover the difference between the current evaluation and alpha.</p>
 
-      <p>Underneath all of that is a transposition table keyed on a Zobrist hash. Each position has a hash built out of XORs, which means making a move updates it incrementally rather than rebuilding it, and positions you reach through different move orders land on the same entry so the earlier result gets reused.</p>
+      <p>A transposition table stores earlier search results using Zobrist hashes. Because the hash is constructed with XOR operations, it can be updated incrementally when a move is made. Positions reached through different move orders produce the same key, allowing the previous result to be reused.</p>
 
       <h2>Move ordering</h2>
-      <p>How well alpha-beta prunes depends almost entirely on move ordering, so the ordering is a small priority scheme: the transposition table's best move goes first, then captures sorted by most valuable victim and least valuable attacker, then killer moves, which are quiet moves that caused a cutoff at the same depth somewhere else, then counter-moves, and finally a history heuristic scoring moves by how often they have caused cutoffs anywhere at all.</p>
+      <p>The effectiveness of alpha-beta pruning depends on examining strong moves first. The engine prioritises the transposition table move, captures ordered by most valuable victim and least valuable attacker, killer moves, counter-moves and finally quiet moves ranked by the history heuristic.</p>
 
       <h2>Evaluation</h2>
-      <p>Material and piece-square tables. Every piece has a value and a 25-entry table that nudges it towards the squares that suit it. The Right ends up worth roughly twice a queen, which looks like a mistake and is not, because on a board this small a piece moving as both a rook and a knight covers an enormous proportion of the squares.</p>
+      <p>The static evaluation combines material values with piece-square tables. Each piece type has a material value and a 25-entry table rewarding suitable positions. The Right is valued at approximately twice a queen because the combination of rook and knight movement controls a large proportion of a 5×5 board.</p>
 
-      <h2>Porting it, and being wrong three times</h2>
-      <p>I wanted the engine running on this site, which meant JavaScript. Most of it came across mechanically but the magics did not, because magic indexing needs a 64-bit multiply that wraps, and JavaScript numbers are doubles, its bitwise operators cut everything down to 32 bits, and BigInt is far too slow to be sitting inside a search loop.</p>
+      <h2>Porting the engine to JavaScript</h2>
+      <p>Running the engine in the browser required a JavaScript implementation. Most of the code could be translated directly, but the magic-bitboard indexing relied on wrapped 64-bit multiplication. JavaScript numbers are double-precision values, its bitwise operators use 32-bit integers, and BigInt was too slow for the search loop.</p>
 
-      <p>What fixes it is <code>Math.imul</code>, which is a 32-bit multiply that wraps, so exactly the semantics magic indexing wants but at half the width. On 25 squares the occupancy that matters is at most six bits, so the tables are tiny and there are plenty of 32-bit magics to find. I searched for a new set and checked each one exhaustively.</p>
+      <p><code>Math.imul</code> provides wrapped 32-bit multiplication. On a 25-square board the relevant occupancy contains at most six bits, so 32-bit magic constants are sufficient. I generated a new set and checked every constant exhaustively.</p>
 
-      <p>Then the browser version started hanging pieces. It would give away a knight, or the Right, and every so often a queen, and the Python one never did any of that.</p>
+      <p>The first browser version still selected moves that lost major pieces without compensation. Since the Python and JavaScript engines were intended to implement the same design, the Python version could be used as a reference.</p>
 
-      <p>Having two engines that ought to agree made this much easier, since the Python one works as an oracle. I ran the JavaScript engine headless under Node and compared the two directly, and the attack sets came out bit-identical over 150,000 random lookups, perft matched exactly down to depth four and the evaluation was identical across hundreds of random positions. That ruled out move generation, make and unmake, and the evaluation, which was the useful half of the answer, and left the search.</p>
+      <p>I compared both engines directly under Node. Their attack sets were bit-identical across 150,000 random lookups, perft matched to depth four, and the evaluation matched across hundreds of random positions. These checks ruled out move generation, make and unmake, and static evaluation, leaving the search as the source of the disagreement.</p>
 
-      <p>There were three things wrong with it.</p>
+      <p>Three separate search errors were identified:</p>
 
-      <p><strong>The null-move window.</strong> I had written the null-move search with a null window, which is the normal thing to do. At the root though the window is infinite, and negating infinity to build the child's window gave a degenerate bound that the child satisfied straight away. It came back as positive infinity, which cleared beta, and the engine decided that doing nothing was already winning by force. After that it played whatever fell out of a search full of mate scores that did not exist.</p>
+      <p><strong>The null-move window.</strong> The null-move search used a null window. At the root, however, the window was infinite. Negating infinity to construct the child window produced a degenerate bound that returned positive infinity immediately, causing a false beta cutoff and invalid mate scores.</p>
 
-      <p><strong>The check extension.</strong> The Python works out an effective depth to decide whether to drop into quiescence, but it still recurses on the original depth. My port incremented the depth itself, so going down a forcing line every check pushed it back up again and it never came down. An extension that never terminates just runs the search away, and it was inventing mates that were not there either.</p>
+      <p><strong>The check extension.</strong> The Python version calculates an effective depth when deciding whether to enter quiescence, but recurses using the original depth. The port increased the depth itself, so repeated checks could prevent the search depth from decreasing and generate false mate results.</p>
 
-      <p><strong>Mate scores in the table.</strong> The Python stores mate as plus or minus infinity, which survives being written at one depth and read back at another. I had swapped that for a finite score counting the distance to mate, which does not survive it unless you adjust the score by the current ply on the way in and again on the way out, and I had not been doing that. So a mate found deep in the tree came back looking a lot closer than it actually was.</p>
+      <p><strong>Mate scores in the table.</strong> The Python engine stores mate as positive or negative infinity. The port used a finite score containing the distance to mate, but did not adjust the score by the current ply when writing to and reading from the transposition table. A mate found deep in the tree could therefore be returned as though it were much closer.</p>
 
-      <p>Each of the three was somewhere the Python was relying on a property I had dropped without noticing in translation, and none of them showed up in the diff.</p>
+      <p>In each case, the Python implementation depended on a property that was lost during translation rather than on an obvious difference in the overall algorithm.</p>
 
-      <h2>What is left</h2>
-      <p>Even after the fixes the browser engine still disagrees with the Python on about one position in forty and picks a move a few hundred centipawns worse. That is not a bug though. The Python has pruning refinements the port never got, so at equal depth it is simply the stronger searcher, and I would rather write that down than pretend the two are equivalent.</p>
+      <h2>Current result</h2>
+      <p>After these fixes, the browser engine still selects a different move from the Python version in approximately one position out of forty, sometimes with an evaluation several hundred centipawns lower. This is expected because the Python engine contains additional pruning refinements that were not included in the port, making it stronger at the same search depth.</p>
 
-      <p>The coursework itself is not public, since it was submitted work and the marking runs against everyone's agent, but the JavaScript port is unminified on this site, so <code>js/chess.js</code> is readable from view source.</p>
-
-      <p>At 350 milliseconds a move the JavaScript version reaches depth ten or eleven, around 400,000 nodes. The source is unminified, so <code>js/chess.js</code> is all there if you want to read it.</p>
+      <p>With a limit of 350 milliseconds per move, the JavaScript version normally reaches depth ten or eleven and searches about 400,000 nodes. The submitted Python coursework is not public, but the JavaScript port is unminified and can be read in <code>js/chess.js</code>.</p>
     </div>
   </article>
 </main>

@@ -36,43 +36,43 @@
     <p class="post__kicker">July 2026</p>
     <h1>A neural network from scratch in NumPy</h1>
     <div class="post__body">
-      <p>I wrote this in sixth form because I wanted to know whether I could actually derive backpropagation myself rather than just calling a library that already does it. The rule I set was that NumPy was allowed to do matrix multiplication and that was all, so no autograd, no layers, no optimiser, and every gradient in the file is one I had worked out on paper before I typed it in.</p>
+      <p>After working through the theory underlying neural networks, I built a network to identify handwritten digits. The objective was to apply the concepts in practice and understand how the design choices affected performance. I avoided frameworks such as TensorFlow, PyTorch and Keras because they hide much of the implementation. NumPy was used for the matrix operations, but the forward pass, backpropagation and gradient descent were written from scratch.</p>
 
-      <p>It is the same network you can <a href="../#fig-nn">draw on from the front page</a>, running the weights I trained back then rather than a retrained copy. The training code, the experiments and the saved weights are all <a href="https://github.com/Und3fin3d/NN-MNIST" rel="noopener">on GitHub</a>.</p>
+      <p>The same saved network is used in the <a href="../#fig-nn">interactive demo on the front page</a>; it has not been retrained for the website. The training code, experiments and weights are available <a href="https://github.com/Und3fin3d/NN-MNIST" rel="noopener">on GitHub</a>.</p>
 
-      <h2>The shape of it</h2>
-      <p>There are 784 inputs, one per pixel of a 28 by 28 image, then a hidden layer of 20, a second hidden layer of 10, and 10 outputs for the digits. ReLU sits between the hidden layers, softmax is at the end and the loss is cross entropy.</p>
+      <h2>Design and structure</h2>
+      <p>The input data consists of 28 by 28 pixel grayscale images. This gives the network 784 input neurons, one for each pixel. These feed into two hidden layers containing 20 and 10 neurons, followed by 10 output neurons representing the digits zero to nine. ReLU is used in the hidden layers, with softmax and cross-entropy loss at the output.</p>
 
-      <p>The weights start off random but scaled by the square root of two over however many inputs that layer has, which I did not think would matter very much when I first read about it. It does matter though. If you initialise a ReLU network from a plain normal distribution the activations shrink at every layer, and by the time the gradients have travelled back to the first set of weights there is so little signal left that they barely move at all.</p>
+      <p>Weight initialisation initially appeared to be a minor concern, but it had a serious effect during training. I first selected weights randomly between -0.5 and 0.5. Changing to Kaiming He initialisation improved convergence and accuracy because it is designed for non-linear activation functions such as ReLU. Poor initialisation can make the gradients too small or too large as they pass through the network.</p>
 
-      <h2>The one bit of maths worth knowing</h2>
-      <p>Most of the backward pass is the chain rule applied patiently and it is fairly tedious to derive, but there is one result at the end that makes it worth doing. The gradient of the loss with respect to the final pre-activation comes out as:</p>
+      <h2>Backpropagation</h2>
+      <p>Training requires the network to determine how much each weight and bias contributed to the total error. These gradients are calculated from the output layer backwards using the chain rule. Although the derivatives of softmax and cross entropy are complicated separately, their product simplifies to:</p>
 
       <pre><code>dC_dz3 = a3 - y</code></pre>
 
-      <p>which is just the prediction minus the truth. Softmax on its own has a fairly unpleasant derivative and so does cross entropy, and when you compose the two nearly all of that cancels out. If I had read it in a textbook I would have believed it and moved on, whereas having gone through the algebra I know why the two are almost always used together.</p>
+      <p>In other words, the gradient at the output is the model's prediction minus the target value. Deriving this result made it clear why softmax and cross entropy are normally used together for classification.</p>
 
-      <p>After that it is mechanical. You push the error backwards through each weight matrix with a transpose, multiply by the derivative of ReLU (which is only a mask of wherever the input was positive) and repeat. Every gradient is averaged over the batch, and my batch is the entire training set, so this is ordinary full batch gradient descent with a learning rate of 0.1.</p>
+      <p>The error is then passed backwards through each transposed weight matrix and multiplied by the derivative of ReLU. Each gradient is averaged across the batch. The base network uses full-batch gradient descent with a learning rate of 0.1.</p>
 
-      <h2>Being careful with the data</h2>
-      <p>The images come in as a CSV of 42,000 rows. I shuffle it, keep the first thousand back as a test set, train on everything else, and divide the pixels by 255 so the inputs sit between 0 and 1.</p>
+      <h2>Data preparation</h2>
+      <p>The dataset is a CSV file containing 42,000 labelled images. I shuffle the data, reserve 1,000 images for testing and train on the remaining 41,000. The pixel values are divided by 255 to normalise them to a range between zero and one, and the labels are converted using one-hot encoding.</p>
 
-      <p>Keeping that thousand back is the part that stops you fooling yourself, since a network can classify an image it has already been trained on without having learned anything general at all, so measuring on the training set tells you almost nothing.</p>
+      <p>The separate test set measures how well the network generalises to unseen images. A high training accuracy alone can be misleading because the network may have memorised features in the training data instead of learning patterns that transfer.</p>
 
-      <h2>Changing one thing at a time</h2>
-      <p>Once it was training properly the more interesting part was arguing with it. There is an <code>experiments</code> folder where each file changes exactly one thing and leaves the rest alone: sigmoid instead of ReLU, a 16 and 16 hidden pair instead of 20 and 10, one hidden layer, three hidden layers, no biases at all, mini batches instead of full batch, and a training set I deliberately made too small.</p>
+      <h2>Experiments and results</h2>
+      <p>To assess how design features affected performance, each experiment changed one feature while keeping the rest of the base network constant. The experiments covered the number of hidden layers and neurons, sigmoid and tanh activation functions, different learning rates, a smaller training set, removing biases and mini-batch gradient descent.</p>
 
-      <p>That last one is the one worth running yourself. Starve it of examples and the training accuracy carries on climbing quite happily whilst the test accuracy flattens off, and watching those two lines come apart taught me more about overfitting than anything I had read about it.</p>
+      <p>Reducing the amount of training data provided the clearest example of overfitting. Training accuracy continued to increase while test accuracy flattened, showing that the network was becoming better at its training examples without improving on unseen data. More layers and neurons could improve accuracy, but they also increased training time and the risk of overfitting. ReLU performed similarly to tanh but trained faster, while sigmoid was less accurate because of the vanishing-gradient problem.</p>
 
-      <h2>Getting it into a browser</h2>
-      <p>The demo on this site runs the same network. I exported the six arrays as base64 float32 into a JSON file and rewrote the forward pass in JavaScript, which is only three matrix multiplies, so that part was not really the problem.</p>
+      <h2>Running the network in a browser</h2>
+      <p>For the website demo, I exported the six weight and bias arrays as base64-encoded 32-bit floats and implemented the forward pass in JavaScript. This only requires three matrix multiplications and the activation functions.</p>
 
-      <p>The problem is that whatever you draw on a canvas is not what MNIST actually looks like. Those digits were scaled to fit inside a 20 pixel box and then positioned by their centre of mass within a 28 pixel frame, so a stroke drawn anywhere on a blank canvas comes from a completely different distribution and the network will get it wrong whilst behaving exactly as it was trained to. So before anything is fed in, the canvas is cropped down to the ink, scaled so the longest side is 20 pixels, and shifted so the centre of mass ends up in the middle.</p>
+      <p>A hand-drawn canvas image does not initially have the same format as an MNIST image. MNIST digits are scaled to fit within a 20 pixel box and positioned by their centre of mass inside a 28 pixel frame. Before classification, the browser therefore crops the image to its drawn pixels, scales its longest side to 20 pixels and shifts its centre of mass to the middle.</p>
 
-      <p>The weights I saved get 95.8% across all 42,000 labelled images and 96.8% on the thousand it never trained on. It is a small network trained in about the simplest way there is, and I would rather put the number I can reproduce on here than the best one I happened to see while I was tuning it.</p>
+      <p>The saved weights achieve 95.8% accuracy across all 42,000 labelled images and 96.8% on the 1,000-image test set. These are the results reproduced with the weights used by the demo, rather than the highest result observed during experimentation.</p>
 
-      <h2>Was it worth not using a library</h2>
-      <p>For learning it definitely was. I use PyTorch now and it is better in every way you could measure, but <code>loss.backward()</code> means something different to me than it would have done if I had started there, because I have written the loop that it stands in for.</p>
+      <h2>What I learned</h2>
+      <p>Building the network without a framework made the relationship between the theory and the implementation much clearer. I now use PyTorch for this type of work, but writing the calculations myself first gave me a better understanding of what functions such as <code>loss.backward()</code> are doing.</p>
     </div>
   </article>
 </main>
