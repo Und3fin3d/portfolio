@@ -36,43 +36,43 @@
     <p class="post__kicker">July 2026</p>
     <h1>A neural network from scratch in NumPy</h1>
     <div class="post__body">
-      <p>I wrote this in sixth form to find out whether I could derive backpropagation rather than import it. The rule I set myself was that NumPy could do the matrix algebra and nothing else was allowed to do the learning. No autograd, no layers class, no optimiser. If a gradient appeared in the code it was because I had worked it out on paper first.</p>
+      <p>I wrote this in sixth form because I wanted to know whether I could actually derive backpropagation myself rather than just calling a library that already does it. The rule I set was that NumPy was allowed to do matrix multiplication and that was all, so no autograd, no layers, no optimiser, and every gradient in the file is one I had worked out on paper before I typed it in.</p>
 
-      <p>It is the network you can <a href="../#fig-nn">draw on from the front page</a>. Those are the original trained weights, not a retrained copy.</p>
+      <p>It is the same network you can <a href="../#fig-nn">draw on from the front page</a>, running the weights I trained back then rather than a retrained copy.</p>
 
       <h2>The shape of it</h2>
-      <p>784 inputs, one for each pixel of a 28 by 28 image, then a hidden layer of 20, then 10, then 10 outputs for the ten digits. ReLU between the hidden layers, softmax at the end, cross-entropy as the loss.</p>
+      <p>There are 784 inputs, one per pixel of a 28 by 28 image, then a hidden layer of 20, a second hidden layer of 10, and 10 outputs for the digits. ReLU sits between the hidden layers, softmax is at the end and the loss is cross entropy.</p>
 
-      <p>Weights start from a normal distribution scaled by the square root of two over the number of inputs to that layer. That factor is not decoration. Initialise a deep ReLU network from a plain unit normal and the variance of the activations shrinks layer by layer until the gradients arriving at the early weights are too small to move them. The scaling keeps the variance roughly constant on the way through.</p>
+      <p>The weights start off random but scaled by the square root of two over however many inputs that layer has, which I did not think would matter very much when I first read about it. It does matter though. If you initialise a ReLU network from a plain normal distribution the activations shrink at every layer, and by the time the gradients have travelled back to the first set of weights there is so little signal left that they barely move at all.</p>
 
-      <h2>The one piece of maths worth knowing</h2>
-      <p>Deriving the backward pass by hand is mostly patient chain rule, and it produces one genuinely satisfying result. The gradient of the loss with respect to the final pre-activation is:</p>
+      <h2>The one bit of maths worth knowing</h2>
+      <p>Most of the backward pass is the chain rule applied patiently and it is fairly tedious to derive, but there is one result at the end that makes it worth doing. The gradient of the loss with respect to the final pre-activation comes out as:</p>
 
       <pre><code>dC_dz3 = a3 - y</code></pre>
 
-      <p>The prediction minus the truth. That is all. Softmax has an awkward derivative, cross-entropy has an awkward derivative, and when you compose them the awkward parts cancel exactly. I would have taken that on faith from a textbook; having ground through it, I know why the two are always paired.</p>
+      <p>which is just the prediction minus the truth. Softmax on its own has a fairly unpleasant derivative and so does cross entropy, and when you compose the two nearly all of that cancels out. If I had read it in a textbook I would have believed it and moved on, whereas having gone through the algebra I know why the two are almost always used together.</p>
 
-      <p>From there it is mechanical. Push the error back through the weight matrix with a transpose, multiply by the derivative of ReLU, which is just a boolean mask of where the input was positive, and repeat. Every gradient is averaged over the batch, and the batch is the entire training set, so this is plain full-batch gradient descent at a learning rate of 0.1.</p>
+      <p>After that it is mechanical. You push the error backwards through each weight matrix with a transpose, multiply by the derivative of ReLU (which is only a mask of wherever the input was positive) and repeat. Every gradient is averaged over the batch, and my batch is the entire training set, so this is ordinary full batch gradient descent with a learning rate of 0.1.</p>
 
       <h2>Being careful with the data</h2>
-      <p>The images arrive as a CSV of 42,000 rows. I shuffle, hold back the first thousand as a test set, train on the rest, and divide every pixel by 255 so the inputs sit between zero and one.</p>
+      <p>The images come in as a CSV of 42,000 rows. I shuffle it, keep the first thousand back as a test set, train on everything else, and divide the pixels by 255 so the inputs sit between 0 and 1.</p>
 
-      <p>Holding back that thousand is the only thing standing between you and fooling yourself. A network that has seen an image can classify it, and that tells you nothing about whether it has learned to read digits.</p>
+      <p>Keeping that thousand back is the part that stops you fooling yourself, since a network can classify an image it has already been trained on without having learned anything general at all, so measuring on the training set tells you almost nothing.</p>
 
       <h2>Changing one thing at a time</h2>
-      <p>Once it trained, the interesting part was the arguing with it. There is an <code>experiments</code> folder where each file changes exactly one thing and keeps the rest fixed: sigmoid instead of ReLU, a 16 by 16 hidden pair instead of 20 and 10, one hidden layer, three hidden layers, no biases at all, mini-batches instead of full batch, and a deliberately undersized training set.</p>
+      <p>Once it was training properly the more interesting part was arguing with it. There is an <code>experiments</code> folder where each file changes exactly one thing and leaves the rest alone: sigmoid instead of ReLU, a 16 and 16 hidden pair instead of 20 and 10, one hidden layer, three hidden layers, no biases at all, mini batches instead of full batch, and a training set I deliberately made too small.</p>
 
-      <p>That last one is the most instructive to run. Starve it of examples and the training accuracy climbs beautifully while the test accuracy stalls, which is overfitting shown to you rather than described at you.</p>
+      <p>That last one is the one worth running yourself. Starve it of examples and the training accuracy carries on climbing quite happily whilst the test accuracy flattens off, and watching those two lines come apart taught me more about overfitting than anything I had read about it.</p>
 
       <h2>Getting it into a browser</h2>
-      <p>The demo on this site runs the same network. I exported the six arrays as base64 float32 in a JSON file and reimplemented the forward pass in JavaScript, which is three matrix multiplies and is not the hard part.</p>
+      <p>The demo on this site runs the same network. I exported the six arrays as base64 float32 into a JSON file and rewrote the forward pass in JavaScript, which is only three matrix multiplies, so that part was not really the problem.</p>
 
-      <p>The hard part is that what you draw is not what MNIST looks like. MNIST digits were size-normalised to fit a 20 pixel box and then centred by their centre of mass inside a 28 pixel frame. A stroke drawn anywhere on a canvas is a different distribution entirely, and a network trained on one and shown the other will guess badly while being entirely correct. So the canvas is cropped to the ink's bounding box, scaled so the longest side is 20 pixels, and shifted so the centre of mass lands in the middle. Only then does it go in.</p>
+      <p>The problem is that whatever you draw on a canvas is not what MNIST actually looks like. Those digits were scaled to fit inside a 20 pixel box and then positioned by their centre of mass within a 28 pixel frame, so a stroke drawn anywhere on a blank canvas comes from a completely different distribution and the network will get it wrong whilst behaving exactly as it was trained to. So before anything is fed in, the canvas is cropped down to the ink, scaled so the longest side is 20 pixels, and shifted so the centre of mass ends up in the middle.</p>
 
-      <p>The saved weights score 95.8% across all 42,000 labelled images, and 96.8% on the thousand it never trained on. It is a small network trained by the simplest method there is, and I would rather quote the number I can reproduce than the best one I ever saw on screen.</p>
+      <p>The weights I saved get 95.8% across all 42,000 labelled images and 96.8% on the thousand it never trained on. It is a small network trained in about the simplest way there is, and I would rather put the number I can reproduce on here than the best one I happened to see while I was tuning it.</p>
 
       <h2>Was it worth not using a library</h2>
-      <p>For learning, entirely. I have since used PyTorch, and it is better at this in every measurable way. But <code>loss.backward()</code> means something different to me now than it would have if I had started there, because I have written the loop it replaces, and I know which line it stands in for.</p>
+      <p>For learning it definitely was. I use PyTorch now and it is better in every way you could measure, but <code>loss.backward()</code> means something different to me than it would have done if I had started there, because I have written the loop that it stands in for.</p>
     </div>
   </article>
 </main>
