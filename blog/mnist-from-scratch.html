@@ -38,7 +38,7 @@
     <div class="post__body">
       <p>I wrote this in sixth form because I wanted to know whether I could actually derive backpropagation myself rather than just calling a library that already does it. The rule I set was that NumPy was allowed to do matrix multiplication and that was all, so no autograd, no layers, no optimiser, and every gradient in the file is one I had worked out on paper before I typed it in.</p>
 
-      <p>It is the same network you can <a href="../#fig-nn">draw on from the front page</a>, running the weights I trained back then rather than a retrained copy.</p>
+      <p>It is the same network you can <a href="../#fig-nn">draw on from the front page</a>, running the weights I trained back then rather than a retrained copy. The training code, the experiments and the saved weights are all <a href="https://github.com/Und3fin3d/NN-MNIST" rel="noopener">on GitHub</a>.</p>
 
       <h2>The shape of it</h2>
       <p>There are 784 inputs, one per pixel of a 28 by 28 image, then a hidden layer of 20, a second hidden layer of 10, and 10 outputs for the digits. ReLU sits between the hidden layers, softmax is at the end and the loss is cross entropy.</p>
