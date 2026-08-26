@@ -647,6 +647,7 @@
   const OUTPUT_REFRACTORY_MS = 20;
   const INPUT_INTERVAL_MS = 20;
   const WINDOW_START_MS = -5;
+  const PULSE_SCALE_BY_STRENGTH = [0.8765, 0.888, 0.903, 1.05, 1.10, 1.15, 1.20];
 
   let mode = "regular";
   let windowEndMs = 130;
@@ -676,7 +677,7 @@
   function buildTrace() {
     const pulses = spikeTimes();
     const strength = Number(strengthSlider.value);
-    const pulseScale = 0.88 + Math.pow((strength - 4) / 6, 2) * 0.32;
+    const pulseScale = PULSE_SCALE_BY_STRENGTH[strength - 4];
     windowEndMs = mode === "single" ? 130 : pulses.at(-1) + 80;
     const count = Math.round((windowEndMs - WINDOW_START_MS) / SAMPLE_MS) + 1;
     const time = new Float64Array(count);
@@ -1261,8 +1262,8 @@
       : mode === "single"
         ? " The receiving neuron produces one postsynaptic action potential."
         : regularOutput
-          ? ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs, one after ${regularGapWording} once firing starts.`
-          : ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs with gaps of ${outputGaps.join(", ")} input intervals.`;
+          ? ` The receiving neuron produces one postsynaptic spike after ${regularGapWording}.`
+          : ` ${trace.pulses.length} inputs produce ${trace.outputSpikes.length} postsynaptic spikes. The receiving neuron sometimes skips an input, so the output gaps are uneven.`;
     status.innerHTML = `<strong>Step ${step}.</strong> ${stepMessages[step]}${step === 5 ? outputNote : ""}`;
   }
 
