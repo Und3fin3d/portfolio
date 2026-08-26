@@ -548,7 +548,9 @@
     label(302, 340, "the spike arrives here", "diagram-small", svg);
 
     // --- electrodes and device --------------------------------------------
+    const wire1 = [[206, 356], [150, 356], [150, 478], [160, 478]];
     node("path", { d: "M206 356 L150 356 L150 478 L160 478", fill: "none", stroke: "#8e8f93", "stroke-width": 5, "stroke-linejoin": "round" }, svg);
+    const wire1Dot = node("circle", { id: "wire1Dot", r: 5, fill: colours.elec, opacity: 0 }, svg);
     node("rect", { x: 141, y: 344, width: 22, height: 24, rx: 4, fill: "#c9ccd1", stroke: "#7c7f85", "stroke-width": 1.6 }, svg);
     label(16, 362, "electrode 1", "diagram-label", svg);
     label(16, 378, "records the presynaptic", "diagram-small", svg);
@@ -562,6 +564,9 @@
     node("rect", { x: 210, y: 446, width: 34, height: 64, rx: 4, fill: "none", stroke: colours.dev, "stroke-width": 1.6 }, svg);
     label(252, 481, "state", "diagram-small", svg);
 
+    const wire2 = [[227, 526], [227, 610], [273, 610], [273, 648]].concat(
+      bezierPoints([273, 648], [273, 663], [260, 677], [247, 687], 20).slice(1)
+    );
     node("path", { d: "M227 526 L227 610 L273 610 L273 648 C273 663 260 677 247 687", fill: "none", stroke: "#8e8f93", "stroke-width": 5, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
     node("rect", { x: 262, y: 598, width: 22, height: 24, rx: 4, fill: "#c9ccd1", stroke: "#7c7f85", "stroke-width": 1.6 }, svg);
     label(16, 586, "electrode 2", "diagram-label", svg);
@@ -605,6 +610,8 @@
     return {
       axonPoints,
       travel,
+      wire1,
+      wire1Dot,
       terminal,
       vesicles: [...vesicles.querySelectorAll("circle")],
       chipState,
@@ -613,7 +620,7 @@
       injectionSite: document.getElementById("injectionSite"),
       receiverAxon,
       outputSpike,
-      wire2: bezierPoints([227, 526], [227, 610], [276, 650], [247, 687], 30)
+      wire2
     };
   }
 
@@ -1081,22 +1088,34 @@
   // ------------------------------------------------------ pathway animation
 
   function pointOnPolyline(points, fraction) {
-    const scaled = Math.max(0, Math.min(1, fraction)) * (points.length - 1);
-    const index = Math.floor(scaled);
-    const next = Math.min(points.length - 1, index + 1);
-    const local = scaled - index;
-    return [
-      points[index][0] + (points[next][0] - points[index][0]) * local,
-      points[index][1] + (points[next][1] - points[index][1]) * local
-    ];
+    const targetFraction = Math.max(0, Math.min(1, fraction));
+    const lengths = [];
+    let totalLength = 0;
+    for (let index = 1; index < points.length; index++) {
+      const length = Math.hypot(points[index][0] - points[index - 1][0], points[index][1] - points[index - 1][1]);
+      lengths.push(length);
+      totalLength += length;
+    }
+    let target = targetFraction * totalLength;
+    for (let index = 0; index < lengths.length; index++) {
+      if (target <= lengths[index] || index === lengths.length - 1) {
+        const local = lengths[index] === 0 ? 0 : target / lengths[index];
+        return [
+          points[index][0] + (points[index + 1][0] - points[index][0]) * local,
+          points[index][1] + (points[index + 1][1] - points[index][1]) * local
+        ];
+      }
+      target -= lengths[index];
+    }
+    return points.at(-1);
   }
 
-  function updatePathway(sample) {
+  function updatePathway(sample, forcedStep = null, forcedProgress = null) {
     const arrival = trace.pulses.reduce((best, pulse) => (sample.time >= pulse - 2 && pulse >= best ? pulse : best), -Infinity);
     const age = arrival === -Infinity ? -Infinity : sample.time - arrival;
 
-    if (age >= -2 && age < 0.6) {
-      const fraction = Math.max(0, Math.min(1, (age + 2) / 2.6));
+    if (forcedStep === 1 || (forcedStep === null && age >= -2 && age < 0.2)) {
+      const fraction = forcedStep === 1 ? forcedProgress : Math.max(0, Math.min(1, (age + 2) / 2.2));
       const point = pointOnPolyline(scene.axonPoints, fraction);
       scene.travel.setAttribute("cx", point[0].toFixed(1));
       scene.travel.setAttribute("cy", point[1].toFixed(1));
@@ -1105,7 +1124,17 @@
       scene.travel.setAttribute("opacity", "0");
     }
 
-    const excited = Math.max(0, Math.min(1, (sample.voltage - GATE_MV) / 55));
+    if (forcedStep === 2 || (forcedStep === null && age >= 0.2 && age < 0.9)) {
+      const fraction = forcedStep === 2 ? forcedProgress : Math.max(0, Math.min(1, (age - 0.2) / 0.7));
+      const point = pointOnPolyline(scene.wire1, fraction);
+      scene.wire1Dot.setAttribute("cx", point[0].toFixed(1));
+      scene.wire1Dot.setAttribute("cy", point[1].toFixed(1));
+      scene.wire1Dot.setAttribute("opacity", "1");
+    } else {
+      scene.wire1Dot.setAttribute("opacity", "0");
+    }
+
+    const excited = forcedStep !== null && forcedStep < 2 ? 0 : Math.max(0, Math.min(1, (sample.voltage - GATE_MV) / 55));
     scene.terminal.setAttribute("fill", excited > 0.05 ? "#f6dcbf" : "#f2e4d5");
     scene.vesicles.forEach((vesicle, index) => {
       vesicle.setAttribute("fill", excited > 0.2 && index % 2 === 0 ? "#f6dcbf" : "#fff");
@@ -1116,22 +1145,26 @@
     scene.chipState.setAttribute("opacity", (0.18 + 0.62 * sample.state).toFixed(2));
 
     const currentFraction = Math.max(0, Math.min(1, sample.current / Math.max(1, trace.peakCurrent)));
+    const showCurrent = forcedStep === null || forcedStep >= 4;
     scene.flowDots.forEach((dot, index) => {
-      if (currentFraction < 0.05) { dot.setAttribute("opacity", "0"); return; }
-      const offset = ((sample.time * 0.05) + index / scene.flowDots.length) % 1;
+      if (!showCurrent || currentFraction < 0.05) { dot.setAttribute("opacity", "0"); return; }
+      const offset = forcedStep === 4
+        ? ((forcedProgress + index / scene.flowDots.length) % 1)
+        : ((sample.time * 0.05) + index / scene.flowDots.length) % 1;
       const point = pointOnPolyline(scene.wire2, offset);
       dot.setAttribute("cx", point[0].toFixed(1));
       dot.setAttribute("cy", point[1].toFixed(1));
       dot.setAttribute("opacity", (0.25 + 0.75 * currentFraction).toFixed(2));
     });
-    scene.injectionSite.setAttribute("opacity", (0.25 + 0.7 * currentFraction).toFixed(2));
+    scene.injectionSite.setAttribute("opacity", showCurrent ? (0.25 + 0.7 * currentFraction).toFixed(2) : "0");
 
     const depolarisation = Math.max(0, Math.min(1, (sample.membrane - REST_MV) / 14));
-    scene.receiverBody.setAttribute("fill", depolarisation < 0.06 ? "#e2eee0" : depolarisation > 0.6 ? "#cfe6cb" : "#d8ead5");
+    const showReceiver = forcedStep === null || forcedStep >= 5;
+    scene.receiverBody.setAttribute("fill", !showReceiver || depolarisation < 0.06 ? "#e2eee0" : depolarisation > 0.6 ? "#cfe6cb" : "#d8ead5");
 
     const latestOutputSpike = trace.outputSpikes.filter(time => time <= sample.time).at(-1);
     const outputAge = latestOutputSpike === undefined ? Infinity : sample.time - latestOutputSpike;
-    if (outputAge >= 0 && outputAge < 3) {
+    if (showReceiver && outputAge >= 0 && outputAge < 3) {
       const point = pointOnPolyline(scene.receiverAxon, outputAge / 3);
       scene.outputSpike.setAttribute("cx", point[0].toFixed(1));
       scene.outputSpike.setAttribute("cy", point[1].toFixed(1));
@@ -1171,15 +1204,27 @@
     readPath.textContent = sample.state < 0.15 ? "weak" : sample.state < 0.55 ? "partial" : "continuous";
   }
 
-  function render(index, phase) {
+  function render(index, phase, forcedStep = null, forcedProgress = null) {
     const sample = sampleAt(index);
+    const displaySample = { ...sample };
+    if (forcedStep !== null && forcedStep <= 2) {
+      displaySample.state = 0;
+      displaySample.conductance = G_MIN_NS;
+      displaySample.current = 0;
+      displaySample.membrane = REST_MV;
+    } else if (forcedStep === 3) {
+      displaySample.current = 0;
+      displaySample.membrane = REST_MV;
+    } else if (forcedStep === 4) {
+      displaySample.membrane = REST_MV;
+    }
     drawScope(Math.round(index));
-    drawDevice(sample, phase);
-    updatePathway(sample);
-    updateReadouts(sample);
-    cursorOut.textContent = sample.time.toFixed(1) + " ms";
+    drawDevice(displaySample, phase);
+    updatePathway(displaySample, forcedStep, forcedProgress);
+    updateReadouts(displaySample);
+    cursorOut.textContent = displaySample.time.toFixed(1) + " ms";
 
-    const step = activeStep(sample);
+    const step = forcedStep === null ? activeStep(sample) : forcedStep;
     steps.forEach(element => {
       const number = Number(element.dataset.step);
       element.classList.toggle("active", number === step);
@@ -1207,6 +1252,7 @@
   let startClock = 0;
   let startIndex = 0;
   let manualStep = 1;
+  let manualStage = null;
 
   function replayDuration() {
     // 1x plays the whole window in six seconds, as on the biology page.
@@ -1235,6 +1281,7 @@
       return;
     }
     if (frame !== null) cancelAnimationFrame(frame);
+    manualStage = null;
     playing = true;
     playButton.textContent = "Pause";
     startIndex = Number(cursorSlider.value) >= trace.count - 1 ? 0 : Number(cursorSlider.value);
@@ -1251,6 +1298,7 @@
 
   function rebuild(resetCursor) {
     stop();
+    manualStage = null;
     buildTrace();
     if (resetCursor) {
       cursorSlider.value = "0";
@@ -1267,6 +1315,7 @@
     modeSingle.setAttribute("aria-pressed", String(next === "single"));
     modeRegular.setAttribute("aria-pressed", String(next === "regular"));
     rebuild(true);
+    startManualStepLoop();
   }
 
   modeSingle.addEventListener("click", () => setMode("single"));
@@ -1275,6 +1324,7 @@
   intervalSlider.addEventListener("input", () => {
     intervalOut.textContent = intervalSlider.value + " Hz";
     rebuild(true);
+    startManualStepLoop();
   });
 
   speedSlider.addEventListener("input", () => {
@@ -1301,30 +1351,35 @@
 
   function loopManualStep(now) {
     const [windowStart, windowEnd] = manualStepWindow(manualStep);
-    const loopDuration = 1400 / Number(speedSlider.value);
+    const loopDuration = Math.max(1100, 1800 / Number(speedSlider.value));
     const loopProgress = ((now - startClock) % loopDuration) / loopDuration;
     const time = windowStart + loopProgress * (windowEnd - windowStart);
     const index = Math.round((time - WINDOW_START_MS) / SAMPLE_MS);
     cursorSlider.value = String(index);
-    render(index, now);
+    render(index, now, manualStage, loopProgress);
     frame = requestAnimationFrame(loopManualStep);
   }
 
-  nextStepButton.addEventListener("click", () => {
+  function startManualStepLoop() {
     stop();
-    manualStep = manualStep >= 5 ? 1 : manualStep + 1;
+    manualStage = manualStep;
     if (reducedMotion.matches) {
       const [, windowEnd] = manualStepWindow(manualStep);
       const index = Math.round((windowEnd - WINDOW_START_MS) / SAMPLE_MS);
       cursorSlider.value = String(index);
-      render(index, null);
-    } else {
-      startClock = performance.now();
-      frame = requestAnimationFrame(loopManualStep);
+      render(index, null, manualStage, 1);
+      return;
     }
+    startClock = performance.now();
+    frame = requestAnimationFrame(loopManualStep);
+  }
+
+  nextStepButton.addEventListener("click", () => {
+    manualStep = manualStep >= 5 ? 1 : manualStep + 1;
+    startManualStepLoop();
     nextStepButton.textContent = manualStep === 5 ? "Start again" : "Next step";
   });
-  restartButton.addEventListener("click", () => { rebuild(true); });
+  restartButton.addEventListener("click", () => { rebuild(true); startManualStepLoop(); });
 
   function handleResize() {
     resizeCanvas(deviceCanvas, deviceContext);
@@ -1337,6 +1392,7 @@
 
   buildTrace();
   handleResize();
+  startManualStepLoop();
 })();
 </script>
 </body>
