@@ -609,6 +609,8 @@
   let lastRenderedProgress = 0;
   let responseCache = null;
   let manualStep = 1;
+  let manualLooping = false;
+  let manualLoopStart = 0;
 
   function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
@@ -1108,6 +1110,7 @@
 
   function start(mode) {
     cancelAnimationFrame(animationFrame);
+    manualLooping = false;
     runMode = mode;
     if (mode === "train") trainExtraPulses = [];
     running = true;
@@ -1267,6 +1270,7 @@
 
   function stopScenario() {
     cancelAnimationFrame(animationFrame);
+    manualLooping = false;
     running = false;
     paused = false;
     playScenario.textContent = "Play";
@@ -1313,16 +1317,46 @@
     }
     start("scenario");
   });
-  nextStepScenario.addEventListener("click", () => {
-    stopScenario();
-    manualStep = manualStep >= 5 ? 1 : manualStep + 1;
-    const ages = { 1: -0.5, 2: 0.15, 3: 0.55, 4: 1.5, 5: 5 };
+
+  function manualStepWindow(step) {
+    return {
+      1: [-0.9, -0.05],
+      2: [0, 0.34],
+      3: [0.35, 0.79],
+      4: [0.8, 3.8],
+      5: [4, 8]
+    }[step];
+  }
+
+  function animateManualStep(now) {
+    if (!manualLooping) return;
+    const [windowStart, windowEnd] = manualStepWindow(manualStep);
+    const loopDuration = 1400 / Number(speedSlider.value);
+    const loopProgress = ((now - manualLoopStart) % loopDuration) / loopDuration;
+    const biologicalTime = windowStart + loopProgress * (windowEnd - windowStart);
     const range = timeline();
-    const biologicalTime = ages[manualStep];
     const progress = Math.max(0, Math.min(1, (biologicalTime - range.min) / (range.max - range.min)));
     lastBiologicalTime = biologicalTime;
     drawGraphs(progress);
     updateDiagram(progress);
+    animationFrame = requestAnimationFrame(animateManualStep);
+  }
+
+  nextStepScenario.addEventListener("click", () => {
+    stopScenario();
+    manualStep = manualStep >= 5 ? 1 : manualStep + 1;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const [, windowEnd] = manualStepWindow(manualStep);
+      const range = timeline();
+      const progress = Math.max(0, Math.min(1, (windowEnd - range.min) / (range.max - range.min)));
+      lastBiologicalTime = windowEnd;
+      drawGraphs(progress);
+      updateDiagram(progress);
+    } else {
+      manualLooping = true;
+      manualLoopStart = performance.now();
+      animationFrame = requestAnimationFrame(animateManualStep);
+    }
     nextStepScenario.textContent = manualStep === 5 ? "Start again" : "Next step";
   });
   restartScenario.addEventListener("click", resetScenario);
