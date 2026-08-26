@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>How do the synapse models compare?</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: oklch(0.965 0.008 85);
+      --paper: oklch(0.992 0.006 85);
+      --ink: oklch(0.25 0.018 245);
+      --muted: oklch(0.48 0.025 245);
+      --line: oklch(0.86 0.015 85);
+      --electrical: oklch(0.55 0.14 58);
+      --biology: oklch(0.49 0.105 145);
+      --data: oklch(0.50 0.115 240);
+      --memristor: oklch(0.49 0.12 302);
+      --memristor-deep: oklch(0.42 0.115 315);
+      --input: var(--electrical);
+      --target: var(--data);
+      --tm: var(--biology);
+      --exp2: oklch(0.53 0.09 195);
+      --fan: var(--memristor);
+      --bohao: var(--memristor-deep);
+      --cursor: oklch(0.40 0.025 245);
+      --wash: oklch(0.95 0.025 240);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    h1 {
+      margin: 0 0 7px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.1;
+    }
+
+    h2 { margin: 0 0 5px; font-size: 21px; }
+    h3 { margin: 0; font-size: 16px; }
+    p { margin: 0; }
+
+    .intro {
+      max-width: 840px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 22px;
+      margin: 22px 0 14px;
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .controls > *, .comparison, .scope-wrap, .notes > *, details { min-width: 0; }
+    .status, .legend, .score, .notes, details { overflow-wrap: anywhere; }
+
+    button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--paper);
+      color: var(--ink);
+      padding: 9px 13px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--input);
+      color: var(--input);
+      font-weight: bold;
+    }
+
+    button:hover { background: oklch(0.95 0.012 85); }
+    button:active { transform: translateY(1px); }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid oklch(0.72 0.10 240 / .45);
+      outline-offset: 2px;
+    }
+
+    button:disabled { cursor: not-allowed; opacity: .5; }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    select, input[type="range"] { accent-color: var(--target); }
+    select {
+      max-width: 260px;
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--paper);
+      font: inherit;
+    }
+
+    output {
+      min-width: 38px;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status {
+      min-height: 48px;
+      margin-bottom: 18px;
+      padding: 11px 14px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    .status strong { display: inline-block; margin-right: 5px; }
+
+    .comparison {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      padding: 17px;
+    }
+
+    .scope-wrap { position: relative; }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 570px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+    }
+
+    .canvas-description {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 11px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .swatch { display: inline-block; width: 18px; height: 3px; }
+
+    details {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    summary {
+      min-height: 44px;
+      padding: 10px 0;
+      color: var(--data);
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .benchmark-intro { max-width: 72ch; color: var(--muted); font-size: 14px; }
+    .scores { margin: 12px 0 0; border-top: 1px solid var(--line); }
+    .score {
+      display: grid;
+      grid-template-columns: minmax(190px, 1fr) auto;
+      gap: 4px 20px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .score dt { font-weight: bold; }
+    .score dd { margin: 0; }
+    .score-value { color: var(--ink); font-weight: bold; font-variant-numeric: tabular-nums; }
+    .score-note { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+
+    .notes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .notes section {
+      min-width: 0;
+      padding: 17px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+    }
+
+    .notes p, .notes li { color: var(--muted); font-size: 14px; }
+    .notes p + p { margin-top: 9px; }
+    .notes ul { margin: 10px 0 0; padding-left: 20px; }
+    .notes li + li { margin-top: 6px; }
+    code {
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    @media (max-width: 760px) {
+      main { width: calc(100% - 20px); padding-top: 20px; }
+      canvas { height: 620px; }
+      .notes { grid-template-columns: 1fr; }
+      .controls button { flex: 1 1 0; }
+      .controls #play { flex-basis: 100%; }
+      .controls label {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        width: 100%;
+      }
+      input[type="range"] { width: 100%; min-width: 0; }
+      select { width: 100%; max-width: none; min-width: 0; }
+      .score { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>How do the synapse models compare?</h1>
+  <p class="intro">
+    Compare real EPSC outputs from the project platform. Each lane uses the same stored input protocol.
+  </p>
+
+  <div class="controls" role="group" aria-label="Comparison controls">
+    <button class="primary" id="play" type="button">Play comparison</button>
+    <button id="pause" type="button" disabled>Pause</button>
+    <button id="replay" type="button">Replay</button>
+    <label>
+      Replay speed
+      <input id="speed" type="range" min="0.1" max="2" value="1" step="0.05">
+      <output id="speedOut" for="speed">1×</output>
+    </label>
+    <label>
+      Spike pattern
+      <select id="pattern">
+        <option value="beato_irregular_7spikes">Beato irregular seven-spike train</option>
+        <option value="beato_accelerating_12spikes">Beato accelerating twelve-spike train</option>
+        <option value="paired_spikes_30ms">Two spikes, 30 ms apart</option>
+        <option value="single_spike">Single spike</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="status" id="status" role="status" aria-live="polite">
+    <strong>Key frame.</strong> The initial view shows the early response to the selected platform protocol.
+  </div>
+
+  <section class="comparison" aria-labelledby="comparisonTitle">
+    <h2 id="comparisonTitle">Comparison</h2>
+    <div class="scope-wrap">
+      <canvas id="scope" role="img" aria-describedby="scopeDescription">
+        Six aligned lanes compare input spikes, the Version 2 target, two software models, and two device reconstructions. Open the benchmark details below for full-protocol scores.
+      </canvas>
+      <p class="canvas-description" id="scopeDescription">
+        Six aligned lanes show the stored presynaptic voltage, the Version 2 synthetic target, Tsodyks-Markram STP, NEURON Exp2Syn, Fan reconstruction with calibrated delay, and Bohao PPF with V2-calibrated parameters and calibrated delay. Longer protocols show their first 220 milliseconds. The traces appear progressively from left to right.
+      </p>
+    </div>
+    <div class="legend" aria-label="Trace legend">
+      <span><i class="swatch" style="background:var(--input)"></i> input spikes</span>
+      <span><i class="swatch" style="background:var(--target)"></i> Version 2 synthetic target</span>
+      <span><i class="swatch" style="background:var(--tm)"></i> Tsodyks–Markram STP</span>
+      <span><i class="swatch" style="background:var(--exp2)"></i> NEURON Exp2Syn</span>
+      <span><i class="swatch" style="background:var(--fan)"></i> Fan reconstruction + calibrated delay</span>
+      <span><i class="swatch" style="background:var(--bohao)"></i> Bohao PPF, V2-calibrated + delay</span>
+    </div>
+
+    <details>
+      <summary>Full benchmark results and method</summary>
+      <p class="benchmark-intro">These mean prediction waveform errors come from the complete stored prediction protocol set. The selected animation pattern does not generate these values. Lower is better.</p>
+      <dl class="scores" id="scores">
+        <div class="score"><dt>Tsodyks–Markram STP</dt><dd class="score-value">7.1%</dd><dd class="score-note">Selected reference model with short-term plasticity.</dd></div>
+        <div class="score"><dt>Fan reconstruction + calibrated delay</dt><dd class="score-value">8.6%</dd><dd class="score-note">Registered Fan reconstruction with the calibrated 1.15 ms delay.</dd></div>
+        <div class="score"><dt>NEURON Exp2Syn</dt><dd class="score-value">12.2%</dd><dd class="score-note">Registered NEURON double-exponential software model.</dd></div>
+        <div class="score"><dt>Bohao PPF, V2-calibrated parameters + calibrated delay</dt><dd class="score-value">16.8%</dd><dd class="score-note">Registered V2-calibrated Bohao PPF configuration with the calibrated 0.50 ms delay.</dd></div>
+      </dl>
+    </details>
+  </section>
+
+</main>
+
+<script src="model_output_comparison_data.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("scope");
+  const context = canvas.getContext("2d");
+  const playButton = document.getElementById("play");
+  const pauseButton = document.getElementById("pause");
+  const replayButton = document.getElementById("replay");
+  const speed = document.getElementById("speed");
+  const speedOut = document.getElementById("speedOut");
+  const pattern = document.getElementById("pattern");
+  const status = document.getElementById("status");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const platformData = window.MODEL_OUTPUT_COMPARISON_DATA;
+
+  if (!context || !platformData?.protocols) {
+    status.innerHTML = "<strong>Trace unavailable.</strong> The page could not load the exported platform waveforms. The benchmark details remain available below.";
+    [playButton, pauseButton, replayButton, speed, pattern].forEach(control => { control.disabled = true; });
+    return;
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+  const cssColour = name => styles.getPropertyValue(name).trim();
+  const colours = {
+    input: cssColour("--input"),
+    target: cssColour("--target"),
+    tm: cssColour("--tm"),
+    exp2: cssColour("--exp2"),
+    fan: cssColour("--fan"),
+    bohao: cssColour("--bohao"),
+    grid: cssColour("--line"),
+    text: cssColour("--muted"),
+    ink: cssColour("--ink"),
+    cursor: cssColour("--cursor"),
+    paper: cssColour("--paper"),
+    background: cssColour("--background"),
+    inputSoft: "oklch(0.55 0.14 58 / 0.22)"
+  };
+
+  const patterns = platformData.protocols;
+
+  const laneDefinitions = [
+    { key: "input", title: "Presynaptic voltage", note: "stored Version 2 input", colour: colours.input },
+    { key: "target", title: "Version 2 target", note: "synthetic conductance target", colour: colours.target },
+    { key: "tm", title: "Tsodyks–Markram STP", note: "history-dependent reference model", colour: colours.tm },
+    { key: "exp2", title: "NEURON Exp2Syn", note: "double-exponential software model", colour: colours.exp2 },
+    { key: "fan", title: "Fan reconstruction + delay", note: "registered 1.15 ms delay", colour: colours.fan },
+    { key: "bohao", title: "Bohao PPF, V2 + delay", note: "V2-calibrated + 0.50 ms delay", colour: colours.bohao }
+  ];
+
+  const initialProgress = 0.34;
+  const maximumViewMs = 220;
+  let progress = initialProgress;
+  let running = false;
+  let paused = false;
+  let startTime = 0;
+  let pausedAt = 0;
+  let animationFrame = 0;
+  let resizeFrame = 0;
+  let lastStatusBucket = -1;
+  let previousSpeed = Number(speed.value);
+  const baseDuration = 6500;
+
+  function selectedPattern() {
+    return patterns[pattern.value];
+  }
+
+  function duration() {
+    return baseDuration / Number(speed.value);
+  }
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    draw(progress);
+  }
+
+  function normalizedTrace(values) {
+    const baseline = values[0];
+    const responses = values.map(value => value - baseline);
+    const peak = Math.max(...responses.map(value => Math.abs(value))) || 1;
+    return responses.map(value => value / peak);
+  }
+
+  function selectedWindow(activePattern) {
+    const start = activePattern.time_ms[0];
+    const fullEnd = activePattern.time_ms[activePattern.time_ms.length - 1];
+    return { start, end: Math.min(fullEnd, start + maximumViewMs) };
+  }
+
+  function draw(drawProgress) {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (!width || !height) return;
+
+    context.clearRect(0, 0, width, height);
+    const compact = width < 660;
+    const left = compact ? 112 : 190;
+    const right = 22;
+    const top = 18;
+    const bottom = 42;
+    const plotWidth = Math.max(60, width - left - right);
+    const laneHeight = (height - top - bottom) / laneDefinitions.length;
+    const activePattern = selectedPattern();
+    const times = activePattern.time_ms;
+    const view = selectedWindow(activePattern);
+    const startTimeMs = view.start;
+    const endTimeMs = view.end;
+    const timeSpanMs = endTimeMs - startTimeMs;
+    const visibleTime = startTimeMs + timeSpanMs * drawProgress;
+
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+
+    laneDefinitions.forEach((lane, laneIndex) => {
+      const laneTop = top + laneIndex * laneHeight;
+      const centre = laneTop + laneHeight * .58;
+      context.fillStyle = laneIndex % 2 ? colours.background : colours.paper;
+      context.fillRect(left, laneTop, plotWidth, laneHeight);
+
+      context.fillStyle = colours.ink;
+      context.font = `bold ${compact ? 11 : 13}px Arial`;
+      const titleBottom = wrapText(lane.title, 10, laneTop + 22, left - 22, compact ? 12 : 15);
+      if (!compact) {
+        context.fillStyle = colours.text;
+        context.font = "11px Arial";
+        wrapText(lane.note, 10, titleBottom + 16, left - 24, 13);
+      }
+
+      context.strokeStyle = colours.grid;
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(left, centre);
+      context.lineTo(width - right, centre);
+      context.stroke();
+
+      for (let tickIndex = 0; tickIndex <= 5; tickIndex += 1) {
+        const x = left + (tickIndex / 5) * plotWidth;
+        context.beginPath();
+        context.moveTo(x, laneTop + 5);
+        context.lineTo(x, laneTop + laneHeight - 5);
+        context.stroke();
+      }
+
+      activePattern.events_ms.forEach((event, eventIndex) => {
+        if (event < startTimeMs || event > endTimeMs) return;
+        const x = left + ((event - startTimeMs) / timeSpanMs) * plotWidth;
+        context.strokeStyle = colours.inputSoft;
+        context.setLineDash([3, 3]);
+        context.beginPath();
+        context.moveTo(x, laneTop + 5);
+        context.lineTo(x, laneTop + laneHeight - 5);
+        context.stroke();
+        context.setLineDash([]);
+        if (laneIndex === 0) {
+          context.fillStyle = colours.input;
+          context.font = "bold 10px Arial";
+          context.fillText(String(eventIndex + 1), x + 4, laneTop + 14);
+        }
+      });
+
+      context.strokeStyle = lane.colour;
+      context.lineWidth = lane.key === "target" ? 2 : 1.5;
+      context.lineJoin = "round";
+      context.lineCap = "round";
+      context.beginPath();
+      let begun = false;
+      const values = normalizedTrace(activePattern[lane.key]);
+      for (let sample = 0; sample < times.length; sample += 1) {
+        const time = times[sample];
+        if (time < startTimeMs) continue;
+        if (time > visibleTime) break;
+        const x = left + ((time - startTimeMs) / timeSpanMs) * plotWidth;
+        const scale = lane.key === "input" ? .82 : 1.0;
+        const y = centre - values[sample] * laneHeight * .44 * scale;
+        if (!begun) {
+          context.moveTo(x, y);
+          begun = true;
+        } else {
+          context.lineTo(x, y);
+        }
+      }
+      context.stroke();
+    });
+
+    const cursorX = left + drawProgress * plotWidth;
+    context.strokeStyle = colours.cursor;
+    context.lineWidth = 1.5;
+    context.setLineDash([4, 4]);
+    context.beginPath();
+    context.moveTo(cursorX, top);
+    context.lineTo(cursorX, height - bottom + 4);
+    context.stroke();
+    context.setLineDash([]);
+
+    context.fillStyle = colours.cursor;
+    context.font = "bold 10px Arial";
+    context.textAlign = cursorX > width - 60 ? "right" : "left";
+    context.fillText("now", cursorX + (cursorX > width - 60 ? -5 : 5), 8);
+
+    context.fillStyle = colours.text;
+    context.font = "11px Arial";
+    context.textAlign = "center";
+    for (let tickIndex = 0; tickIndex <= 5; tickIndex += 1) {
+      const x = left + (tickIndex / 5) * plotWidth;
+      const tick = Math.round(startTimeMs + (tickIndex / 5) * timeSpanMs);
+      context.fillText(`${tick}`, x, height - 21);
+    }
+    context.fillText(compact ? "time (ms)" : "time from start of sequence (milliseconds)", left + plotWidth / 2, height - 6);
+  }
+
+  function wrapText(text, x, y, maxWidth, lineHeight) {
+    const words = text.split(" ");
+    let line = "";
+    words.forEach((word, index) => {
+      const test = `${line}${word} `;
+      if (context.measureText(test).width > maxWidth && index > 0) {
+        context.fillText(line.trim(), x, y);
+        line = `${word} `;
+        y += lineHeight;
+      } else {
+        line = test;
+      }
+    });
+    context.fillText(line.trim(), x, y);
+    return y;
+  }
+
+  function currentProgress(now = performance.now()) {
+    const clock = paused ? pausedAt : now;
+    return Math.max(0, Math.min(1, (clock - startTime) / duration()));
+  }
+
+  function updateStatus(force = false) {
+    const activePattern = selectedPattern();
+    const { start, end } = selectedWindow(activePattern);
+    const time = Math.round(start + (end - start) * progress);
+    const bucket = progress >= 1 ? 4 : Math.floor(progress * 4);
+    if (!force && !paused && bucket === lastStatusBucket) return;
+    lastStatusBucket = bucket;
+    if (progress >= 1) {
+      status.innerHTML = `<strong>Selected interval complete.</strong> Open the optional benchmark details for full-protocol error values.`;
+      return;
+    }
+    if (paused) {
+      status.innerHTML = `<strong>Paused at ${time} ms.</strong> Every lane remains aligned to the same ${activePattern.label}.`;
+      return;
+    }
+    status.innerHTML = `<strong>Comparing at ${time} ms.</strong> Every lane receives the same ${activePattern.label}.`;
+  }
+
+  function finish() {
+    running = false;
+    paused = false;
+    progress = 1;
+    pauseButton.disabled = true;
+    pauseButton.textContent = "Pause";
+    playButton.textContent = "Play comparison";
+    draw(progress);
+    updateStatus(true);
+  }
+
+  function animate(now) {
+    if (!running || paused) return;
+    progress = currentProgress(now);
+    draw(progress);
+    updateStatus();
+    if (progress >= 1) {
+      finish();
+      return;
+    }
+    animationFrame = requestAnimationFrame(animate);
+  }
+
+  function start(reset = false) {
+    cancelAnimationFrame(animationFrame);
+    if (reset || progress >= 1) progress = 0;
+    if (reducedMotion.matches) {
+      finish();
+      status.innerHTML = "<strong>Comparison shown.</strong> Reduced motion is active, so the completed traces appear without animation.";
+      return;
+    }
+    running = true;
+    paused = false;
+    startTime = performance.now() - progress * duration();
+    lastStatusBucket = -1;
+    pauseButton.disabled = false;
+    pauseButton.textContent = "Pause";
+    playButton.textContent = "Playing";
+    updateStatus(true);
+    animationFrame = requestAnimationFrame(animate);
+  }
+
+  playButton.addEventListener("click", () => {
+    if (paused) {
+      const pausedDuration = performance.now() - pausedAt;
+      startTime += pausedDuration;
+      paused = false;
+      pauseButton.textContent = "Pause";
+      playButton.textContent = "Playing";
+      animationFrame = requestAnimationFrame(animate);
+      return;
+    }
+    start(progress >= 1);
+  });
+
+  pauseButton.addEventListener("click", () => {
+    if (!running) return;
+    if (paused) {
+      const pausedDuration = performance.now() - pausedAt;
+      startTime += pausedDuration;
+      paused = false;
+      pauseButton.textContent = "Pause";
+      playButton.textContent = "Playing";
+      animationFrame = requestAnimationFrame(animate);
+    } else {
+      paused = true;
+      pausedAt = performance.now();
+      cancelAnimationFrame(animationFrame);
+      pauseButton.textContent = "Resume";
+      playButton.textContent = "Resume comparison";
+      updateStatus(true);
+    }
+  });
+
+  replayButton.addEventListener("click", () => start(true));
+
+  speed.addEventListener("input", () => {
+    const clock = paused ? pausedAt : performance.now();
+    const priorDuration = baseDuration / previousSpeed;
+    if (running) progress = Math.max(0, Math.min(1, (clock - startTime) / priorDuration));
+    previousSpeed = Number(speed.value);
+    speedOut.value = `${Number(speed.value).toFixed(2).replace(/\.00$/, "").replace(/0$/, "")}×`;
+    if (running) startTime = clock - progress * duration();
+  });
+
+  pattern.addEventListener("change", () => {
+    cancelAnimationFrame(animationFrame);
+    progress = initialProgress;
+    running = false;
+    paused = false;
+    pauseButton.disabled = true;
+    pauseButton.textContent = "Pause";
+    playButton.textContent = "Play comparison";
+    lastStatusBucket = -1;
+    draw(progress);
+    status.innerHTML = `<strong>Key frame updated.</strong> The early response to the ${selectedPattern().label} is ready.`;
+  });
+
+  window.addEventListener("resize", () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(resizeCanvas);
+  });
+
+  reducedMotion.addEventListener?.("change", event => {
+    if (event.matches) finish();
+  });
+
+  resizeCanvas();
+  if (reducedMotion.matches) {
+    progress = 1;
+    draw(progress);
+    status.innerHTML = "<strong>Reduced motion.</strong> The completed selected-pattern trace is shown without animation.";
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1290 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>How a memristor stands in for a synapse</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: #f5f4f1;
+      --paper: #ffffff;
+      --ink: #1f2124;
+      --muted: #5f636a;
+      --line: #d9dade;
+      --bio: #3f7a45;
+      --elec: #b0742a;
+      --dev: #6b4fa8;
+      --data: #2674a8;
+      --spike: #b52d32;
+      --grid: #e4e5e8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    main {
+      width: min(1360px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 26px 0 44px;
+    }
+
+    h1 { margin: 0 0 7px; font-size: clamp(26px, 3.2vw, 40px); line-height: 1.1; }
+    h2 { margin: 0 0 5px; font-size: 20px; }
+    h3 { margin: 0 0 4px; font-size: 15px; }
+    p { margin: 0; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 20px;
+      margin: 20px 0 14px;
+      padding: 13px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .controls > *, .workspace > *, .column, section { min-width: 0; }
+    .status, .section-note, .step, .legend, .readouts { overflow-wrap: anywhere; }
+
+    button {
+      border: 1px solid #aeb2b7;
+      border-radius: 4px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 13px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button.primary { border-color: var(--elec); color: var(--elec); font-weight: bold; }
+    button[aria-pressed="true"] { background: #efeaf7; border-color: var(--dev); color: var(--dev); font-weight: bold; }
+    button:hover { background: #f0f1f2; }
+    button[aria-pressed="true"]:hover { background: #e7e0f4; }
+    button:disabled { color: #9aa0a6; border-color: #d5d7da; cursor: not-allowed; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(107, 79, 168, .3);
+      outline-offset: 2px;
+    }
+
+    .segmented { display: inline-flex; }
+    .segmented button { border-radius: 0; margin-left: -1px; }
+    .segmented button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+    .segmented button:last-child { border-radius: 0 4px 4px 0; }
+
+    label { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--muted); }
+    input[type="range"] { accent-color: var(--dev); }
+    output { min-width: 52px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+    .group-label { flex-basis: 100%; margin-bottom: -4px; font-size: 13px; font-weight: bold; }
+    .group-label span { font-weight: normal; color: var(--muted); }
+
+    .status {
+      min-height: 46px;
+      margin-bottom: 16px;
+      padding: 11px 14px;
+      border-left: 5px solid var(--dev);
+      background: var(--paper);
+      font-size: 16px;
+    }
+
+    .status strong { display: inline-block; margin-right: 5px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(330px, .78fr) minmax(520px, 1.32fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .column { display: grid; gap: 18px; }
+
+    section { background: var(--paper); border: 1px solid var(--line); padding: 16px; }
+
+    .section-note { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+
+    .pathway svg { display: block; width: 100%; height: auto; }
+
+    canvas { display: block; width: 100%; background: #fff; border: 1px solid var(--line); }
+    #deviceCanvas { height: 300px; }
+    #scope { height: 470px; }
+
+    .readouts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 22px;
+      margin-top: 11px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .readouts b {
+      display: block;
+      font-size: 16px;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 11px; font-size: 13px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .swatch { display: inline-block; width: 18px; height: 3px; }
+
+    .steps { margin-top: 18px; }
+
+    .step-list {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      margin-top: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .step {
+      min-height: 168px;
+      padding: 14px;
+      border-right: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    .step:last-child { border-right: 0; }
+    .step.active { background: #f1edf9; }
+    .step.not-reached { background: #f7f7f6; color: var(--muted); }
+    .step-number { display: block; margin-bottom: 6px; font-size: 12px; font-weight: bold; color: var(--dev); text-transform: uppercase; }
+    .step strong { display: block; margin-bottom: 6px; font-size: 15px; }
+    .step p { color: var(--muted); font-size: 13px; }
+    .step code { font-size: 12.5px; background: #f0f0ee; padding: 0 3px; }
+
+    .diagram-label { font-size: 13px; fill: var(--ink); }
+    .diagram-small { font-size: 11.5px; fill: var(--muted); }
+    .diagram-head { font-size: 13px; fill: var(--ink); font-weight: bold; }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 1080px) {
+      .workspace { grid-template-columns: 1fr; }
+      .step-list { grid-template-columns: 1fr; }
+      .step { min-height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .step:last-child { border-bottom: 0; }
+      #scope { height: 560px; }
+    }
+
+    @media (max-width: 520px) {
+      main { width: calc(100% - 20px); padding-top: 18px; }
+      .controls { gap: 10px 14px; }
+      .controls button, .segmented button { flex: 1 1 auto; }
+      .segmented { width: 100%; }
+      .segmented button { flex: 1 1 0; padding-inline: 8px; }
+      label { flex-basis: 100%; }
+      input[type="range"] { flex: 1 1 auto; min-width: 0; }
+      #deviceCanvas { height: 240px; }
+      #scope { height: 520px; }
+      .readouts { gap: 6px 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>How a memristor stands in for a synapse</h1>
+
+  <div class="controls" aria-label="Stimulus and playback controls">
+    <span class="segmented" role="group" aria-label="Input spike pattern">
+      <button id="modeSingle" aria-pressed="false">One input</button>
+      <button id="modeRegular" aria-pressed="true">Pulse train</button>
+    </span>
+    <button class="primary" id="play">Play</button>
+    <button id="restart">Restart</button>
+    <label>
+      Input rate
+      <input id="interval" type="range" min="20" max="100" value="40" step="1">
+      <output id="intervalOut">40 Hz</output>
+    </label>
+    <label>
+      Replay speed
+      <input id="speed" type="range" min="0.1" max="3" value="1" step="0.05">
+      <output id="speedOut">1x</output>
+    </label>
+  </div>
+
+  <div hidden>
+    <input id="cursor" type="range" min="0" max="1000" value="0"><output id="cursorOut"></output>
+  </div>
+
+  <div class="status" id="status" aria-live="polite">
+    <strong>Ready.</strong> Regular inputs produce postsynaptic spikes after several inputs.
+  </div>
+
+  <div class="workspace">
+    <section class="pathway">
+      <h2>The pathway</h2>
+      <svg id="pathway" viewBox="0 0 460 920" role="img" aria-labelledby="pathTitle pathDesc">
+        <title id="pathTitle">Signal pathway from a presynaptic neuron through a memristor to a receiving neuron</title>
+        <desc id="pathDesc">A multipolar presynaptic neuron sends a spike along its axon to an axon terminal. An electrode at the terminal carries the presynaptic voltage to a memristor. A second electrode carries the resulting current into a dendrite of a multipolar receiving neuron.</desc>
+      </svg>
+    </section>
+
+    <div class="column">
+      <section class="device">
+        <h2>Inside the device</h2>
+        <p class="section-note">
+          Voltage redistributes the conductive state. A more continuous path
+          gives higher conductance. The state relaxes after the voltage ends.
+        </p>
+        <canvas id="deviceCanvas" aria-label="Animated cross-section of a memristor. Mobile conductive state redistributes under applied voltage to form a better conducting path, then disperses as the state relaxes."></canvas>
+        <div class="readouts">
+          <span>applied voltage<b id="readVoltage">0.00 V</b></span>
+          <span>internal state<b id="readState">0.00</b></span>
+          <span>conductance<b id="readConductance">0.60 nS</b></span>
+          <span>path continuity<b id="readPath">weak</b></span>
+        </div>
+      </section>
+
+      <section class="scope">
+        <h2>The aligned traces</h2>
+        <p class="section-note">
+          The same time axis for all four rows. Time zero is the first
+          presynaptic spike.
+        </p>
+        <canvas id="scope" aria-label="Four time-aligned traces: presynaptic voltage, device conductance with internal state, postsynaptic current, and receiving-neuron voltage."></canvas>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--elec)"></i> presynaptic voltage, sampled at 20 kHz</span>
+          <span><i class="swatch" style="background:var(--dev)"></i> device conductance</span>
+          <span><i class="swatch" style="background:var(--data)"></i> postsynaptic current</span>
+          <span><i class="swatch" style="background:var(--bio)"></i> receiving-neuron voltage</span>
+          <span><i class="swatch" style="background:var(--spike)"></i> postsynaptic action potential</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="steps">
+    <h2>The sequence</h2>
+    <p class="section-note">Each step reads the output of the step before it. Nothing skips ahead.</p>
+    <div class="step-list">
+      <div class="step" data-step="1">
+        <span class="step-number">Step 1</span>
+        <strong>Presynaptic voltage</strong>
+        <p>The spike travels the axon to the terminal. The electrode samples the complete voltage waveform at 20 kHz, one sample every 0.05 ms.</p>
+      </div>
+      <div class="step" data-step="2">
+        <span class="step-number">Step 2</span>
+        <strong>Voltage across the device</strong>
+        <p>Every sample is applied to the memristor. The device sees the whole waveform, not a spike time.</p>
+      </div>
+      <div class="step" data-step="3">
+        <span class="step-number">Step 3</span>
+        <strong>Conductive state redistributes</strong>
+        <p>The voltage moves the conductive state within the active layer. The conducting path improves and the device conductance rises.</p>
+      </div>
+      <div class="step" data-step="4">
+        <span class="step-number">Step 4</span>
+        <strong>Postsynaptic current</strong>
+        <p>The memristor outputs conductance. This illustration shows current magnitude: <code>|I| = g |V - E_rev|</code>. The code keeps the current sign.</p>
+      </div>
+      <div class="step" data-step="5">
+        <span class="step-number">Step 5</span>
+        <strong>Receiving neuron may spike</strong>
+        <p>The membrane voltage produces an action potential if it crosses the −36 mV firing threshold. The device state then relaxes.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const svg = document.getElementById("pathway");
+  const deviceCanvas = document.getElementById("deviceCanvas");
+  const deviceContext = deviceCanvas.getContext("2d");
+  const scope = document.getElementById("scope");
+  const scopeContext = scope.getContext("2d");
+  const modeSingle = document.getElementById("modeSingle");
+  const modeRegular = document.getElementById("modeRegular");
+  const intervalSlider = document.getElementById("interval");
+  const intervalOut = document.getElementById("intervalOut");
+  const playButton = document.getElementById("play");
+  const restartButton = document.getElementById("restart");
+  const speedSlider = document.getElementById("speed");
+  const speedOut = document.getElementById("speedOut");
+  const cursorSlider = document.getElementById("cursor");
+  const cursorOut = document.getElementById("cursorOut");
+  const status = document.getElementById("status");
+  const readVoltage = document.getElementById("readVoltage");
+  const readState = document.getElementById("readState");
+  const readConductance = document.getElementById("readConductance");
+  const readPath = document.getElementById("readPath");
+  const steps = [...document.querySelectorAll(".step")];
+
+  const colours = {
+    bio: "#3f7a45",
+    elec: "#b0742a",
+    dev: "#6b4fa8",
+    data: "#2674a8",
+    spike: "#b52d32",
+    grid: "#e4e5e8",
+    ink: "#1f2124",
+    muted: "#5f636a"
+  };
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  // ---------------------------------------------------------------- geometry
+
+  function seeded(seed) {
+    let value = seed >>> 0;
+    return () => {
+      value = (value + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(value ^ (value >>> 15), 1 | value);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function taperedPath(points, startWidth, endWidth) {
+    const left = [];
+    const right = [];
+    for (let i = 0; i < points.length; i++) {
+      const previous = points[Math.max(0, i - 1)];
+      const next = points[Math.min(points.length - 1, i + 1)];
+      let dx = next[0] - previous[0];
+      let dy = next[1] - previous[1];
+      const length = Math.hypot(dx, dy) || 1;
+      dx /= length;
+      dy /= length;
+      const fraction = i / Math.max(1, points.length - 1);
+      const half = (startWidth + (endWidth - startWidth) * fraction) / 2;
+      left.push([points[i][0] - dy * half, points[i][1] + dx * half]);
+      right.push([points[i][0] + dy * half, points[i][1] - dx * half]);
+    }
+    right.reverse();
+    const format = list => list.map(p => p[0].toFixed(2) + " " + p[1].toFixed(2)).join(" L");
+    return "M" + format(left) + " L" + format(right) + " Z";
+  }
+
+  // A neurite segment: a slightly curved polyline that drifts with the random
+  // walk so branches never look like straight rays.
+  function neurite(x, y, angle, length, steps, rng, curl) {
+    const points = [[x, y]];
+    let direction = angle;
+    for (let i = 0; i < steps; i++) {
+      direction += (rng() - 0.5) * curl;
+      const step = length / steps;
+      const last = points[points.length - 1];
+      points.push([last[0] + Math.cos(direction) * step, last[1] + Math.sin(direction) * step]);
+    }
+    return { points, endAngle: direction };
+  }
+
+  function dendriteTree(x, y, angle, length, width, depth, rng, output) {
+    const segment = neurite(x, y, angle, length, 7, rng, 0.34);
+    const endWidth = Math.max(0.7, width * 0.55);
+    output.push(taperedPath(segment.points, width, endWidth));
+    if (depth <= 0) return;
+    const tip = segment.points[segment.points.length - 1];
+    const spread = 0.42 + rng() * 0.3;
+    const children = depth > 1 ? 2 : (rng() > 0.35 ? 2 : 1);
+    for (let i = 0; i < children; i++) {
+      const side = children === 1 ? (rng() - 0.5) * 0.6 : (i === 0 ? -spread : spread);
+      dendriteTree(tip[0], tip[1], segment.endAngle + side, length * (0.62 + rng() * 0.18), endWidth, depth - 1, rng, output);
+    }
+  }
+
+  // Closed Catmull-Rom outline: an irregular soma that bulges where dendrites
+  // leave it, rather than a circle or an ellipse.
+  function somaPath(cx, cy, radius, angles, rng) {
+    const count = 26;
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      let bulge = 0;
+      angles.forEach(a => {
+        let difference = Math.abs(((angle - a + Math.PI) % (Math.PI * 2)) - Math.PI);
+        bulge = Math.max(bulge, Math.exp(-Math.pow(difference / 0.34, 2)));
+      });
+      const r = radius * (0.88 + 0.05 * Math.sin(i * 2.3) + (rng() - 0.5) * 0.07 + 0.26 * bulge);
+      points.push([cx + Math.cos(angle) * r, cy + Math.sin(angle) * r * 0.92]);
+    }
+    let d = "M" + points[0][0].toFixed(2) + " " + points[0][1].toFixed(2);
+    for (let i = 0; i < count; i++) {
+      const p0 = points[(i - 1 + count) % count];
+      const p1 = points[i];
+      const p2 = points[(i + 1) % count];
+      const p3 = points[(i + 2) % count];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += " C" + c1[0].toFixed(2) + " " + c1[1].toFixed(2) + "," + c2[0].toFixed(2) + " " + c2[1].toFixed(2) + "," + p2[0].toFixed(2) + " " + p2[1].toFixed(2);
+    }
+    return d + " Z";
+  }
+
+  function bezierPoints(p0, p1, p2, p3, count) {
+    const points = [];
+    for (let i = 0; i <= count; i++) {
+      const t = i / count;
+      const u = 1 - t;
+      points.push([
+        u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+        u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]
+      ]);
+    }
+    return points;
+  }
+
+  const NS = "http://www.w3.org/2000/svg";
+
+  function node(name, attributes, parent) {
+    const element = document.createElementNS(NS, name);
+    Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+    if (parent) parent.appendChild(element);
+    return element;
+  }
+
+  function label(x, y, text, className, parent) {
+    const element = node("text", { x, y, class: className }, parent);
+    element.textContent = text;
+    return element;
+  }
+
+  // Multipolar neuron: irregular soma, several tapering branched dendrites, one
+  // axon leaving a distinct hillock.
+  function drawNeuron(parent, options) {
+    const rng = seeded(options.seed);
+    const group = node("g", {}, parent);
+    const dendritePaths = [];
+    options.dendriteAngles.forEach(angle => {
+      const start = [
+        options.cx + Math.cos(angle) * options.radius * 0.85,
+        options.cy + Math.sin(angle) * options.radius * 0.8
+      ];
+      dendriteTree(start[0], start[1], angle, options.dendriteLength * (0.8 + rng() * 0.45), options.radius * 0.34, 2, rng, dendritePaths);
+    });
+    dendritePaths.forEach(d => node("path", { d, fill: options.fill, stroke: options.stroke, "stroke-width": 1.1, "stroke-linejoin": "round" }, group));
+
+    node("path", {
+      d: somaPath(options.cx, options.cy, options.radius, options.dendriteAngles.concat([options.axonAngle]), seeded(options.seed + 7)),
+      fill: options.fill,
+      stroke: options.stroke,
+      "stroke-width": 2.2
+    }, group);
+    node("ellipse", { cx: options.cx + options.radius * 0.05, cy: options.cy, rx: options.radius * 0.42, ry: options.radius * 0.36, fill: "#fff", stroke: options.stroke, "stroke-width": 1.4 }, group);
+    node("circle", { cx: options.cx + options.radius * 0.12, cy: options.cy + options.radius * 0.05, r: options.radius * 0.13, fill: options.stroke, opacity: .55 }, group);
+    return group;
+  }
+
+  function buildPathway() {
+    const defs = node("defs", {}, svg);
+    const marker = node("marker", { id: "flowArrow", viewBox: "0 0 10 10", refX: "8", refY: "5", markerWidth: "6", markerHeight: "6", orient: "auto" }, defs);
+    node("path", { d: "M0 0 L10 5 L0 10 Z", fill: colours.elec }, marker);
+
+    // --- presynaptic neuron ------------------------------------------------
+    label(16, 26, "Presynaptic neuron", "diagram-head", svg);
+
+    drawNeuron(svg, {
+      seed: 11,
+      cx: 150, cy: 184, radius: 30,
+      dendriteAngles: [-2.75, -2.1, -1.45, -0.72, 2.55, 1.95],
+      axonAngle: 0.5,
+      dendriteLength: 52,
+      fill: "#f2e4d5",
+      stroke: colours.elec
+    });
+    label(192, 172, "soma", "diagram-small", svg);
+    label(316, 96, "dendrites", "diagram-small", svg);
+
+    const hillock = [174, 204];
+    const axonPoints = bezierPoints(hillock, [244, 228], [208, 262], [236, 300], 60);
+    node("path", { d: taperedPath(axonPoints, 9, 5.4), fill: "#f2e4d5", stroke: colours.elec, "stroke-width": 1.6 }, svg);
+
+    // Myelin segments with nodes between them.
+    [0.24, 0.46, 0.68].forEach(position => {
+      const index = Math.round(position * (axonPoints.length - 1));
+      const point = axonPoints[index];
+      const next = axonPoints[Math.min(axonPoints.length - 1, index + 6)];
+      const angle = Math.atan2(next[1] - point[1], next[0] - point[0]) * 180 / Math.PI;
+      node("rect", { x: point[0] - 11, y: point[1] - 7.5, width: 26, height: 15, rx: 7, fill: "#f7ecdd", stroke: colours.elec, "stroke-width": 1.4, transform: "rotate(" + angle.toFixed(1) + " " + point[0].toFixed(1) + " " + point[1].toFixed(1) + ")" }, svg);
+    });
+    label(292, 244, "myelinated axon", "diagram-small", svg);
+
+    const travel = node("circle", { id: "travelDot", r: 6, fill: colours.spike, opacity: 0 }, svg);
+    travel.dataset.role = "travel";
+
+    // --- axon terminal -----------------------------------------------------
+    const terminal = node("path", {
+      id: "terminal",
+      d: "M236 300 C214 306 202 322 206 340 C210 360 228 372 252 370 C278 368 292 352 288 332 C285 314 268 300 236 300 Z",
+      fill: "#f2e4d5",
+      stroke: colours.elec,
+      "stroke-width": 2.4
+    }, svg);
+    const vesicles = node("g", { id: "vesicles" }, svg);
+    [[228, 328], [248, 340], [266, 326], [244, 316], [262, 348]].forEach(([cx, cy]) => {
+      node("circle", { cx, cy, r: 5.4, fill: "#fff", stroke: colours.elec, "stroke-width": 1.2 }, vesicles);
+    });
+    label(302, 322, "axon terminal", "diagram-label", svg);
+    label(302, 340, "the spike arrives here", "diagram-small", svg);
+
+    // --- electrodes and device --------------------------------------------
+    node("path", { d: "M206 356 L150 356 L150 478 L160 478", fill: "none", stroke: "#8e8f93", "stroke-width": 5, "stroke-linejoin": "round" }, svg);
+    node("rect", { x: 141, y: 344, width: 22, height: 24, rx: 4, fill: "#c9ccd1", stroke: "#7c7f85", "stroke-width": 1.6 }, svg);
+    label(16, 362, "electrode 1", "diagram-label", svg);
+    label(16, 378, "records the presynaptic", "diagram-small", svg);
+    label(16, 392, "voltage at 20 kHz", "diagram-small", svg);
+
+    label(16, 450, "Memristor cell", "diagram-label", svg);
+    label(16, 467, "voltage in", "diagram-small", svg);
+    label(16, 482, "conductance out", "diagram-small", svg);
+    node("rect", { x: 160, y: 430, width: 134, height: 96, rx: 6, fill: "#f4f1fa", stroke: colours.dev, "stroke-width": 2.4 }, svg);
+    const chipState = node("rect", { id: "chipState", x: 210, y: 446, width: 34, height: 64, rx: 4, fill: colours.dev, opacity: .18 }, svg);
+    node("rect", { x: 210, y: 446, width: 34, height: 64, rx: 4, fill: "none", stroke: colours.dev, "stroke-width": 1.6 }, svg);
+    label(252, 481, "state", "diagram-small", svg);
+
+    node("path", { d: "M227 526 L227 610 L273 610 L273 648 C273 663 260 677 247 687", fill: "none", stroke: "#8e8f93", "stroke-width": 5, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    node("rect", { x: 262, y: 598, width: 22, height: 24, rx: 4, fill: "#c9ccd1", stroke: "#7c7f85", "stroke-width": 1.6 }, svg);
+    label(16, 586, "electrode 2", "diagram-label", svg);
+    label(16, 603, "delivers the postsynaptic", "diagram-small", svg);
+    label(16, 618, "current into a dendrite", "diagram-small", svg);
+
+    const flow = node("g", { id: "flowDots" }, svg);
+    [0, 1, 2, 3].forEach(index => node("circle", { class: "flow-dot", cx: 0, cy: 0, r: 4.5, fill: colours.data, opacity: 0, "data-index": index }, flow));
+
+    // --- receiving neuron --------------------------------------------------
+    label(16, 690, "Receiving neuron", "diagram-head", svg);
+    label(16, 708, "current changes its voltage", "diagram-small", svg);
+
+    const contactDendrite = [[247, 687], [251, 716], [247, 744], [250, 767]];
+    node("path", {
+      d: taperedPath(contactDendrite, 3.2, 8),
+      fill: "#e2eee0",
+      stroke: colours.bio,
+      "stroke-width": 1.5,
+      "stroke-linejoin": "round"
+    }, svg);
+
+    const receiver = drawNeuron(svg, {
+      seed: 29,
+      cx: 250, cy: 795, radius: 34,
+      dendriteAngles: [-2.6, -1.95, -0.55, 2.5, 1.6],
+      axonAngle: 0.35,
+      dendriteLength: 66,
+      fill: "#e2eee0",
+      stroke: colours.bio
+    });
+    receiver.setAttribute("id", "receiver");
+
+    const receiverAxon = bezierPoints([282, 813], [344, 829], [356, 855], [416, 882], 40);
+    node("path", { d: taperedPath(receiverAxon, 8, 4.4), fill: "#e2eee0", stroke: colours.bio, "stroke-width": 1.5 }, svg);
+    label(300, 861, "postsynaptic spike", "diagram-small", svg);
+    const outputSpike = node("circle", { r: 7, fill: colours.spike, opacity: 0 }, svg);
+
+    node("circle", { id: "injectionSite", cx: 247, cy: 687, r: 8, fill: "none", stroke: colours.data, "stroke-width": 2.4, opacity: .35 }, svg);
+
+    return {
+      axonPoints,
+      travel,
+      terminal,
+      vesicles: [...vesicles.querySelectorAll("circle")],
+      chipState,
+      flowDots: [...flow.querySelectorAll("circle")],
+      receiverBody: receiver.querySelector("path:last-of-type"),
+      injectionSite: document.getElementById("injectionSite"),
+      receiverAxon,
+      outputSpike,
+      wire2: bezierPoints([227, 526], [227, 610], [276, 650], [247, 687], 30)
+    };
+  }
+
+  const scene = buildPathway();
+
+  // ------------------------------------------------------------- the model
+
+  const SAMPLE_RATE_HZ = 20000;
+  const SAMPLE_MS = 1000 / SAMPLE_RATE_HZ;      // 0.05 ms
+  const REST_MV = -65;
+  const REVERSAL_MV = 0;
+  const CAPACITANCE_PF = 100;
+  const MEMBRANE_TAU_MS = 12;
+  const G_MIN_NS = 0.6;
+  const G_MAX_NS = 13.0;
+  const SET_TAU_MS = 0.35;
+  const RELAX_TAU_MS = 45;
+  const GATE_MV = -20;
+  const FIRING_THRESHOLD_MV = -36;
+  const OUTPUT_REFRACTORY_MS = 8;
+  const WINDOW_START_MS = -5;
+
+  let mode = "regular";
+  let windowEndMs = 130;
+  let trace = null;
+
+  function presynapticVoltage(age) {
+    if (age < 0) return REST_MV;
+    const depolarisation = 105 * (Math.exp(-age / 0.62) - Math.exp(-age / 0.16)) / 0.463;
+    const afterHyperpolarisation = -13 * (Math.exp(-age / 7.5) - Math.exp(-age / 1.1)) / 0.614;
+    return REST_MV + depolarisation + afterHyperpolarisation;
+  }
+
+  function spikeTimes() {
+    if (mode === "single") return [0];
+    const interval = 1000 / Number(intervalSlider.value);
+    return Array.from({ length: 14 }, (_, index) => index * interval);
+  }
+
+  function postsynapticActionPotential(age) {
+    if (age < 0 || age > 7) return -Infinity;
+    const depolarisation = 108 * (Math.exp(-age / 0.72) - Math.exp(-age / 0.14)) / 0.58;
+    const afterHyperpolarisation = -12 * (Math.exp(-age / 5.5) - Math.exp(-age / 1.05)) / 0.62;
+    return REST_MV + depolarisation + afterHyperpolarisation;
+  }
+
+  // Fixed-step integration at the project's 20 kHz sampling rate. The device
+  // reads every sample of the voltage waveform, not a spike time.
+  function buildTrace() {
+    const pulses = spikeTimes();
+    windowEndMs = mode === "single" ? 130 : pulses.at(-1) + 80;
+    const count = Math.round((windowEndMs - WINDOW_START_MS) / SAMPLE_MS) + 1;
+    const time = new Float64Array(count);
+    const voltage = new Float64Array(count);
+    const state = new Float64Array(count);
+    const conductance = new Float64Array(count);
+    const current = new Float64Array(count);
+    const membrane = new Float64Array(count);
+
+    const outputSpikes = [];
+    let lastOutputSpike = -Infinity;
+    let x = 0;
+    let v = REST_MV;
+    for (let i = 0; i < count; i++) {
+      const t = WINDOW_START_MS + i * SAMPLE_MS;
+      let preVoltage = REST_MV;
+      pulses.forEach(pulse => { preVoltage += presynapticVoltage(t - pulse) - REST_MV; });
+
+      // Generic drive: the part of the applied voltage above a gate threshold
+      // redistributes the conductive state. Below the gate, only relaxation acts.
+      const drive = Math.max(0, (preVoltage - GATE_MV) / (40 - GATE_MV));
+      const gated = Math.min(1, drive * drive);
+      const dx = gated * (1 - x) / SET_TAU_MS - x / RELAX_TAU_MS;
+      x = Math.max(0, Math.min(1, x + dx * SAMPLE_MS));
+
+      const g = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * x;
+      const i_pA = (g - G_MIN_NS) * Math.abs(v - REVERSAL_MV) * 0.85;
+      const dv = (-(v - REST_MV) / MEMBRANE_TAU_MS) + i_pA / CAPACITANCE_PF;
+      v += dv * SAMPLE_MS;
+
+      if (v >= FIRING_THRESHOLD_MV && t - lastOutputSpike >= OUTPUT_REFRACTORY_MS) {
+        outputSpikes.push(t);
+        lastOutputSpike = t;
+        v = REST_MV;
+      }
+
+      time[i] = t;
+      voltage[i] = preVoltage;
+      state[i] = x;
+      conductance[i] = g;
+      current[i] = i_pA;
+      membrane[i] = v;
+    }
+
+    const displayedMembrane = new Float64Array(membrane);
+    outputSpikes.forEach(spikeTime => {
+      for (let i = 0; i < count; i++) {
+        const actionPotential = postsynapticActionPotential(time[i] - spikeTime);
+        if (actionPotential > displayedMembrane[i]) displayedMembrane[i] = actionPotential;
+      }
+    });
+
+    let peakCurrent = 0;
+    let peakMembrane = REST_MV;
+    for (let i = 0; i < count; i++) {
+      peakCurrent = Math.max(peakCurrent, current[i]);
+      peakMembrane = Math.max(peakMembrane, displayedMembrane[i]);
+    }
+    trace = { count, time, voltage, state, conductance, current, membrane: displayedMembrane, passiveMembrane: membrane, pulses, outputSpikes, peakCurrent, peakMembrane };
+    cursorSlider.max = String(count - 1);
+  }
+
+  function sampleAt(index) {
+    const i = Math.max(0, Math.min(trace.count - 1, Math.round(index)));
+    return {
+      time: trace.time[i],
+      voltage: trace.voltage[i],
+      state: trace.state[i],
+      conductance: trace.conductance[i],
+      current: trace.current[i],
+      membrane: trace.membrane[i]
+    };
+  }
+
+  // --------------------------------------------------------- device drawing
+
+  const particleCount = 64;
+  const particles = [];
+  {
+    const rng = seeded(97);
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        homeX: 0.08 + rng() * 0.84,
+        homeY: rng(),
+        lane: (rng() - 0.5) * 0.5,
+        wobble: rng() * Math.PI * 2,
+        radius: 2.2 + rng() * 1.5
+      });
+    }
+  }
+
+  function resizeCanvas(canvas, context) {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  function drawDevice(sample, phase) {
+    const width = deviceCanvas.clientWidth;
+    const height = deviceCanvas.clientHeight;
+    if (!width || !height) return;
+    const context = deviceContext;
+    context.clearRect(0, 0, width, height);
+
+    const narrow = width < 520;
+    const left = narrow ? 16 : 122;
+    const right = width - (narrow ? 16 : 22);
+    const top = 34;
+    const bottom = height - 46;
+    const electrode = Math.max(18, (bottom - top) * 0.14);
+    const layerTop = top + electrode;
+    const layerBottom = bottom - electrode;
+    const layerHeight = layerBottom - layerTop;
+    const state = sample.state;
+
+    context.font = "12px Arial";
+    context.textBaseline = "middle";
+
+    // Top electrode: carries the presynaptic voltage.
+    const positive = sample.voltage > GATE_MV;
+    context.fillStyle = positive ? "#d8bd8f" : "#c9ccd1";
+    context.fillRect(left, top, right - left, electrode);
+    context.strokeStyle = "#7c7f85";
+    context.lineWidth = 1.2;
+    context.strokeRect(left, top, right - left, electrode);
+    context.fillStyle = colours.ink;
+    context.textAlign = narrow ? "left" : "right";
+    const labelX = narrow ? left + 8 : left - 10;
+    context.fillText("top electrode", labelX, top + electrode / 2);
+
+    // Active layer.
+    context.fillStyle = "#f6f3fb";
+    context.fillRect(left, layerTop, right - left, layerHeight);
+    context.strokeStyle = "#c9bfe0";
+    context.strokeRect(left, layerTop, right - left, layerHeight);
+    context.fillStyle = colours.ink;
+    context.fillText("active layer", labelX, narrow ? layerTop + 14 : layerTop + layerHeight / 2);
+    context.fillStyle = colours.muted;
+    context.font = "11px Arial";
+    context.fillText("(SiC / SiO2 stack)", labelX, (narrow ? layerTop + 14 : layerTop + layerHeight / 2) + 15);
+
+    // Bottom electrode: the conductance is read here.
+    context.font = "12px Arial";
+    context.fillStyle = "#c9ccd1";
+    context.fillRect(left, layerBottom, right - left, electrode);
+    context.strokeStyle = "#7c7f85";
+    context.strokeRect(left, layerBottom, right - left, electrode);
+    context.fillStyle = colours.ink;
+    context.fillText("bottom electrode", labelX, layerBottom + electrode / 2);
+
+    const corridorX = left + (right - left) * 0.52;
+    const corridorWidth = (right - left) * 0.1;
+
+    // The conducting path. Its width, opacity and continuity all follow the
+    // internal state, so a low state shows visible gaps.
+    const segments = 9;
+    context.lineCap = "round";
+    for (let i = 0; i < segments; i++) {
+      const t0 = i / segments;
+      const t1 = (i + 0.72) / segments;
+      const y0 = layerTop + t0 * layerHeight;
+      const y1 = layerTop + t1 * layerHeight;
+      const sway = Math.sin(t0 * 4.6 + 1.2) * corridorWidth * 0.9;
+      const swayNext = Math.sin(t1 * 4.6 + 1.2) * corridorWidth * 0.9;
+      const strength = Math.max(0, Math.min(1, state * 1.25 - i * 0.035));
+      if (strength <= 0.02) continue;
+      context.strokeStyle = "rgba(107, 79, 168, " + (0.15 + 0.75 * strength).toFixed(3) + ")";
+      context.lineWidth = 1.6 + 6.4 * strength;
+      context.beginPath();
+      context.moveTo(corridorX + sway, y0);
+      context.lineTo(corridorX + swayNext, y1);
+      context.stroke();
+    }
+
+    // Mobile conductive state. Each marker moves from its dispersed home
+    // position towards the corridor as the state rises, and drifts back as the
+    // state relaxes.
+    particles.forEach(particle => {
+      const wobble = phase === null ? 0 : Math.sin(phase * 0.004 + particle.wobble) * 1.6 * (1 - state * 0.6);
+      const homeX = left + particle.homeX * (right - left);
+      const targetX = corridorX + particle.lane * corridorWidth + Math.sin(particle.homeY * 4.6 + 1.2) * corridorWidth * 0.9;
+      const x = homeX + (targetX - homeX) * state + wobble;
+      const y = layerTop + particle.homeY * layerHeight;
+      context.beginPath();
+      context.arc(x, y, particle.radius, 0, Math.PI * 2);
+      context.fillStyle = "rgba(107, 79, 168, " + (0.3 + 0.55 * state).toFixed(3) + ")";
+      context.fill();
+    });
+
+    // Applied-voltage arrows on the left of the layer.
+    const arrowStrength = Math.max(0, Math.min(1, (sample.voltage - GATE_MV) / 60));
+    if (arrowStrength > 0.02) {
+      context.strokeStyle = "rgba(176, 116, 42, " + (0.25 + 0.7 * arrowStrength).toFixed(3) + ")";
+      context.fillStyle = context.strokeStyle;
+      context.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const x = left + 18 + i * 15;
+        context.beginPath();
+        context.moveTo(x, layerTop + 8);
+        context.lineTo(x, layerBottom - 12);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(x - 4, layerBottom - 16);
+        context.lineTo(x + 4, layerBottom - 16);
+        context.lineTo(x, layerBottom - 8);
+        context.closePath();
+        context.fill();
+      }
+    }
+
+    context.textAlign = "left";
+    context.fillStyle = colours.muted;
+    context.font = "11px Arial";
+    context.fillText(narrow ? "voltage redistributes the device state" : "applied voltage redistributes the conductive state", left + 4, bottom + 16);
+    context.fillText(narrow ? "dots show mobile conductive state" : "markers = generic mobile conductive state, not one named species", left + 4, bottom + 32);
+  }
+
+  // --------------------------------------------------------- trace drawing
+
+  function drawScope(visibleIndex) {
+    const width = scope.clientWidth;
+    const height = scope.clientHeight;
+    if (!width || !height) return;
+    const context = scopeContext;
+    context.clearRect(0, 0, width, height);
+
+    const narrow = width < 560;
+    const left = width < 330 ? 122 : width < 450 ? 145 : width < 700 ? 185 : 200;
+    const right = 16;
+    const plotWidth = width - left - right;
+    const top = 16;
+    const rowHeight = (height - 52) / 4;
+
+    const rows = [
+      {
+        title: "1. Presynaptic voltage",
+        note: narrow ? "mV, 20 kHz" : "millivolts, sampled at 20 kHz",
+        colour: colours.elec,
+        get: i => trace.voltage[i],
+        min: -80, max: 45,
+        zero: REST_MV
+      },
+      {
+        title: "2. Device conductance",
+        note: narrow ? "nS" : "nanosiemens, from the internal state",
+        colour: colours.dev,
+        get: i => trace.conductance[i],
+        min: 0, max: G_MAX_NS * 1.12,
+        zero: 0,
+        shade: i => trace.state[i]
+      },
+      {
+        title: "3. Postsynaptic current",
+        note: narrow ? "pA, magnitude" : "picoamps, |g x (V - E_rev)|",
+        colour: colours.data,
+        get: i => trace.current[i],
+        min: 0, max: Math.max(60, trace.peakCurrent * 1.15),
+        zero: 0
+      },
+      {
+        title: "4. Receiving-neuron voltage",
+        note: narrow ? "mV" : "millivolts, from rest at -65 mV",
+        colour: colours.bio,
+        get: i => trace.membrane[i],
+        min: REST_MV - 3,
+        max: Math.max(REST_MV + 10, trace.peakMembrane + 4),
+        zero: REST_MV
+      }
+    ];
+
+    const xOf = index => left + (index / (trace.count - 1)) * plotWidth;
+
+    rows.forEach((row, index) => {
+      const rowTop = top + index * rowHeight;
+      const plotTop = rowTop + (narrow ? 34 : 24);
+      const plotBottom = rowTop + rowHeight - 12;
+      const yOf = value => plotBottom - ((value - row.min) / (row.max - row.min)) * (plotBottom - plotTop);
+
+      context.textAlign = "left";
+      context.textBaseline = "alphabetic";
+      context.fillStyle = colours.ink;
+      context.font = narrow ? "bold 10.5px Arial" : "bold 12.5px Arial";
+      drawWrappedLabel(row.title, 8, rowTop + 12, left - 20, 14);
+      context.fillStyle = colours.muted;
+      context.font = narrow ? "10px Arial" : "11px Arial";
+      drawWrappedLabel(row.note, 8, rowTop + 40, left - 20, 13);
+
+      context.strokeStyle = colours.grid;
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(left, yOf(row.zero));
+      context.lineTo(left + plotWidth, yOf(row.zero));
+      context.stroke();
+      for (let i = 0; i <= 5; i++) {
+        const x = left + (i / 5) * plotWidth;
+        context.beginPath();
+        context.moveTo(x, plotTop);
+        context.lineTo(x, plotBottom);
+        context.stroke();
+      }
+
+      if (index === 3) {
+        const thresholdY = yOf(FIRING_THRESHOLD_MV);
+        context.strokeStyle = colours.spike;
+        context.setLineDash([6, 4]);
+        context.beginPath();
+        context.moveTo(left, thresholdY);
+        context.lineTo(left + plotWidth, thresholdY);
+        context.stroke();
+        context.setLineDash([]);
+        context.fillStyle = colours.spike;
+        context.font = narrow ? "9px Arial" : "10px Arial";
+        context.fillText("−36 mV firing threshold", left + 5, thresholdY - 5);
+      }
+
+      // The violet band under row 2 shows the internal state directly, so the
+      // state and the conductance can be compared without a fifth row.
+      if (row.shade) {
+        context.fillStyle = "rgba(107, 79, 168, .12)";
+        context.beginPath();
+        context.moveTo(xOf(0), plotBottom);
+        for (let i = 0; i <= visibleIndex; i += 4) {
+          context.lineTo(xOf(i), plotBottom - row.shade(i) * (plotBottom - plotTop));
+        }
+        context.lineTo(xOf(visibleIndex), plotBottom);
+        context.closePath();
+        context.fill();
+      }
+
+      context.strokeStyle = row.colour;
+      context.lineWidth = 2.3;
+      context.beginPath();
+      const stride = Math.max(1, Math.floor(trace.count / (plotWidth * 2)));
+      for (let i = 0; i <= visibleIndex; i += stride) {
+        const x = xOf(i);
+        const y = yOf(row.get(i));
+        if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
+      }
+      context.stroke();
+
+      if (index === 3) {
+        trace.outputSpikes.forEach(spikeTime => {
+          const start = Math.max(0, Math.round((spikeTime - WINDOW_START_MS) / SAMPLE_MS));
+          const end = Math.min(visibleIndex, start + Math.round(7 / SAMPLE_MS));
+          if (start > visibleIndex || end <= start) return;
+          context.strokeStyle = colours.spike;
+          context.lineWidth = 2.8;
+          context.beginPath();
+          for (let i = start; i <= end; i += 2) {
+            const x = xOf(i);
+            const y = yOf(row.get(i));
+            if (i === start) context.moveTo(x, y); else context.lineTo(x, y);
+          }
+          context.stroke();
+        });
+      }
+
+      trace.pulses.forEach(pulse => {
+        const index = Math.round((pulse - WINDOW_START_MS) / SAMPLE_MS);
+        if (index > visibleIndex) return;
+        context.strokeStyle = "rgba(181, 45, 50, .35)";
+        context.setLineDash([3, 3]);
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(xOf(index), plotTop);
+        context.lineTo(xOf(index), plotBottom);
+        context.stroke();
+        context.setLineDash([]);
+      });
+    });
+
+    const cursorX = xOf(visibleIndex);
+    context.strokeStyle = "#555b63";
+    context.setLineDash([3, 3]);
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(cursorX, top);
+    context.lineTo(cursorX, top + 4 * rowHeight - 12);
+    context.stroke();
+    context.setLineDash([]);
+    context.fillStyle = "#555b63";
+    context.font = "bold 10px Arial";
+    context.textAlign = cursorX > width - 50 ? "right" : "left";
+    context.fillText("now", cursorX + (cursorX > width - 50 ? -5 : 5), top + 8);
+
+    context.fillStyle = colours.muted;
+    context.font = "11px Arial";
+    context.textAlign = "center";
+    for (let i = 0; i <= 5; i++) {
+      const x = left + (i / 5) * plotWidth;
+      const t = WINDOW_START_MS + (i / 5) * (windowEndMs - WINDOW_START_MS);
+      context.fillText(t.toFixed(0), x, height - 20);
+    }
+    context.fillText(narrow ? "time (ms)" : "time from the first presynaptic spike (milliseconds)", left + plotWidth / 2, height - 5);
+
+    function drawWrappedLabel(text, x, y, maxWidth, lineHeight) {
+      const words = text.split(" ");
+      let line = "";
+      words.forEach(word => {
+        const test = line ? `${line} ${word}` : word;
+        if (line && context.measureText(test).width > maxWidth) {
+          context.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+        } else {
+          line = test;
+        }
+      });
+      if (line) context.fillText(line, x, y);
+    }
+  }
+
+  // ------------------------------------------------------ pathway animation
+
+  function pointOnPolyline(points, fraction) {
+    const scaled = Math.max(0, Math.min(1, fraction)) * (points.length - 1);
+    const index = Math.floor(scaled);
+    const next = Math.min(points.length - 1, index + 1);
+    const local = scaled - index;
+    return [
+      points[index][0] + (points[next][0] - points[index][0]) * local,
+      points[index][1] + (points[next][1] - points[index][1]) * local
+    ];
+  }
+
+  function updatePathway(sample) {
+    const arrival = trace.pulses.reduce((best, pulse) => (sample.time >= pulse - 2 && pulse >= best ? pulse : best), -Infinity);
+    const age = arrival === -Infinity ? -Infinity : sample.time - arrival;
+
+    if (age >= -2 && age < 0.6) {
+      const fraction = Math.max(0, Math.min(1, (age + 2) / 2.6));
+      const point = pointOnPolyline(scene.axonPoints, fraction);
+      scene.travel.setAttribute("cx", point[0].toFixed(1));
+      scene.travel.setAttribute("cy", point[1].toFixed(1));
+      scene.travel.setAttribute("opacity", "1");
+    } else {
+      scene.travel.setAttribute("opacity", "0");
+    }
+
+    const excited = Math.max(0, Math.min(1, (sample.voltage - GATE_MV) / 55));
+    scene.terminal.setAttribute("fill", excited > 0.05 ? "#f6dcbf" : "#f2e4d5");
+    scene.vesicles.forEach((vesicle, index) => {
+      vesicle.setAttribute("fill", excited > 0.2 && index % 2 === 0 ? "#f6dcbf" : "#fff");
+    });
+
+    scene.chipState.setAttribute("height", (6 + 58 * sample.state).toFixed(1));
+    scene.chipState.setAttribute("y", (446 + 64 - (6 + 58 * sample.state)).toFixed(1));
+    scene.chipState.setAttribute("opacity", (0.18 + 0.62 * sample.state).toFixed(2));
+
+    const currentFraction = Math.max(0, Math.min(1, sample.current / Math.max(1, trace.peakCurrent)));
+    scene.flowDots.forEach((dot, index) => {
+      if (currentFraction < 0.05) { dot.setAttribute("opacity", "0"); return; }
+      const offset = ((sample.time * 0.05) + index / scene.flowDots.length) % 1;
+      const point = pointOnPolyline(scene.wire2, offset);
+      dot.setAttribute("cx", point[0].toFixed(1));
+      dot.setAttribute("cy", point[1].toFixed(1));
+      dot.setAttribute("opacity", (0.25 + 0.75 * currentFraction).toFixed(2));
+    });
+    scene.injectionSite.setAttribute("opacity", (0.25 + 0.7 * currentFraction).toFixed(2));
+
+    const depolarisation = Math.max(0, Math.min(1, (sample.membrane - REST_MV) / 14));
+    scene.receiverBody.setAttribute("fill", depolarisation < 0.06 ? "#e2eee0" : depolarisation > 0.6 ? "#cfe6cb" : "#d8ead5");
+
+    const latestOutputSpike = trace.outputSpikes.filter(time => time <= sample.time).at(-1);
+    const outputAge = latestOutputSpike === undefined ? Infinity : sample.time - latestOutputSpike;
+    if (outputAge >= 0 && outputAge < 3) {
+      const point = pointOnPolyline(scene.receiverAxon, outputAge / 3);
+      scene.outputSpike.setAttribute("cx", point[0].toFixed(1));
+      scene.outputSpike.setAttribute("cy", point[1].toFixed(1));
+      scene.outputSpike.setAttribute("opacity", "1");
+    } else {
+      scene.outputSpike.setAttribute("opacity", "0");
+    }
+  }
+
+  // ---------------------------------------------------------------- staging
+
+  function activeStep(sample) {
+    const arrival = trace.pulses.filter(pulse => sample.time >= pulse - 2).pop();
+    if (arrival === undefined) return 1;
+    const age = sample.time - arrival;
+    if (age < 0.2) return 1;
+    if (age < 0.9) return 2;
+    if (age < 2.4) return 3;
+    if (age < 5) return 4;
+    return 5;
+  }
+
+  const stepMessages = {
+    1: "Step 1. The spike travels the axon. Electrode 1 samples the complete presynaptic voltage waveform at 20 kHz.",
+    2: "Step 2. Every voltage sample is applied across the memristor. The device reads the waveform, not a spike time.",
+    3: "Step 3. The applied voltage redistributes the conductive state. The conducting path improves and the conductance rises.",
+    4: "Step 4. The memristor outputs conductance. The receiver computes the current as conductance times driving force.",
+    5: "Step 5. The current changes the receiving neuron's voltage. An action potential appears if the voltage crosses −36 mV."
+  };
+
+  function updateReadouts(sample) {
+    // The teaching model works in millivolts. The device panel reports the same
+    // quantity in volts, which is how a device datasheet states it.
+    readVoltage.textContent = (sample.voltage / 1000).toFixed(3) + " V";
+    readState.textContent = sample.state.toFixed(2);
+    readConductance.textContent = sample.conductance.toFixed(2) + " nS";
+    readPath.textContent = sample.state < 0.15 ? "weak" : sample.state < 0.55 ? "partial" : "continuous";
+  }
+
+  function render(index, phase) {
+    const sample = sampleAt(index);
+    drawScope(Math.round(index));
+    drawDevice(sample, phase);
+    updatePathway(sample);
+    updateReadouts(sample);
+    cursorOut.textContent = sample.time.toFixed(1) + " ms";
+
+    const step = activeStep(sample);
+    steps.forEach(element => {
+      const number = Number(element.dataset.step);
+      element.classList.toggle("active", number === step);
+      element.classList.toggle("not-reached", number > step);
+    });
+    const inputInterval = mode === "single" ? null : 1000 / Number(intervalSlider.value);
+    const outputGaps = inputInterval === null ? [] : trace.outputSpikes.slice(1).map((time, index) =>
+      Math.max(1, Math.round((time - trace.outputSpikes[index]) / inputInterval))
+    );
+    const regularOutput = outputGaps.length > 0 && outputGaps.every(gap => gap === outputGaps[0]);
+    const outputNote = trace.outputSpikes.length === 0
+      ? " The receiving neuron remains below its firing threshold."
+      : mode === "single"
+        ? " The receiving neuron produces one postsynaptic action potential."
+        : regularOutput
+          ? ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs, one after every ${outputGaps[0]} inputs once firing starts.`
+          : ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs with gaps of ${outputGaps.join(", ")} input intervals.`;
+    status.innerHTML = "<strong>" + (playing ? "Playing." : "Paused.") + "</strong> " + stepMessages[step] + (step === 5 ? outputNote : "");
+  }
+
+  // --------------------------------------------------------------- playback
+
+  let playing = false;
+  let frame = null;
+  let startClock = 0;
+  let startIndex = 0;
+
+  function replayDuration() {
+    // 1x plays the whole window in six seconds, as on the biology page.
+    return 6000 / Number(speedSlider.value);
+  }
+
+  function tick(now) {
+    const progress = (now - startClock) / replayDuration();
+    const index = startIndex + progress * (trace.count - 1);
+    if (index >= trace.count - 1) {
+      cursorSlider.value = String(trace.count - 1);
+      stop();
+      render(trace.count - 1, now);
+      return;
+    }
+    cursorSlider.value = String(Math.round(index));
+    render(index, now);
+    frame = requestAnimationFrame(tick);
+  }
+
+  function play() {
+    if (reducedMotion.matches) {
+      cursorSlider.value = cursorSlider.max;
+      render(trace.count - 1, null);
+      status.innerHTML = "<strong>Reduced motion.</strong> The full result is shown at once. Drag the time cursor to step through the chain.";
+      return;
+    }
+    playing = true;
+    playButton.textContent = "Pause";
+    startIndex = Number(cursorSlider.value) >= trace.count - 1 ? 0 : Number(cursorSlider.value);
+    startClock = performance.now();
+    frame = requestAnimationFrame(tick);
+  }
+
+  function stop() {
+    playing = false;
+    playButton.textContent = "Play";
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+  }
+
+  function rebuild(resetCursor) {
+    stop();
+    buildTrace();
+    if (resetCursor) cursorSlider.value = "0";
+    render(Number(cursorSlider.value), null);
+  }
+
+  // ---------------------------------------------------------------- wiring
+
+  function setMode(next) {
+    mode = next;
+    modeSingle.setAttribute("aria-pressed", String(next === "single"));
+    modeRegular.setAttribute("aria-pressed", String(next === "regular"));
+    rebuild(true);
+  }
+
+  modeSingle.addEventListener("click", () => setMode("single"));
+  modeRegular.addEventListener("click", () => setMode("regular"));
+
+  intervalSlider.addEventListener("input", () => {
+    intervalOut.textContent = intervalSlider.value + " Hz";
+    rebuild(true);
+  });
+
+  speedSlider.addEventListener("input", () => {
+    speedOut.textContent = Number(speedSlider.value).toFixed(2).replace(/\.?0+$/, "") + "x";
+    if (playing) { stop(); play(); }
+  });
+
+  cursorSlider.addEventListener("input", () => {
+    stop();
+    render(Number(cursorSlider.value), null);
+  });
+
+  playButton.addEventListener("click", () => { if (playing) { stop(); render(Number(cursorSlider.value), null); } else play(); });
+  restartButton.addEventListener("click", () => { rebuild(true); });
+
+  function handleResize() {
+    resizeCanvas(deviceCanvas, deviceContext);
+    resizeCanvas(scope, scopeContext);
+    render(Number(cursorSlider.value), null);
+  }
+
+  window.addEventListener("resize", handleResize);
+  reducedMotion.addEventListener("change", () => { stop(); render(Number(cursorSlider.value), null); });
+
+  buildTrace();
+  handleResize();
+})();
+</script>
+</body>
+</html>
