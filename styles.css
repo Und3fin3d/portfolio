@@ -1048,9 +1048,17 @@ main {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--signal);
+  transition: transform 0.3s var(--ease);
 }
 
-.research-link__body { display: grid; gap: 0.45rem; }
+.research-link__body {
+  display: grid;
+  gap: 0.45rem;
+  transition: transform 0.3s var(--ease);
+}
+
+.research-link:hover .research-link__number,
+.research-link:hover .research-link__body { transform: translateX(0.4rem); }
 
 .research-link__body strong {
   font-family: var(--font-display);
