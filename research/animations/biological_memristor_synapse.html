@@ -604,6 +604,8 @@
     node("path", { d: taperedPath(receiverAxon, 8, 4.4), fill: "#e2eee0", stroke: colours.bio, "stroke-width": 1.5 }, svg);
     label(300, 861, "postsynaptic spike", "diagram-small", svg);
     const outputSpike = node("circle", { r: 7, fill: colours.spike, opacity: 0 }, svg);
+    const receiverInput = [[247, 687], [251, 716], [247, 744], [250, 767], [250, 795]];
+    const receiverVoltage = node("circle", { r: 6, fill: colours.bio, opacity: 0 }, svg);
 
     node("circle", { id: "injectionSite", cx: 247, cy: 687, r: 8, fill: "none", stroke: colours.data, "stroke-width": 2.4, opacity: .35 }, svg);
 
@@ -619,6 +621,8 @@
       receiverBody: receiver.querySelector("path:last-of-type"),
       injectionSite: document.getElementById("injectionSite"),
       receiverAxon,
+      receiverInput,
+      receiverVoltage,
       outputSpike,
       wire2
     };
@@ -1145,7 +1149,7 @@
     scene.chipState.setAttribute("opacity", (0.18 + 0.62 * sample.state).toFixed(2));
 
     const currentFraction = Math.max(0, Math.min(1, sample.current / Math.max(1, trace.peakCurrent)));
-    const showCurrent = forcedStep === null || forcedStep >= 4;
+    const showCurrent = forcedStep === null || forcedStep === 4;
     scene.flowDots.forEach((dot, index) => {
       if (!showCurrent || currentFraction < 0.05) { dot.setAttribute("opacity", "0"); return; }
       const offset = forcedStep === 4
@@ -1160,12 +1164,26 @@
 
     const depolarisation = Math.max(0, Math.min(1, (sample.membrane - REST_MV) / 14));
     const showReceiver = forcedStep === null || forcedStep >= 5;
-    scene.receiverBody.setAttribute("fill", !showReceiver || depolarisation < 0.06 ? "#e2eee0" : depolarisation > 0.6 ? "#cfe6cb" : "#d8ead5");
+    const forcedDepolarisation = forcedStep === 5 ? Math.sin(Math.PI * forcedProgress) : 0;
+    const visibleDepolarisation = Math.max(depolarisation, forcedDepolarisation);
+    scene.receiverBody.setAttribute("fill", !showReceiver || visibleDepolarisation < 0.06 ? "#e2eee0" : visibleDepolarisation > 0.6 ? "#cfe6cb" : "#d8ead5");
+
+    if (forcedStep === 5 && forcedProgress < 0.48) {
+      const point = pointOnPolyline(scene.receiverInput, forcedProgress / 0.48);
+      scene.receiverVoltage.setAttribute("cx", point[0].toFixed(1));
+      scene.receiverVoltage.setAttribute("cy", point[1].toFixed(1));
+      scene.receiverVoltage.setAttribute("opacity", "1");
+    } else {
+      scene.receiverVoltage.setAttribute("opacity", "0");
+    }
 
     const latestOutputSpike = trace.outputSpikes.filter(time => time <= sample.time).at(-1);
     const outputAge = latestOutputSpike === undefined ? Infinity : sample.time - latestOutputSpike;
-    if (showReceiver && outputAge >= 0 && outputAge < 3) {
-      const point = pointOnPolyline(scene.receiverAxon, outputAge / 3);
+    const forcedOutputProgress = forcedStep === 5 && trace.outputSpikes.length > 0 && forcedProgress >= 0.48
+      ? (forcedProgress - 0.48) / 0.52
+      : null;
+    if (forcedOutputProgress !== null || (showReceiver && outputAge >= 0 && outputAge < 3)) {
+      const point = pointOnPolyline(scene.receiverAxon, forcedOutputProgress ?? (outputAge / 3));
       scene.outputSpike.setAttribute("cx", point[0].toFixed(1));
       scene.outputSpike.setAttribute("cy", point[1].toFixed(1));
       scene.outputSpike.setAttribute("opacity", "1");
@@ -1340,6 +1358,10 @@
   playButton.addEventListener("click", () => { if (playing) { stop(); render(Number(cursorSlider.value), null); } else play(); });
 
   function manualStepWindow(step) {
+    if (step === 5 && trace.outputSpikes.length > 0) {
+      const firstOutputSpike = trace.outputSpikes[0];
+      return [firstOutputSpike - 0.5, firstOutputSpike + 3];
+    }
     return {
       1: [-1.8, 0.15],
       2: [0.2, 0.85],
