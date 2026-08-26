@@ -388,8 +388,8 @@
 
 <div>
   <p class="intro">
-    Choose one input or a regular input train. Change the input rate to see when
-    the receiving neuron fires and which input spikes it skips.
+    Choose one input or a regular input train. Change the input strength to see
+    how several smaller inputs can build towards one output spike.
   </p>
 
   <div class="controls" aria-label="Simulation controls">
@@ -401,9 +401,9 @@
     <button id="nextStepScenario">Next step</button>
     <button id="restartScenario">Restart</button>
     <label>
-      Input rate
-      <input id="frequency" type="range" min="10" max="100" value="50" step="5">
-      <output id="frequencyOut">50 Hz</output>
+      Input strength
+      <input id="strength" type="range" min="4" max="10" value="5" step="1">
+      <output id="strengthOut">5 / 10</output>
     </label>
     <label>
       Replay speed
@@ -415,11 +415,11 @@
   <div hidden>
     <button id="send"></button><button id="clear"></button><button id="train"></button><button id="pause"></button>
     <select id="kind"><option value="exc" selected>Excitatory</option></select>
-    <input id="strength" type="range" value="7"><output id="strengthOut"></output>
+    <input id="frequency" type="range" min="50" max="50" value="50"><output id="frequencyOut">50 Hz</output>
   </div>
 
   <div class="status" id="status" aria-live="polite">
-    <strong>Ready.</strong> Regular inputs produce one postsynaptic spike after every second input.
+    <strong>Ready.</strong> Smaller inputs accumulate. Stronger inputs approach one output spike for each input.
   </div>
 
   <div class="workspace">
@@ -686,10 +686,9 @@
     const inhibitory = kindSelect.value === "inh";
     const sign = inhibitory ? -0.65 : 1;
     const timeStep = 0.02;
-    const membraneTimeConstant = 12;
+    const membraneTimeConstant = 30;
     const currentToVoltage = 0.5;
-    const resetAmount = firingLevel + 0.2;
-    const refractoryPeriod = 2;
+    const refractoryPeriod = 18;
     const simulationStart = Math.min(range.min, pulses[0] - 1);
     const times = [];
     const voltages = [];
@@ -707,7 +706,7 @@
       if (!inhibitory && voltage >= firingLevel && t - lastSpike >= refractoryPeriod) {
         if (t >= range.min) spikeTimes.push(t);
         lastSpike = t;
-        voltage -= resetAmount;
+        voltage = 0;
       }
 
       if (t >= range.min - timeStep / 2) {
@@ -1244,7 +1243,7 @@
 
   strengthSlider.addEventListener("input", () => {
     strengthOut.value = `${strengthSlider.value} / 10`;
-    resetForChangedSettings();
+    resetScenario();
   });
 
   kindSelect.addEventListener("change", () => {
@@ -1287,8 +1286,10 @@
     drawGraphs(0);
     updateDiagram(0);
     const message = scenario === "single"
-      ? "One input changes the receiving-cell voltage but remains below threshold."
-      : "A regular input train can produce skipped or unevenly spaced output spikes.";
+      ? (willFire()
+        ? "One strong input crosses the firing threshold and produces one output spike."
+        : "One input changes the receiving-cell voltage but remains below threshold.")
+      : "Smaller inputs need time to accumulate. Stronger inputs approach one output spike for each input.";
     status.innerHTML = `<strong>Ready.</strong> ${message}`;
   }
 
