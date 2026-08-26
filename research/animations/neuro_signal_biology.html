@@ -955,7 +955,7 @@
     };
   }
 
-  function updateDiagram(progress) {
+  function updateDiagram(progress, forcedStep = null) {
     const state = animationState(progress);
     const age = state.eventAge;
     resetVisuals();
@@ -974,17 +974,18 @@
       receivingCell.setAttribute("fill", voltage >= firingLevel ? "#f3d7d9" : "#d8ead5");
     }
 
-    const activeStep = age < 0 ? 1 :
+    const activeStep = forcedStep ?? (age < 0 ? 1 :
       age < 0.35 ? 2 :
       age < 0.8 ? 3 :
-      age < 4 ? 4 : 5;
+      age < 4 ? 4 : 5);
 
+    const didFire = forcedStep === 5 ? willFire() : state.pulseFired;
     steps.forEach((step, index) => {
       step.classList.toggle("active", index + 1 === activeStep);
-      step.classList.toggle("not-reached", index === 4 && activeStep === 5 && !state.pulseFired);
+      step.classList.toggle("not-reached", index === 4 && activeStep === 5 && !didFire);
     });
 
-    updateStatus(activeStep, state.pulseFired);
+    updateStatus(activeStep, didFire);
   }
 
   function renderAllActiveEvents(biologicalTime) {
@@ -1082,7 +1083,7 @@
       const wording = gaps[0] === 1 ? "every input" : `every ${gaps[0]} inputs`;
       return ` The receiving neuron produces one postsynaptic spike after ${wording}.`;
     }
-    return ` Postsynaptic spike gaps vary between ${gaps.join(", ")} input intervals.`;
+    return ` ${timeline().pulseTimes.length} inputs produce ${spikes.length} postsynaptic spikes. The receiving neuron sometimes skips an input, so the output gaps are uneven.`;
   }
 
   function animate(now) {
@@ -1319,6 +1320,10 @@
   });
 
   function manualStepWindow(step) {
+    if (step === 5) {
+      const firstOutputSpike = (findSpikeTimes() || [])[0];
+      if (firstOutputSpike !== undefined) return [firstOutputSpike - 0.4, firstOutputSpike + 2.2];
+    }
     return {
       1: [-0.9, -0.05],
       2: [0, 0.34],
@@ -1338,7 +1343,7 @@
     const progress = Math.max(0, Math.min(1, (biologicalTime - range.min) / (range.max - range.min)));
     lastBiologicalTime = biologicalTime;
     drawGraphs(progress);
-    updateDiagram(progress);
+    updateDiagram(progress, manualStep);
     animationFrame = requestAnimationFrame(animateManualStep);
   }
 
