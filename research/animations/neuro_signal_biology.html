@@ -608,7 +608,7 @@
   let trainExtraPulses = [];
   let lastRenderedProgress = 0;
   let responseCache = null;
-  let manualStep = 1;
+  let manualStep = 0;
   let manualLooping = false;
   let manualLoopStart = 0;
 
@@ -1278,7 +1278,7 @@
 
   function resetScenario() {
     stopScenario();
-    manualStep = 1;
+    manualStep = 0;
     nextStepScenario.textContent = "Next step";
     responseCache = null;
     lastBiologicalTime = timeline().min;
