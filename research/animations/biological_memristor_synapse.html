@@ -1155,11 +1155,11 @@
   }
 
   const stepMessages = {
-    1: "Step 1. The spike travels the axon. Electrode 1 samples the complete presynaptic voltage waveform at 20 kHz.",
-    2: "Step 2. Every voltage sample is applied across the memristor. The device reads the waveform, not a spike time.",
-    3: "Step 3. The applied voltage redistributes the conductive state. The conducting path improves and the conductance rises.",
-    4: "Step 4. The memristor outputs conductance. The receiver computes the current as conductance times driving force.",
-    5: "Step 5. The current changes the receiving neuron's voltage. An action potential appears if the voltage crosses −36 mV."
+    1: "The spike travels the axon. Electrode 1 samples the complete presynaptic voltage waveform at 20 kHz.",
+    2: "Every voltage sample is applied across the memristor. The device reads the waveform, not a spike time.",
+    3: "The applied voltage redistributes the conductive state. The conducting path improves and the conductance rises.",
+    4: "The memristor outputs conductance. The receiver computes the current as conductance times driving force.",
+    5: "The current changes the receiving neuron's voltage. An action potential appears if the voltage crosses −36 mV."
   };
 
   function updateReadouts(sample) {
@@ -1197,7 +1197,7 @@
         : regularOutput
           ? ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs, one after every ${outputGaps[0]} inputs once firing starts.`
           : ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs with gaps of ${outputGaps.join(", ")} input intervals.`;
-    status.innerHTML = "<strong>" + (playing ? "Playing." : "Paused.") + "</strong> " + stepMessages[step] + (step === 5 ? outputNote : "");
+    status.innerHTML = `<strong>Step ${step}.</strong> ${stepMessages[step]}${step === 5 ? outputNote : ""}`;
   }
 
   // --------------------------------------------------------------- playback
