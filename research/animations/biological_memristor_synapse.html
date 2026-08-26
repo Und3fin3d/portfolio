@@ -213,6 +213,7 @@
       <button id="modeRegular" aria-pressed="true">Pulse train</button>
     </span>
     <button class="primary" id="play">Play</button>
+    <button id="nextStep">Next step</button>
     <button id="restart">Restart</button>
     <label>
       Input rate
@@ -325,6 +326,7 @@
   const intervalSlider = document.getElementById("interval");
   const intervalOut = document.getElementById("intervalOut");
   const playButton = document.getElementById("play");
+  const nextStepButton = document.getElementById("nextStep");
   const restartButton = document.getElementById("restart");
   const speedSlider = document.getElementById("speed");
   const speedOut = document.getElementById("speedOut");
@@ -1204,6 +1206,7 @@
   let frame = null;
   let startClock = 0;
   let startIndex = 0;
+  let manualStep = 1;
 
   function replayDuration() {
     // 1x plays the whole window in six seconds, as on the biology page.
@@ -1248,7 +1251,11 @@
   function rebuild(resetCursor) {
     stop();
     buildTrace();
-    if (resetCursor) cursorSlider.value = "0";
+    if (resetCursor) {
+      cursorSlider.value = "0";
+      manualStep = 1;
+      nextStepButton.textContent = "Next step";
+    }
     render(Number(cursorSlider.value), null);
   }
 
@@ -1280,6 +1287,15 @@
   });
 
   playButton.addEventListener("click", () => { if (playing) { stop(); render(Number(cursorSlider.value), null); } else play(); });
+  nextStepButton.addEventListener("click", () => {
+    stop();
+    manualStep = manualStep >= 5 ? 1 : manualStep + 1;
+    const times = { 1: -1, 2: 0.5, 3: 1.5, 4: 3.2, 5: 6 };
+    const index = Math.round((times[manualStep] - WINDOW_START_MS) / SAMPLE_MS);
+    cursorSlider.value = String(index);
+    render(index, null);
+    nextStepButton.textContent = manualStep === 5 ? "Start again" : "Next step";
+  });
   restartButton.addEventListener("click", () => { rebuild(true); });
 
   function handleResize() {

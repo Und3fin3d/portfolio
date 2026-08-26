@@ -398,6 +398,7 @@
       <button id="scenarioRegular" aria-pressed="true">Pulse train</button>
     </span>
     <button class="primary" id="playScenario">Play</button>
+    <button id="nextStepScenario">Next step</button>
     <button id="restartScenario">Restart</button>
     <label>
       Input rate
@@ -562,6 +563,7 @@
   const scenarioSingle = document.getElementById("scenarioSingle");
   const scenarioRegular = document.getElementById("scenarioRegular");
   const playScenario = document.getElementById("playScenario");
+  const nextStepScenario = document.getElementById("nextStepScenario");
   const restartScenario = document.getElementById("restartScenario");
   const status = document.getElementById("status");
   const prePath = document.getElementById("prePath");
@@ -606,6 +608,7 @@
   let trainExtraPulses = [];
   let lastRenderedProgress = 0;
   let responseCache = null;
+  let manualStep = 1;
 
   function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
@@ -1271,6 +1274,8 @@
 
   function resetScenario() {
     stopScenario();
+    manualStep = 1;
+    nextStepScenario.textContent = "Next step";
     responseCache = null;
     lastBiologicalTime = timeline().min;
     lastRenderedProgress = 0;
@@ -1307,6 +1312,18 @@
       return;
     }
     start("scenario");
+  });
+  nextStepScenario.addEventListener("click", () => {
+    stopScenario();
+    manualStep = manualStep >= 5 ? 1 : manualStep + 1;
+    const ages = { 1: -0.5, 2: 0.15, 3: 0.55, 4: 1.5, 5: 5 };
+    const range = timeline();
+    const biologicalTime = ages[manualStep];
+    const progress = Math.max(0, Math.min(1, (biologicalTime - range.min) / (range.max - range.min)));
+    lastBiologicalTime = biologicalTime;
+    drawGraphs(progress);
+    updateDiagram(progress);
+    nextStepScenario.textContent = manualStep === 5 ? "Start again" : "Next step";
   });
   restartScenario.addEventListener("click", resetScenario);
 
