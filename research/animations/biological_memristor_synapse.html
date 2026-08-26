@@ -217,7 +217,7 @@
     <button id="restart">Restart</button>
     <label>
       Input strength
-      <input id="strength" type="range" min="4" max="10" value="5" step="1">
+      <input id="strength" type="range" min="1" max="10" value="5" step="1">
       <output id="strengthOut">5 / 10</output>
     </label>
     <label>
@@ -647,7 +647,7 @@
   const OUTPUT_REFRACTORY_MS = 20;
   const INPUT_INTERVAL_MS = 20;
   const WINDOW_START_MS = -5;
-  const PULSE_SCALE_BY_STRENGTH = [0.8765, 0.888, 0.903, 1.05, 1.10, 1.15, 1.20];
+  const PULSE_SCALE_BY_STRENGTH = [0.84, 0.855, 0.868, 0.8765, 0.888, 0.903, 1.05, 1.10, 1.15, 1.20];
 
   let mode = "regular";
   let windowEndMs = 130;
@@ -677,7 +677,7 @@
   function buildTrace() {
     const pulses = spikeTimes();
     const strength = Number(strengthSlider.value);
-    const pulseScale = PULSE_SCALE_BY_STRENGTH[strength - 4];
+    const pulseScale = PULSE_SCALE_BY_STRENGTH[strength - 1];
     windowEndMs = mode === "single" ? 130 : pulses.at(-1) + 80;
     const count = Math.round((windowEndMs - WINDOW_START_MS) / SAMPLE_MS) + 1;
     const time = new Float64Array(count);
