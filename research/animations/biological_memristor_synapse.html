@@ -1234,6 +1234,7 @@
       status.innerHTML = "<strong>Reduced motion.</strong> The full result is shown at once. Drag the time cursor to step through the chain.";
       return;
     }
+    if (frame !== null) cancelAnimationFrame(frame);
     playing = true;
     playButton.textContent = "Pause";
     startIndex = Number(cursorSlider.value) >= trace.count - 1 ? 0 : Number(cursorSlider.value);
@@ -1287,13 +1288,40 @@
   });
 
   playButton.addEventListener("click", () => { if (playing) { stop(); render(Number(cursorSlider.value), null); } else play(); });
+
+  function manualStepWindow(step) {
+    return {
+      1: [-1.8, 0.15],
+      2: [0.2, 0.85],
+      3: [0.9, 2.35],
+      4: [2.4, 4.9],
+      5: [5, 8]
+    }[step];
+  }
+
+  function loopManualStep(now) {
+    const [windowStart, windowEnd] = manualStepWindow(manualStep);
+    const loopDuration = 1400 / Number(speedSlider.value);
+    const loopProgress = ((now - startClock) % loopDuration) / loopDuration;
+    const time = windowStart + loopProgress * (windowEnd - windowStart);
+    const index = Math.round((time - WINDOW_START_MS) / SAMPLE_MS);
+    cursorSlider.value = String(index);
+    render(index, now);
+    frame = requestAnimationFrame(loopManualStep);
+  }
+
   nextStepButton.addEventListener("click", () => {
     stop();
     manualStep = manualStep >= 5 ? 1 : manualStep + 1;
-    const times = { 1: -1, 2: 0.5, 3: 1.5, 4: 3.2, 5: 6 };
-    const index = Math.round((times[manualStep] - WINDOW_START_MS) / SAMPLE_MS);
-    cursorSlider.value = String(index);
-    render(index, null);
+    if (reducedMotion.matches) {
+      const [, windowEnd] = manualStepWindow(manualStep);
+      const index = Math.round((windowEnd - WINDOW_START_MS) / SAMPLE_MS);
+      cursorSlider.value = String(index);
+      render(index, null);
+    } else {
+      startClock = performance.now();
+      frame = requestAnimationFrame(loopManualStep);
+    }
     nextStepButton.textContent = manualStep === 5 ? "Start again" : "Next step";
   });
   restartButton.addEventListener("click", () => { rebuild(true); });
