@@ -1037,10 +1037,10 @@ main {
   min-height: 8rem;
   padding: 1.5rem 0;
   text-decoration: none;
-  transition: color 0.2s var(--ease), padding 0.3s var(--ease);
+  transition: color 0.2s var(--ease);
 }
 
-.research-link:hover { color: var(--signal); padding-left: 0.6rem; }
+.research-link:hover { color: var(--signal); }
 
 .research-link__number {
   align-self: start;
@@ -1072,10 +1072,7 @@ main {
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: transform 0.3s var(--ease);
 }
-
-.research-link:hover .research-link__arrow { transform: translateX(4px); }
 
 /* ---------- reveal motion ---------- */
 
