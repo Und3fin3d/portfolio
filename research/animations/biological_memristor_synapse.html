@@ -216,9 +216,9 @@
     <button id="nextStep">Next step</button>
     <button id="restart">Restart</button>
     <label>
-      Input rate
-      <input id="interval" type="range" min="20" max="100" value="40" step="1">
-      <output id="intervalOut">40 Hz</output>
+      Input strength
+      <input id="strength" type="range" min="4" max="10" value="5" step="1">
+      <output id="strengthOut">5 / 10</output>
     </label>
     <label>
       Replay speed
@@ -232,7 +232,7 @@
   </div>
 
   <div class="status" id="status" aria-live="polite">
-    <strong>Ready.</strong> Regular inputs produce postsynaptic spikes after several inputs.
+    <strong>Ready.</strong> Smaller inputs accumulate. Stronger inputs approach one output spike for each input.
   </div>
 
   <div class="workspace">
@@ -323,8 +323,8 @@
   const scopeContext = scope.getContext("2d");
   const modeSingle = document.getElementById("modeSingle");
   const modeRegular = document.getElementById("modeRegular");
-  const intervalSlider = document.getElementById("interval");
-  const intervalOut = document.getElementById("intervalOut");
+  const strengthSlider = document.getElementById("strength");
+  const strengthOut = document.getElementById("strengthOut");
   const playButton = document.getElementById("play");
   const nextStepButton = document.getElementById("nextStep");
   const restartButton = document.getElementById("restart");
@@ -644,7 +644,8 @@
   const RELAX_TAU_MS = 45;
   const GATE_MV = -20;
   const FIRING_THRESHOLD_MV = -36;
-  const OUTPUT_REFRACTORY_MS = 8;
+  const OUTPUT_REFRACTORY_MS = 20;
+  const INPUT_INTERVAL_MS = 20;
   const WINDOW_START_MS = -5;
 
   let mode = "regular";
@@ -660,8 +661,7 @@
 
   function spikeTimes() {
     if (mode === "single") return [0];
-    const interval = 1000 / Number(intervalSlider.value);
-    return Array.from({ length: 14 }, (_, index) => index * interval);
+    return Array.from({ length: 14 }, (_, index) => index * INPUT_INTERVAL_MS);
   }
 
   function postsynapticActionPotential(age) {
@@ -675,6 +675,8 @@
   // reads every sample of the voltage waveform, not a spike time.
   function buildTrace() {
     const pulses = spikeTimes();
+    const strength = Number(strengthSlider.value);
+    const pulseScale = 0.88 + Math.pow((strength - 4) / 6, 2) * 0.32;
     windowEndMs = mode === "single" ? 130 : pulses.at(-1) + 80;
     const count = Math.round((windowEndMs - WINDOW_START_MS) / SAMPLE_MS) + 1;
     const time = new Float64Array(count);
@@ -691,7 +693,7 @@
     for (let i = 0; i < count; i++) {
       const t = WINDOW_START_MS + i * SAMPLE_MS;
       let preVoltage = REST_MV;
-      pulses.forEach(pulse => { preVoltage += presynapticVoltage(t - pulse) - REST_MV; });
+      pulses.forEach(pulse => { preVoltage += (presynapticVoltage(t - pulse) - REST_MV) * pulseScale; });
 
       // Generic drive: the part of the applied voltage above a gate threshold
       // redistributes the conductive state. Below the gate, only relaxation acts.
@@ -701,7 +703,7 @@
       x = Math.max(0, Math.min(1, x + dx * SAMPLE_MS));
 
       const g = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * x;
-      const i_pA = (g - G_MIN_NS) * Math.abs(v - REVERSAL_MV) * 0.85;
+      const i_pA = (g - G_MIN_NS) * Math.abs(v - REVERSAL_MV);
       const dv = (-(v - REST_MV) / MEMBRANE_TAU_MS) + i_pA / CAPACITANCE_PF;
       v += dv * SAMPLE_MS;
 
@@ -1248,17 +1250,18 @@
       element.classList.toggle("active", number === step);
       element.classList.toggle("not-reached", number > step);
     });
-    const inputInterval = mode === "single" ? null : 1000 / Number(intervalSlider.value);
+    const inputInterval = mode === "single" ? null : INPUT_INTERVAL_MS;
     const outputGaps = inputInterval === null ? [] : trace.outputSpikes.slice(1).map((time, index) =>
       Math.max(1, Math.round((time - trace.outputSpikes[index]) / inputInterval))
     );
     const regularOutput = outputGaps.length > 0 && outputGaps.every(gap => gap === outputGaps[0]);
+    const regularGapWording = outputGaps[0] === 1 ? "every input" : `every ${outputGaps[0]} inputs`;
     const outputNote = trace.outputSpikes.length === 0
       ? " The receiving neuron remains below its firing threshold."
       : mode === "single"
         ? " The receiving neuron produces one postsynaptic action potential."
         : regularOutput
-          ? ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs, one after every ${outputGaps[0]} inputs once firing starts.`
+          ? ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs, one after ${regularGapWording} once firing starts.`
           : ` ${trace.pulses.length} regular inputs produce ${trace.outputSpikes.length} outputs with gaps of ${outputGaps.join(", ")} input intervals.`;
     status.innerHTML = `<strong>Step ${step}.</strong> ${stepMessages[step]}${step === 5 ? outputNote : ""}`;
   }
@@ -1339,8 +1342,8 @@
   modeSingle.addEventListener("click", () => setMode("single"));
   modeRegular.addEventListener("click", () => setMode("regular"));
 
-  intervalSlider.addEventListener("input", () => {
-    intervalOut.textContent = intervalSlider.value + " Hz";
+  strengthSlider.addEventListener("input", () => {
+    strengthOut.textContent = strengthSlider.value + " / 10";
     rebuild(true);
     startManualStepLoop();
   });
