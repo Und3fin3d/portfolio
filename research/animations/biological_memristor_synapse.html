@@ -1250,7 +1250,15 @@
   function render(index, phase, forcedStep = null, forcedProgress = null) {
     const sample = sampleAt(index);
     const displaySample = { ...sample };
-    if (forcedStep !== null && forcedStep <= 2) {
+    if (forcedStep === 1) {
+      // Step 1 stops at electrode 1. The memristor has not received the
+      // sampled waveform yet, so keep the device panel at its resting input.
+      displaySample.voltage = REST_MV;
+      displaySample.state = 0;
+      displaySample.conductance = G_MIN_NS;
+      displaySample.current = 0;
+      displaySample.membrane = REST_MV;
+    } else if (forcedStep === 2) {
       displaySample.state = 0;
       displaySample.conductance = G_MIN_NS;
       displaySample.current = 0;
@@ -1387,9 +1395,16 @@
   playButton.addEventListener("click", () => { if (playing) { stop(); render(Number(cursorSlider.value), null); } else play(); });
 
   function manualStepWindow(step) {
-    if (step === 5 && trace.outputSpikes.length > 0) {
-      const firstOutputSpike = trace.outputSpikes[0];
-      return [firstOutputSpike - 0.5, firstOutputSpike + 3];
+    if ((step === 4 || step === 5) && trace.outputSpikes.length > 0) {
+      // Use one later output event for both stages. Step 4 ends immediately
+      // before that event. Step 5 starts at the event and then shows the
+      // retained device state relaxing before the next 20 ms input.
+      const outputSpike = trace.outputSpikes.find(time => time >= INPUT_INTERVAL_MS)
+        ?? trace.outputSpikes[0];
+      if (step === 4) {
+        return [Math.max(0.85, outputSpike - 4.5), Math.max(1.35, outputSpike - 0.25)];
+      }
+      return [outputSpike, outputSpike + 8];
     }
     return {
       1: [-1.8, 0.15],
