@@ -912,27 +912,6 @@
       context.fill();
     });
 
-    // Applied-voltage arrows on the left of the layer.
-    const arrowStrength = Math.max(0, Math.min(1, (sample.voltage - GATE_MV) / 60));
-    if (arrowStrength > 0.02) {
-      context.strokeStyle = "rgba(176, 116, 42, " + (0.25 + 0.7 * arrowStrength).toFixed(3) + ")";
-      context.fillStyle = context.strokeStyle;
-      context.lineWidth = 2;
-      for (let i = 0; i < 3; i++) {
-        const x = left + 18 + i * 15;
-        context.beginPath();
-        context.moveTo(x, layerTop + 8);
-        context.lineTo(x, layerBottom - 12);
-        context.stroke();
-        context.beginPath();
-        context.moveTo(x - 4, layerBottom - 16);
-        context.lineTo(x + 4, layerBottom - 16);
-        context.lineTo(x, layerBottom - 8);
-        context.closePath();
-        context.fill();
-      }
-    }
-
     context.textAlign = "left";
     context.fillStyle = colours.muted;
     context.font = "11px Arial";
