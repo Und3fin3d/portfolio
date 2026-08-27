@@ -167,6 +167,32 @@
     .diagram-small { font-size: 11.5px; fill: var(--muted); }
     .diagram-head { font-size: 13px; fill: var(--ink); font-weight: bold; }
 
+    details.technical-details {
+      margin: 14px 0 18px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    details.technical-details summary {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      padding: 0 14px;
+      color: var(--dev);
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .technical-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 0 14px 14px;
+    }
+
+    .technical-content p { color: var(--muted); font-size: 14px; }
+    .technical-content p + p { margin-top: 8px; }
+
     [hidden] { display: none !important; }
 
     @media (max-width: 1080px) {
@@ -188,6 +214,7 @@
       #deviceCanvas { height: 240px; }
       #scope { height: 520px; }
       .readouts { gap: 6px 16px; }
+      .technical-content { grid-template-columns: 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -309,6 +336,22 @@
       </div>
     </div>
   </section>
+
+  <details class="technical-details">
+    <summary>Playback and model details</summary>
+    <div class="technical-content">
+      <div>
+        <h3>Playback</h3>
+        <p><strong>Play</strong> runs the complete pathway. <strong>Next step</strong> repeats one stage so the voltage, device state, and output can be followed separately.</p>
+        <p>Input strength changes the applied voltage waveform. Replay speed changes only the animation speed.</p>
+      </div>
+      <div>
+        <h3>Teaching model</h3>
+        <p>The model samples presynaptic voltage at 20 kHz. Applied voltage changes device state, conductance, postsynaptic current, and receiving-neuron voltage.</p>
+        <p>The receiving neuron produces an action potential at −36 mV. The internal device view is an explanatory model.</p>
+      </div>
+    </div>
+  </details>
 
 </main>
 
