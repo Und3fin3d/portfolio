@@ -1247,6 +1247,11 @@
     readPath.textContent = sample.state < 0.15 ? "weak" : sample.state < 0.55 ? "partial" : "continuous";
   }
 
+  function outputEventForManualStages() {
+    return trace.outputSpikes.find(time => time >= INPUT_INTERVAL_MS)
+      ?? trace.outputSpikes[0];
+  }
+
   function render(index, phase, forcedStep = null, forcedProgress = null) {
     const sample = sampleAt(index);
     const displaySample = { ...sample };
@@ -1270,7 +1275,22 @@
       displaySample.current = 0;
       displaySample.membrane = REST_MV;
     } else if (forcedStep === 4) {
+      const outputEvent = outputEventForManualStages();
+      if (outputEvent !== undefined) {
+        const eventIndex = Math.round((outputEvent - WINDOW_START_MS) / SAMPLE_MS);
+        displaySample.state = trace.state[Math.max(0, Math.min(trace.count - 1, eventIndex))];
+        displaySample.conductance = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * displaySample.state;
+      }
       displaySample.membrane = REST_MV;
+    } else if (forcedStep === 5) {
+      const outputEvent = outputEventForManualStages();
+      if (outputEvent !== undefined) {
+        const eventIndex = Math.round((outputEvent - WINDOW_START_MS) / SAMPLE_MS);
+        const peakState = trace.state[Math.max(0, Math.min(trace.count - 1, eventIndex))];
+        const retainedFraction = 0.88 - 0.25 * (forcedProgress ?? 0);
+        displaySample.state = peakState * retainedFraction;
+        displaySample.conductance = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * displaySample.state;
+      }
     }
     drawScope(Math.round(index));
     drawDevice(displaySample, phase);
@@ -1399,8 +1419,7 @@
       // Use one later output event for both stages. Step 4 ends immediately
       // before that event. Step 5 starts at the event and then shows the
       // retained device state relaxing before the next 20 ms input.
-      const outputSpike = trace.outputSpikes.find(time => time >= INPUT_INTERVAL_MS)
-        ?? trace.outputSpikes[0];
+      const outputSpike = outputEventForManualStages();
       if (step === 4) {
         return [Math.max(0.85, outputSpike - 4.5), Math.max(1.35, outputSpike - 0.25)];
       }
