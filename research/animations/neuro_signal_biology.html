@@ -211,6 +211,33 @@
       gap: 7px;
     }
 
+    details.technical-details {
+      margin: 14px 0 18px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    details.technical-details summary {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      padding: 0 14px;
+      color: var(--synapse);
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .technical-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 0 14px 14px;
+    }
+
+    .technical-content h3 { margin: 0 0 5px; font-size: 15px; }
+    .technical-content p { color: var(--muted); font-size: 14px; }
+    .technical-content p + p { margin-top: 8px; }
+
     .swatch {
       display: inline-block;
       width: 18px;
@@ -370,6 +397,7 @@
       .segmented button { flex: 1 1 0; padding-inline: 8px; }
       label { flex-basis: 100%; }
       input[type="range"] { flex: 1 1 auto; min-width: 0; }
+      .technical-content { grid-template-columns: 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -540,6 +568,22 @@
       </div>
     </div>
   </section>
+
+  <details class="technical-details">
+    <summary>Playback and model details</summary>
+    <div class="technical-content">
+      <div>
+        <h3>Playback</h3>
+        <p><strong>Play</strong> runs the complete sequence. <strong>Next step</strong> repeats one stage so its movement is easier to follow.</p>
+        <p>Input strength changes how much each input raises the receiving-cell voltage. Replay speed changes only the animation speed.</p>
+      </div>
+      <div>
+        <h3>Teaching model</h3>
+        <p>A leaky integrate-and-fire model combines the synaptic current. The receiving neuron fires when its voltage reaches the threshold.</p>
+        <p>The model explains accumulation and skipped outputs. The traces are teaching data rather than measured recordings.</p>
+      </div>
+    </div>
+  </details>
 
 </div>
 
