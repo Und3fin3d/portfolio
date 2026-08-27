@@ -1256,6 +1256,9 @@
       displaySample.current = 0;
       displaySample.membrane = REST_MV;
     } else if (forcedStep === 3) {
+      const formation = 0.10 + 0.50 * (forcedProgress ?? 1);
+      displaySample.state *= formation;
+      displaySample.conductance = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * displaySample.state;
       displaySample.current = 0;
       displaySample.membrane = REST_MV;
     } else if (forcedStep === 4) {
@@ -1391,8 +1394,8 @@
     return {
       1: [-1.8, 0.15],
       2: [0.2, 0.85],
-      3: [0.9, 2.35],
-      4: [2.4, 4.9],
+      3: [0.2, 0.85],
+      4: [0.85, 4.9],
       5: [5, 8]
     }[step];
   }
