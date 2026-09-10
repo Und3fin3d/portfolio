@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
-  <title>How a memristor stands in for a synapse</title>
-  <link rel="stylesheet" href="../demo-nav.css">
+  <title>A memristor between two neurons</title>
+  <link rel="stylesheet" href="../demo-nav.css?v=20260910-space">
   <style>
     :root {
       color-scheme: light;
@@ -221,8 +221,11 @@
       * { scroll-behavior: auto !important; }
     }
   </style>
+  <link rel="stylesheet" href="../mobile-demo.css?v=20260910-landscape4">
+  <link rel="stylesheet" href="../demo-theme.css?v=20260910-landscape4"><script src="../demo-theme.js?v=20260910-landscape4"></script><script src="../demo-visuals.js?v=20260910-landscape4"></script>
+<script src="../demo-input.js?v=20260910-waveform"></script>
 </head>
-<body>
+<body data-demo="memristor">
 <nav class="demo-sequence" aria-label="Demo sequence">
   <a class="demo-sequence__home" href="../">All demos</a>
   <span class="demo-sequence__step">2 of 4</span>
@@ -232,7 +235,7 @@
   </span>
 </nav>
 <main>
-  <h1>How a memristor stands in for a synapse</h1>
+  <h1>A memristor between two neurons</h1>
 
   <div class="controls" aria-label="Stimulus and playback controls">
     <span class="segmented" role="group" aria-label="Input spike pattern">
@@ -248,24 +251,27 @@
       <output id="strengthOut">5 / 10</output>
     </label>
     <label>
-      Replay speed
-      <input id="speed" type="range" min="0.1" max="3" value="1" step="0.05">
-      <output id="speedOut">1x</output>
+      Train frequency
+      <input id="frequency" type="range" min="5" max="100" value="50" step="5">
+      <output id="frequencyOut">50 Hz</output>
+    </label>
+    <label>
+      Speed
+      <input id="speed" type="range" min="0.1" max="2" value="0.5" step="0.05">
+      <output id="speedOut">0.5×</output>
     </label>
   </div>
 
   <div hidden>
-    <input id="cursor" type="range" min="0" max="1000" value="0"><output id="cursorOut"></output>
+    <input id="cursor" type="range" min="0" max="1000" value="0" step="any"><output id="cursorOut"></output>
   </div>
 
-  <div class="status" id="status" aria-live="polite">
-    <strong>Ready.</strong> Smaller inputs accumulate. Stronger inputs approach one output spike for each input.
-  </div>
+  <div class="status" id="status" aria-live="polite">Press Play to begin.</div>
 
   <div class="workspace">
     <section class="pathway">
-      <h2>The pathway</h2>
-      <svg id="pathway" viewBox="0 0 460 920" role="img" aria-labelledby="pathTitle pathDesc">
+      <h2>Neurons</h2>
+      <svg id="pathway" viewBox="0 0 490 1010" role="img" aria-labelledby="pathTitle pathDesc">
         <title id="pathTitle">Signal pathway from a presynaptic neuron through a memristor to a receiving neuron</title>
         <desc id="pathDesc">A multipolar presynaptic neuron sends a spike along its axon to an axon terminal. An electrode at the terminal carries the presynaptic voltage to a memristor. A second electrode carries the resulting current into a dendrite of a multipolar receiving neuron.</desc>
       </svg>
@@ -274,25 +280,32 @@
     <div class="column">
       <section class="device">
         <h2>Inside the device</h2>
-        <p class="section-note">
-          Voltage redistributes the conductive state. A more continuous path
-          gives higher conductance. The state relaxes after the voltage ends.
-        </p>
+        <svg class="phone-pathway" viewBox="0 0 400 120" role="img" aria-label="A first neuron sends voltage into the memristor. Current from the memristor reaches a receiving neuron.">
+          <path d="M52 40 H148 M192 40 H288" fill="none" stroke="#9a9ca1" stroke-width="3"/>
+          <g id="phoneFirstNeuron"></g>
+          <rect x="148" y="22" width="44" height="36" rx="4" fill="var(--demo-paper)" stroke="var(--demo-device)" stroke-width="2"/>
+          <path id="phoneChipState" d="M168 24 C181 31 159 46 173 56" fill="none" stroke="var(--demo-device)" stroke-width="3" opacity="0"/>
+          <g id="phoneOutputNeuron"></g><path id="phoneOutputAxon" d="M327 40 C351 40 365 65 390 66" fill="none" stroke="var(--demo-voltage)" stroke-width="3"/>
+          <circle id="phoneInputSignal" cx="56" cy="40" r="5" fill="var(--demo-input)" opacity="0"/>
+          <path id="phoneCurrentLine" d="M192 40 H288" fill="none" stroke="var(--demo-current)" stroke-width="4" opacity="0"/>
+          <path id="phoneCurrentSignal" d="M192 40 H284" fill="none" stroke="var(--demo-current-soft)" stroke-width="2" stroke-dasharray="5 13" opacity="0"/>
+          <circle id="phoneOutputSignal" cx="329" cy="40" r="5" fill="var(--demo-spike)" opacity="0"/>
+          <g fill="var(--demo-ink)" font-family="Arial, sans-serif" font-size="16" text-anchor="middle">
+            <text x="55" y="95">Input neuron</text><text x="170" y="95">Memristor</text><text x="306" y="95">Output neuron</text>
+            <text x="102" y="17" font-size="14">voltage</text><text id="phoneCurrentLabel" x="240" y="17" font-size="14">no current</text>
+          </g>
+        </svg>
         <canvas id="deviceCanvas" aria-label="Animated cross-section of a memristor. Mobile conductive state redistributes under applied voltage to form a better conducting path, then disperses as the state relaxes."></canvas>
         <div class="readouts">
           <span>applied voltage<b id="readVoltage">0.00 V</b></span>
           <span>internal state<b id="readState">0.00</b></span>
           <span>conductance<b id="readConductance">0.60 nS</b></span>
-          <span>path continuity<b id="readPath">weak</b></span>
+          <span>output current<b id="readPath">0.0 pA</b></span>
         </div>
       </section>
 
       <section class="scope">
         <h2>The aligned traces</h2>
-        <p class="section-note">
-          The same time axis for all four rows. Time zero is the first
-          presynaptic spike.
-        </p>
         <canvas id="scope" aria-label="Four time-aligned traces: presynaptic voltage, device conductance with internal state, postsynaptic current, and receiving-neuron voltage."></canvas>
         <div class="legend">
           <span><i class="swatch" style="background:var(--elec)"></i> presynaptic voltage, sampled at 20 kHz</span>
@@ -306,52 +319,38 @@
   </div>
 
   <section class="steps">
-    <h2>The sequence</h2>
-    <p class="section-note">Each step reads the output of the step before it. Nothing skips ahead.</p>
+    <h2>Sequence</h2>
     <div class="step-list">
       <div class="step" data-step="1">
         <span class="step-number">Step 1</span>
         <strong>Presynaptic voltage</strong>
-        <p>The spike travels the axon to the terminal. The electrode samples the complete voltage waveform at 20 kHz, one sample every 0.05 ms.</p>
+        <p>The input neuron sends a voltage waveform to the sampling electrode.</p>
       </div>
       <div class="step" data-step="2">
         <span class="step-number">Step 2</span>
         <strong>Voltage across the device</strong>
-        <p>Every sample is applied to the memristor. The device sees the whole waveform, not a spike time.</p>
+        <p>The interface applies the sampled voltage across the memristor.</p>
       </div>
       <div class="step" data-step="3">
         <span class="step-number">Step 3</span>
-        <strong>Conductive state redistributes</strong>
-        <p>The voltage moves the conductive state within the active layer. The conducting path improves and the device conductance rises.</p>
+        <strong>Conductance increases</strong>
+        <p>Voltage increases the model’s internal state and conductance.</p>
       </div>
       <div class="step" data-step="4">
         <span class="step-number">Step 4</span>
         <strong>Postsynaptic current</strong>
-        <p>The memristor outputs conductance. This illustration shows current magnitude: <code>|I| = g |V - E_rev|</code>. The code keeps the current sign.</p>
+        <p>Conductance and neuron voltage set the injected current. Current continues between spikes.</p>
       </div>
       <div class="step" data-step="5">
         <span class="step-number">Step 5</span>
         <strong>Receiving neuron may spike</strong>
-        <p>The membrane voltage produces an action potential if it crosses the −36 mV firing threshold. The device state then relaxes.</p>
+        <p>The receiving neuron fires when its voltage reaches −36 mV.</p>
       </div>
     </div>
+
   </section>
 
-  <details class="technical-details">
-    <summary>Playback and model details</summary>
-    <div class="technical-content">
-      <div>
-        <h3>Playback</h3>
-        <p><strong>Play</strong> runs the complete pathway. <strong>Next step</strong> repeats one stage so the voltage, device state, and output can be followed separately.</p>
-        <p>Input strength changes the applied voltage waveform. Replay speed changes only the animation speed.</p>
-      </div>
-      <div>
-        <h3>Teaching model</h3>
-        <p>The model samples presynaptic voltage at 20 kHz. Applied voltage changes device state, conductance, postsynaptic current, and receiving-neuron voltage.</p>
-        <p>The receiving neuron produces an action potential at −36 mV. The internal device view is an explanatory model.</p>
-      </div>
-    </div>
-  </details>
+
 
 </main>
 
@@ -368,6 +367,8 @@
   const modeRegular = document.getElementById("modeRegular");
   const strengthSlider = document.getElementById("strength");
   const strengthOut = document.getElementById("strengthOut");
+  const frequencySlider = document.getElementById("frequency");
+  const frequencyOut = document.getElementById("frequencyOut");
   const playButton = document.getElementById("play");
   const nextStepButton = document.getElementById("nextStep");
   const restartButton = document.getElementById("restart");
@@ -383,14 +384,14 @@
   const steps = [...document.querySelectorAll(".step")];
 
   const colours = {
-    bio: "#3f7a45",
-    elec: "#b0742a",
-    dev: "#6b4fa8",
-    data: "#2674a8",
-    spike: "#b52d32",
-    grid: "#e4e5e8",
-    ink: "#1f2124",
-    muted: "#5f636a"
+    bio: DemoTheme.colour('voltage'),
+    elec: DemoTheme.colour('input'),
+    dev: DemoTheme.colour('device'),
+    data: DemoTheme.colour('current'),
+    spike: DemoTheme.colour('spike'),
+    grid: DemoTheme.colour('grid'),
+    ink: DemoTheme.colour('ink'),
+    muted: DemoTheme.colour('muted')
   };
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -533,7 +534,7 @@
       stroke: options.stroke,
       "stroke-width": 2.2
     }, group);
-    node("ellipse", { cx: options.cx + options.radius * 0.05, cy: options.cy, rx: options.radius * 0.42, ry: options.radius * 0.36, fill: "#fff", stroke: options.stroke, "stroke-width": 1.4 }, group);
+    node("ellipse", { cx: options.cx + options.radius * 0.05, cy: options.cy, rx: options.radius * 0.42, ry: options.radius * 0.36, fill: "var(--demo-paper)", stroke: options.stroke, "stroke-width": 1.4 }, group);
     node("circle", { cx: options.cx + options.radius * 0.12, cy: options.cy + options.radius * 0.05, r: options.radius * 0.13, fill: options.stroke, opacity: .55 }, group);
     return group;
   }
@@ -543,24 +544,25 @@
     const marker = node("marker", { id: "flowArrow", viewBox: "0 0 10 10", refX: "8", refY: "5", markerWidth: "6", markerHeight: "6", orient: "auto" }, defs);
     node("path", { d: "M0 0 L10 5 L0 10 Z", fill: colours.elec }, marker);
 
+    const upper = node("g", {id: "pathUpper"}, svg);
     // --- presynaptic neuron ------------------------------------------------
-    label(16, 26, "Presynaptic neuron", "diagram-head", svg);
+    label(16, 26, "Presynaptic neuron", "diagram-head", upper);
 
-    drawNeuron(svg, {
+    drawNeuron(upper, {
       seed: 11,
       cx: 150, cy: 184, radius: 30,
       dendriteAngles: [-2.75, -2.1, -1.45, -0.72, 2.55, 1.95],
       axonAngle: 0.5,
       dendriteLength: 52,
-      fill: "#f2e4d5",
+      fill: "var(--demo-input-soft)",
       stroke: colours.elec
     });
-    label(192, 172, "soma", "diagram-small", svg);
-    label(316, 96, "dendrites", "diagram-small", svg);
+
+
 
     const hillock = [174, 204];
     const axonPoints = bezierPoints(hillock, [244, 228], [208, 262], [236, 300], 60);
-    node("path", { d: taperedPath(axonPoints, 9, 5.4), fill: "#f2e4d5", stroke: colours.elec, "stroke-width": 1.6 }, svg);
+    node("path", { d: taperedPath(axonPoints, 9, 5.4), fill: "var(--demo-input-soft)", stroke: colours.elec, "stroke-width": 1.6 }, upper);
 
     // Myelin segments with nodes between them.
     [0.24, 0.46, 0.68].forEach(position => {
@@ -568,91 +570,102 @@
       const point = axonPoints[index];
       const next = axonPoints[Math.min(axonPoints.length - 1, index + 6)];
       const angle = Math.atan2(next[1] - point[1], next[0] - point[0]) * 180 / Math.PI;
-      node("rect", { x: point[0] - 11, y: point[1] - 7.5, width: 26, height: 15, rx: 7, fill: "#f7ecdd", stroke: colours.elec, "stroke-width": 1.4, transform: "rotate(" + angle.toFixed(1) + " " + point[0].toFixed(1) + " " + point[1].toFixed(1) + ")" }, svg);
+      node("rect", { x: point[0] - 11, y: point[1] - 7.5, width: 26, height: 15, rx: 7, fill: "var(--demo-input-soft)", stroke: colours.elec, "stroke-width": 1.4, transform: "rotate(" + angle.toFixed(1) + " " + point[0].toFixed(1) + " " + point[1].toFixed(1) + ")" }, upper);
     });
-    label(292, 244, "myelinated axon", "diagram-small", svg);
+    label(305, 244, "Axon", "diagram-label", upper);
 
-    const travel = node("circle", { id: "travelDot", r: 6, fill: colours.spike, opacity: 0 }, svg);
+    const travel = node("circle", { id: "travelDot", r: 6, fill: colours.spike, opacity: 0 }, upper);
     travel.dataset.role = "travel";
 
     // --- axon terminal -----------------------------------------------------
     const terminal = node("path", {
       id: "terminal",
       d: "M236 300 C214 306 202 322 206 340 C210 360 228 372 252 370 C278 368 292 352 288 332 C285 314 268 300 236 300 Z",
-      fill: "#f2e4d5",
+      fill: "var(--demo-input-soft)",
       stroke: colours.elec,
       "stroke-width": 2.4
-    }, svg);
-    const vesicles = node("g", { id: "vesicles" }, svg);
+    }, upper);
+    const vesicles = node("g", { id: "vesicles" }, upper);
     [[228, 328], [248, 340], [266, 326], [244, 316], [262, 348]].forEach(([cx, cy]) => {
-      node("circle", { cx, cy, r: 5.4, fill: "#fff", stroke: colours.elec, "stroke-width": 1.2 }, vesicles);
+      node("circle", { cx, cy, r: 5.4, fill: "var(--demo-paper)", stroke: colours.elec, "stroke-width": 1.2 }, vesicles);
     });
-    label(302, 322, "axon terminal", "diagram-label", svg);
-    label(302, 340, "the spike arrives here", "diagram-small", svg);
+    label(302, 322, "axon terminal", "diagram-label", upper);
+
 
     // --- electrodes and device --------------------------------------------
     const wire1 = [[206, 356], [150, 356], [150, 478], [160, 478]];
-    node("path", { d: "M206 356 L150 356 L150 478 L160 478", fill: "none", stroke: "#8e8f93", "stroke-width": 5, "stroke-linejoin": "round" }, svg);
-    const wire1Dot = node("circle", { id: "wire1Dot", r: 5, fill: colours.elec, opacity: 0 }, svg);
-    node("rect", { x: 141, y: 344, width: 22, height: 24, rx: 4, fill: "#c9ccd1", stroke: "#7c7f85", "stroke-width": 1.6 }, svg);
-    label(16, 362, "electrode 1", "diagram-label", svg);
-    label(16, 378, "records the presynaptic", "diagram-small", svg);
-    label(16, 392, "voltage at 20 kHz", "diagram-small", svg);
+    node("path", { d: "M206 356 L150 356 L150 478 L160 478", fill: "none", stroke: "var(--demo-wire)", "stroke-width": 5, "stroke-linejoin": "round" }, upper);
+    const wire1Dot = node("circle", { id: "wire1Dot", r: 5, fill: colours.elec, opacity: 0 }, upper);
+    node("rect", { x: 141, y: 344, width: 22, height: 24, rx: 4, fill: "var(--demo-electrode)", stroke: "var(--demo-wire)", "stroke-width": 1.6 }, upper);
+    label(16, 362, "electrode 1", "diagram-label", upper);
 
-    label(16, 450, "Memristor cell", "diagram-label", svg);
-    label(16, 467, "voltage in", "diagram-small", svg);
-    label(16, 482, "conductance out", "diagram-small", svg);
-    node("rect", { x: 160, y: 430, width: 134, height: 96, rx: 6, fill: "#f4f1fa", stroke: colours.dev, "stroke-width": 2.4 }, svg);
-    const chipState = node("rect", { id: "chipState", x: 210, y: 446, width: 34, height: 64, rx: 4, fill: colours.dev, opacity: .18 }, svg);
-    node("rect", { x: 210, y: 446, width: 34, height: 64, rx: 4, fill: "none", stroke: colours.dev, "stroke-width": 1.6 }, svg);
-    label(252, 481, "state", "diagram-small", svg);
+
+
+    label(16, 415, "Memristor", "diagram-label", upper);
+
+
+    node("rect", { x: 160, y: 430, width: 134, height: 96, rx: 6, fill: "var(--demo-device-soft)", stroke: colours.dev, "stroke-width": 2.4 }, upper);
+    const chipState = node("rect", { id: "chipState", x: 210, y: 446, width: 34, height: 64, rx: 4, fill: colours.dev, opacity: .18 }, upper);
+    node("rect", { x: 210, y: 446, width: 34, height: 64, rx: 4, fill: "none", stroke: colours.dev, "stroke-width": 1.6 }, upper);
+
 
     const wire2 = [[227, 526], [227, 610], [273, 610], [273, 648]].concat(
       bezierPoints([273, 648], [273, 663], [260, 677], [247, 687], 20).slice(1)
     );
-    node("path", { d: "M227 526 L227 610 L273 610 L273 648 C273 663 260 677 247 687", fill: "none", stroke: "#8e8f93", "stroke-width": 5, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
-    node("rect", { x: 262, y: 598, width: 22, height: 24, rx: 4, fill: "#c9ccd1", stroke: "#7c7f85", "stroke-width": 1.6 }, svg);
-    label(16, 586, "electrode 2", "diagram-label", svg);
-    label(16, 603, "delivers the postsynaptic", "diagram-small", svg);
-    label(16, 618, "current into a dendrite", "diagram-small", svg);
+    const currentPath = "M227 526 L227 610 L273 610 L273 648 C273 663 260 677 247 687";
+    const currentWire = node("path", { d: currentPath, fill: "none", stroke: "var(--demo-wire)", "stroke-width": 5, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    const currentLine = node("path", {d: currentPath, fill: "none", stroke: colours.data, "stroke-width": 5, opacity: 0}, svg);
+    const secondElectrode = node("rect", { x: 262, y: 598, width: 22, height: 24, rx: 4, fill: "var(--demo-electrode)", stroke: "var(--demo-wire)", "stroke-width": 1.6 }, svg);
+    label(16, 558, "Current interface", "diagram-label", svg);
+    label(16, 580, "G → current", "diagram-label", svg);
+
 
     const flow = node("g", { id: "flowDots" }, svg);
     [0, 1, 2, 3].forEach(index => node("circle", { class: "flow-dot", cx: 0, cy: 0, r: 4.5, fill: colours.data, opacity: 0, "data-index": index }, flow));
 
+    const lower = node("g", {id: "pathLower"}, svg);
     // --- receiving neuron --------------------------------------------------
-    label(16, 690, "Receiving neuron", "diagram-head", svg);
-    label(16, 708, "current changes its voltage", "diagram-small", svg);
+    label(16, 975, "Receiving neuron", "diagram-head", lower);
+
 
     const contactDendrite = [[247, 687], [251, 716], [247, 744], [250, 767]];
     node("path", {
       d: taperedPath(contactDendrite, 3.2, 8),
-      fill: "#e2eee0",
+      fill: "var(--demo-neuron-soft)",
       stroke: colours.bio,
       "stroke-width": 1.5,
       "stroke-linejoin": "round"
-    }, svg);
+    }, lower);
 
-    const receiver = drawNeuron(svg, {
+    const receiver = drawNeuron(lower, {
       seed: 29,
       cx: 250, cy: 795, radius: 34,
       dendriteAngles: [-2.6, -1.95, -0.55, 2.5, 1.6],
       axonAngle: 0.35,
       dendriteLength: 66,
-      fill: "#e2eee0",
+      fill: "var(--demo-neuron-soft)",
       stroke: colours.bio
     });
     receiver.setAttribute("id", "receiver");
 
     const receiverAxon = bezierPoints([282, 813], [344, 829], [356, 855], [416, 882], 40);
-    node("path", { d: taperedPath(receiverAxon, 8, 4.4), fill: "#e2eee0", stroke: colours.bio, "stroke-width": 1.5 }, svg);
-    label(300, 861, "postsynaptic spike", "diagram-small", svg);
-    const outputSpike = node("circle", { r: 7, fill: colours.spike, opacity: 0 }, svg);
+    node("path", { d: taperedPath(receiverAxon, 8, 4.4), fill: "var(--demo-neuron-soft)", stroke: colours.bio, "stroke-width": 1.5 }, lower);
+    label(300, 945, "Output axon", "diagram-label", lower);
+    const outputSpike = node("circle", { r: 7, fill: colours.spike, opacity: 0 }, lower);
     const receiverInput = [[247, 687], [251, 716], [247, 744], [250, 767], [250, 795]];
-    const receiverVoltage = node("circle", { r: 6, fill: colours.bio, opacity: 0 }, svg);
+    const receiverVoltage = node("circle", { r: 6, fill: colours.bio, opacity: 0 }, lower);
 
-    node("circle", { id: "injectionSite", cx: 247, cy: 687, r: 8, fill: "none", stroke: colours.data, "stroke-width": 2.4, opacity: .35 }, svg);
+    node("circle", { id: "injectionSite", cx: 247, cy: 687, r: 8, fill: "none", stroke: colours.data, "stroke-width": 2.4, opacity: .35 }, lower);
 
+    const mobileLabels = node("g", {class: "mobile-path-labels", fill: colours.ink, "font-size": 24}, svg);
+    [[265,80,"Input neuron"],[250,210,"Input voltage"],[12,335,"Current"],[12,367,"interface"],[12,445,"Output"],[12,477,"neuron"],[273,539,"Output axon"]]
+      .forEach(([x,y,text])=>label(x,y,text,"",mobileLabels));
+    node("path", { d: "M228 256 L188 279.5", fill: "none", stroke: colours.dev, "stroke-width": 2.4, "stroke-linecap": "round" }, mobileLabels);
+    const memristorLabel = label(235,265,"Memristor","",mobileLabels);
+    memristorLabel.setAttribute("fill", colours.dev);
+    label(12,399,"0.0 pA","",mobileLabels).id="neuronCurrentReadout";
     return {
+      upper, lower, mobileLabels, currentWire, secondElectrode, originalWire2: wire2, currentPath,
       axonPoints,
       travel,
       wire1,
@@ -661,6 +674,7 @@
       vesicles: [...vesicles.querySelectorAll("circle")],
       chipState,
       flowDots: [...flow.querySelectorAll("circle")],
+      currentLine,
       receiverBody: receiver.querySelector("path:last-of-type"),
       injectionSite: document.getElementById("injectionSite"),
       receiverAxon,
@@ -672,6 +686,14 @@
   }
 
   const scene = buildPathway();
+  drawNeuron(document.getElementById('phoneFirstNeuron'),{seed:11,cx:40,cy:40,radius:16,dendriteAngles:[-2.8,-2.1,-1.4,2.5],axonAngle:0,dendriteLength:8,fill:'var(--demo-input-soft)',stroke:colours.elec});
+  const compactReceiver=drawNeuron(document.getElementById('phoneOutputNeuron'),{seed:29,cx:306,cy:40,radius:18,dendriteAngles:[-2.4,-1.7,-.8,1.1,2.5],axonAngle:0,dendriteLength:9,fill:'var(--demo-neuron-soft)',stroke:colours.bio});
+  compactReceiver.querySelector('path:last-of-type').id='phoneReceiver';
+  const phoneInput = document.getElementById("phoneInputSignal");
+  const phoneCurrent = document.getElementById("phoneCurrentSignal");
+  const phoneState = document.getElementById("phoneChipState");
+  const phoneReceiver = document.getElementById("phoneReceiver");
+  const phoneOutput = document.getElementById("phoneOutputSignal");
 
   // ------------------------------------------------------------- the model
 
@@ -679,40 +701,34 @@
   const SAMPLE_MS = 1000 / SAMPLE_RATE_HZ;      // 0.05 ms
   const REST_MV = -65;
   const REVERSAL_MV = 0;
-  const CAPACITANCE_PF = 100;
-  const MEMBRANE_TAU_MS = 12;
+  // Teaching calibration: the default train sums four inputs before each output.
+  const CAPACITANCE_PF = 44;
+  const MEMBRANE_TAU_MS = 18;
   const G_MIN_NS = 0.6;
   const G_MAX_NS = 13.0;
   const SET_TAU_MS = 0.35;
-  const RELAX_TAU_MS = 45;
+  const RELAX_TAU_MS = 15;
   const GATE_MV = -20;
   const FIRING_THRESHOLD_MV = -36;
   const OUTPUT_REFRACTORY_MS = 20;
-  const INPUT_INTERVAL_MS = 20;
+  const inputInterval = () => 1000 / Number(frequencySlider.value);
   const WINDOW_START_MS = -5;
-  const PULSE_SCALE_BY_STRENGTH = [0.84, 0.855, 0.868, 0.8765, 0.888, 0.903, 1.05, 1.10, 1.15, 1.20];
+  // Keep isolated inputs subthreshold. The membrane and device state then
+  // determine whether repeated inputs sum to an output spike.
+  const PULSE_SCALE_BY_STRENGTH = [0.65, 0.72, 0.78, 0.84, 0.888, 0.903, 0.92, 0.935, 0.95, 0.965];
 
   let mode = "regular";
   let windowEndMs = 130;
   let trace = null;
 
   function presynapticVoltage(age) {
-    if (age < 0) return REST_MV;
-    const depolarisation = 105 * (Math.exp(-age / 0.62) - Math.exp(-age / 0.16)) / 0.463;
-    const afterHyperpolarisation = -13 * (Math.exp(-age / 7.5) - Math.exp(-age / 1.1)) / 0.614;
-    return REST_MV + depolarisation + afterHyperpolarisation;
+    // Use the comparison input shape with this demo's resting voltage and peak scale.
+    return REST_MV + 101 * DemoInputSpike(age);
   }
 
   function spikeTimes() {
     if (mode === "single") return [0];
-    return Array.from({ length: 14 }, (_, index) => index * INPUT_INTERVAL_MS);
-  }
-
-  function postsynapticActionPotential(age) {
-    if (age < 0 || age > 7) return -Infinity;
-    const depolarisation = 108 * (Math.exp(-age / 0.72) - Math.exp(-age / 0.14)) / 0.58;
-    const afterHyperpolarisation = -12 * (Math.exp(-age / 5.5) - Math.exp(-age / 1.05)) / 0.62;
-    return REST_MV + depolarisation + afterHyperpolarisation;
+    return Array.from({ length: 14 }, (_, index) => index * inputInterval());
   }
 
   // Fixed-step integration at the project's 20 kHz sampling rate. The device
@@ -728,6 +744,7 @@
     const state = new Float64Array(count);
     const conductance = new Float64Array(count);
     const current = new Float64Array(count);
+    const charge = new Float64Array(count);
     const membrane = new Float64Array(count);
 
     const outputSpikes = [];
@@ -749,7 +766,8 @@
       const g = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * x;
       const i_pA = (g - G_MIN_NS) * Math.abs(v - REVERSAL_MV);
       const dv = (-(v - REST_MV) / MEMBRANE_TAU_MS) + i_pA / CAPACITANCE_PF;
-      v += dv * SAMPLE_MS;
+      if(t-lastOutputSpike<OUTPUT_REFRACTORY_MS) v=REST_MV;
+      else v += dv * SAMPLE_MS;
 
       if (v >= FIRING_THRESHOLD_MV && t - lastOutputSpike >= OUTPUT_REFRACTORY_MS) {
         outputSpikes.push(t);
@@ -761,37 +779,35 @@
       voltage[i] = preVoltage;
       state[i] = x;
       conductance[i] = g;
-      current[i] = i_pA;
+      current[i] = (g - G_MIN_NS) * (REVERSAL_MV - v);
       membrane[i] = v;
+      if (i > 0) charge[i] = charge[i - 1] + (current[i - 1] + current[i]) * SAMPLE_MS / 2;
     }
-
-    const displayedMembrane = new Float64Array(membrane);
-    outputSpikes.forEach(spikeTime => {
-      for (let i = 0; i < count; i++) {
-        const actionPotential = postsynapticActionPotential(time[i] - spikeTime);
-        if (actionPotential > displayedMembrane[i]) displayedMembrane[i] = actionPotential;
-      }
-    });
 
     let peakCurrent = 0;
     let peakMembrane = REST_MV;
     for (let i = 0; i < count; i++) {
       peakCurrent = Math.max(peakCurrent, current[i]);
-      peakMembrane = Math.max(peakMembrane, displayedMembrane[i]);
+      peakMembrane = Math.max(peakMembrane, membrane[i]);
     }
-    trace = { count, time, voltage, state, conductance, current, membrane: displayedMembrane, passiveMembrane: membrane, pulses, outputSpikes, peakCurrent, peakMembrane };
+    trace = { count, time, voltage, state, conductance, current, charge, membrane, pulses, outputSpikes, peakCurrent, peakMembrane };
+    const firstPulseIndices=Array.from({length:count},(_,i)=>i).filter(i=>time[i]>=0&&time[i]<inputInterval());
+    trace.inputPeakIndex=firstPulseIndices.reduce((peak,i)=>voltage[i]>voltage[peak]?i:peak,firstPulseIndices[0]);
+    trace.statePeakIndex=firstPulseIndices.reduce((peak,i)=>state[i]>state[peak]?i:peak,firstPulseIndices[0]);
+    trace.gateIndex=firstPulseIndices.find(i=>voltage[i]>GATE_MV)??firstPulseIndices[0];
+    trace.clockMap=DemoClockMap({start:WINDOW_START_MS,end:windowEndMs});
     cursorSlider.max = String(count - 1);
   }
 
   function sampleAt(index) {
-    const i = Math.max(0, Math.min(trace.count - 1, Math.round(index)));
+    const position = Math.max(0, Math.min(trace.count - 1, index));
+    const i = Math.floor(position), next = Math.min(trace.count - 1, i + 1), fraction = position - i;
+    const interpolate = values => values[i] + (values[next] - values[i]) * fraction;
     return {
-      time: trace.time[i],
-      voltage: trace.voltage[i],
-      state: trace.state[i],
-      conductance: trace.conductance[i],
-      current: trace.current[i],
-      membrane: trace.membrane[i]
+      time: interpolate(trace.time), voltage: interpolate(trace.voltage),
+      state: interpolate(trace.state), conductance: interpolate(trace.conductance),
+      current: interpolate(trace.current), membrane: interpolate(trace.membrane),
+      charge: interpolate(trace.charge)
     };
   }
 
@@ -821,297 +837,50 @@
   }
 
   function drawDevice(sample, phase) {
-    const width = deviceCanvas.clientWidth;
-    const height = deviceCanvas.clientHeight;
-    if (!width || !height) return;
-    const context = deviceContext;
-    context.clearRect(0, 0, width, height);
-
-    const narrow = width < 520;
-    const left = narrow ? 16 : 122;
-    const right = width - (narrow ? 16 : 22);
-    const top = 34;
-    const bottom = height - 46;
-    const electrode = Math.max(18, (bottom - top) * 0.14);
-    const layerTop = top + electrode;
-    const layerBottom = bottom - electrode;
-    const layerHeight = layerBottom - layerTop;
-    const state = sample.state;
-
-    context.font = "12px Arial";
-    context.textBaseline = "middle";
-
-    // Top electrode: carries the presynaptic voltage.
-    const positive = sample.voltage > GATE_MV;
-    context.fillStyle = positive ? "#d8bd8f" : "#c9ccd1";
-    context.fillRect(left, top, right - left, electrode);
-    context.strokeStyle = "#7c7f85";
-    context.lineWidth = 1.2;
-    context.strokeRect(left, top, right - left, electrode);
-    context.fillStyle = colours.ink;
-    context.textAlign = narrow ? "left" : "right";
-    const labelX = narrow ? left + 8 : left - 10;
-    context.fillText("top electrode", labelX, top + electrode / 2);
-
-    // Active layer.
-    context.fillStyle = "#f6f3fb";
-    context.fillRect(left, layerTop, right - left, layerHeight);
-    context.strokeStyle = "#c9bfe0";
-    context.strokeRect(left, layerTop, right - left, layerHeight);
-    context.fillStyle = colours.ink;
-    context.fillText("active layer", labelX, narrow ? layerTop + 14 : layerTop + layerHeight / 2);
-    context.fillStyle = colours.muted;
-    context.font = "11px Arial";
-    context.fillText("(SiC / SiO2 stack)", labelX, (narrow ? layerTop + 14 : layerTop + layerHeight / 2) + 15);
-
-    // Bottom electrode: the conductance is read here.
-    context.font = "12px Arial";
-    context.fillStyle = "#c9ccd1";
-    context.fillRect(left, layerBottom, right - left, electrode);
-    context.strokeStyle = "#7c7f85";
-    context.strokeRect(left, layerBottom, right - left, electrode);
-    context.fillStyle = colours.ink;
-    context.fillText("bottom electrode", labelX, layerBottom + electrode / 2);
-
-    const corridorX = left + (right - left) * 0.52;
-    const corridorWidth = (right - left) * 0.1;
-
-    // The conducting path. Its width, opacity and continuity all follow the
-    // internal state, so a low state shows visible gaps.
-    const segments = 9;
-    context.lineCap = "round";
-    for (let i = 0; i < segments; i++) {
-      const t0 = i / segments;
-      const t1 = (i + 0.72) / segments;
-      const y0 = layerTop + t0 * layerHeight;
-      const y1 = layerTop + t1 * layerHeight;
-      const sway = Math.sin(t0 * 4.6 + 1.2) * corridorWidth * 0.9;
-      const swayNext = Math.sin(t1 * 4.6 + 1.2) * corridorWidth * 0.9;
-      const strength = Math.max(0, Math.min(1, state * 1.25 - i * 0.035));
-      if (strength <= 0.02) continue;
-      context.strokeStyle = "rgba(107, 79, 168, " + (0.15 + 0.75 * strength).toFixed(3) + ")";
-      context.lineWidth = 1.6 + 6.4 * strength;
-      context.beginPath();
-      context.moveTo(corridorX + sway, y0);
-      context.lineTo(corridorX + swayNext, y1);
-      context.stroke();
-    }
-
-    // Mobile conductive state. Each marker moves from its dispersed home
-    // position towards the corridor as the state rises, and drifts back as the
-    // state relaxes.
-    particles.forEach(particle => {
-      const wobble = phase === null ? 0 : Math.sin(phase * 0.004 + particle.wobble) * 1.6 * (1 - state * 0.6);
-      const homeX = left + particle.homeX * (right - left);
-      const targetX = corridorX + particle.lane * corridorWidth + Math.sin(particle.homeY * 4.6 + 1.2) * corridorWidth * 0.9;
-      const x = homeX + (targetX - homeX) * state + wobble;
-      const y = layerTop + particle.homeY * layerHeight;
-      context.beginPath();
-      context.arc(x, y, particle.radius, 0, Math.PI * 2);
-      context.fillStyle = "rgba(107, 79, 168, " + (0.3 + 0.55 * state).toFixed(3) + ")";
-      context.fill();
+    if(deviceCanvas.closest('.phone-panel')?.inert) return;
+    const width=deviceCanvas.clientWidth,height=deviceCanvas.clientHeight,ctx=deviceContext;
+    if(!width||!height)return;ctx.clearRect(0,0,width,height);
+    const left=12,right=width-12,top=height<140?4:12,bottom=height-(height<140?4:12),electrode=Math.min(26,Math.max(14,height*.15));
+    const layerTop=top+electrode,layerBottom=bottom-electrode,layerHeight=layerBottom-layerTop;
+    ctx.fillStyle=DemoTheme.colour('device-soft');ctx.fillRect(left,layerTop,right-left,layerHeight);
+    ctx.save();ctx.beginPath();ctx.rect(left+3,layerTop+3,right-left-6,Math.max(1,layerHeight-6));ctx.clip();
+    const centre=left+(right-left)*.52, strength=sample.state, corridorWidth=(right-left)*.1;
+    particles.forEach(p=>{
+      const dispersed=left+8+p.homeX*(right-left-16);
+      const target=centre+p.lane*corridorWidth+Math.sin(p.homeY*4.6+1.2)*corridorWidth*.9;
+      const x=dispersed+(target-dispersed)*strength;
+      const inset=3+p.radius+1;
+      const y=layerTop+inset+p.homeY*Math.max(0,layerHeight-2*inset);
+      ctx.fillStyle=colours.dev;ctx.globalAlpha=.25+.65*strength;ctx.beginPath();ctx.arc(x,y,p.radius,0,Math.PI*2);ctx.fill();
     });
-
-    context.textAlign = "left";
-    context.fillStyle = colours.muted;
-    context.font = "11px Arial";
-    context.fillText(narrow ? "voltage redistributes the device state" : "applied voltage redistributes the conductive state", left + 4, bottom + 16);
-    context.fillText(narrow ? "dots show mobile conductive state" : "markers = generic mobile conductive state, not one named species", left + 4, bottom + 32);
+    const visibility=Math.sqrt(strength);
+    ctx.lineCap='round';
+    for(let i=0;i<9;i++){
+      const t0=i/9,t1=(i+.55+.43*visibility)/9;
+      ctx.strokeStyle=colours.dev;ctx.globalAlpha=visibility;ctx.lineWidth=1.6+6.4*visibility;
+      ctx.beginPath();ctx.moveTo(centre+Math.sin(t0*4.6+1.2)*corridorWidth*.9,layerTop+t0*layerHeight);
+      ctx.lineTo(centre+Math.sin(t1*4.6+1.2)*corridorWidth*.9,layerTop+t1*layerHeight);ctx.stroke();
+    }
+    ctx.restore();
+    // Draw electrode labels after particles, outside the clipped active layer.
+    ctx.fillStyle=DemoTheme.colour(sample.voltage>GATE_MV?'input-soft':'electrode');ctx.fillRect(left,top,right-left,electrode);
+    ctx.fillStyle=DemoTheme.colour('electrode');ctx.fillRect(left,layerBottom,right-left,electrode);
+    ctx.strokeStyle=DemoTheme.colour('wire');ctx.lineWidth=1;ctx.strokeRect(left,top,right-left,bottom-top);
+    ctx.font=height<140?'10px Arial':'12px Arial';ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillStyle=colours.ink;
+    ctx.fillText('Top electrode',left+8,top+electrode/2);ctx.fillText('Bottom electrode',left+8,layerBottom+electrode/2);
   }
 
   // --------------------------------------------------------- trace drawing
 
   function drawScope(visibleIndex) {
-    const width = scope.clientWidth;
-    const height = scope.clientHeight;
-    if (!width || !height) return;
-    const context = scopeContext;
-    context.clearRect(0, 0, width, height);
-
-    const narrow = width < 560;
-    const left = width < 330 ? 122 : width < 450 ? 145 : width < 700 ? 185 : 200;
-    const right = 16;
-    const plotWidth = width - left - right;
-    const top = 16;
-    const rowHeight = (height - 52) / 4;
-
-    const rows = [
-      {
-        title: "1. Presynaptic voltage",
-        note: narrow ? "mV, 20 kHz" : "millivolts, sampled at 20 kHz",
-        colour: colours.elec,
-        get: i => trace.voltage[i],
-        min: -80, max: 45,
-        zero: REST_MV
-      },
-      {
-        title: "2. Device conductance",
-        note: narrow ? "nS" : "nanosiemens, from the internal state",
-        colour: colours.dev,
-        get: i => trace.conductance[i],
-        min: 0, max: G_MAX_NS * 1.12,
-        zero: 0,
-        shade: i => trace.state[i]
-      },
-      {
-        title: "3. Postsynaptic current",
-        note: narrow ? "pA, magnitude" : "picoamps, |g x (V - E_rev)|",
-        colour: colours.data,
-        get: i => trace.current[i],
-        min: 0, max: Math.max(60, trace.peakCurrent * 1.15),
-        zero: 0
-      },
-      {
-        title: "4. Receiving-neuron voltage",
-        note: narrow ? "mV" : "millivolts, from rest at -65 mV",
-        colour: colours.bio,
-        get: i => trace.membrane[i],
-        min: REST_MV - 3,
-        max: Math.max(REST_MV + 10, trace.peakMembrane + 4),
-        zero: REST_MV
-      }
+    let rows = [
+      {title:'1. Input voltage (mV)',colour:colours.elec,min:-90,max:70,baseline:REST_MV,values:trace.voltage},
+      {title:'2. Conductance (nS)',colour:colours.dev,min:0,max:13,values:trace.conductance},
+      {title:'3. Injected current (pA)',colour:colours.data,min:0,max:Math.max(60,trace.peakCurrent*1.1),values:trace.current},
+      {title:'4. Neuron voltage · threshold −36 mV',colour:colours.bio,min:-70,max:-30,baseline:REST_MV,threshold:FIRING_THRESHOLD_MV,values:trace.membrane,spikes:trace.outputSpikes}
     ];
-
-    const xOf = index => left + (index / (trace.count - 1)) * plotWidth;
-
-    rows.forEach((row, index) => {
-      const rowTop = top + index * rowHeight;
-      const plotTop = rowTop + (narrow ? 34 : 24);
-      const plotBottom = rowTop + rowHeight - 12;
-      const yOf = value => plotBottom - ((value - row.min) / (row.max - row.min)) * (plotBottom - plotTop);
-
-      context.textAlign = "left";
-      context.textBaseline = "alphabetic";
-      context.fillStyle = colours.ink;
-      context.font = narrow ? "bold 10.5px Arial" : "bold 12.5px Arial";
-      drawWrappedLabel(row.title, 8, rowTop + 12, left - 20, 14);
-      context.fillStyle = colours.muted;
-      context.font = narrow ? "10px Arial" : "11px Arial";
-      drawWrappedLabel(row.note, 8, rowTop + 40, left - 20, 13);
-
-      context.strokeStyle = colours.grid;
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(left, yOf(row.zero));
-      context.lineTo(left + plotWidth, yOf(row.zero));
-      context.stroke();
-      for (let i = 0; i <= 5; i++) {
-        const x = left + (i / 5) * plotWidth;
-        context.beginPath();
-        context.moveTo(x, plotTop);
-        context.lineTo(x, plotBottom);
-        context.stroke();
-      }
-
-      if (index === 3) {
-        const thresholdY = yOf(FIRING_THRESHOLD_MV);
-        context.strokeStyle = colours.spike;
-        context.setLineDash([6, 4]);
-        context.beginPath();
-        context.moveTo(left, thresholdY);
-        context.lineTo(left + plotWidth, thresholdY);
-        context.stroke();
-        context.setLineDash([]);
-        context.fillStyle = colours.spike;
-        context.font = narrow ? "9px Arial" : "10px Arial";
-        context.fillText("−36 mV firing threshold", left + 5, thresholdY - 5);
-      }
-
-      // The violet band under row 2 shows the internal state directly, so the
-      // state and the conductance can be compared without a fifth row.
-      if (row.shade) {
-        context.fillStyle = "rgba(107, 79, 168, .12)";
-        context.beginPath();
-        context.moveTo(xOf(0), plotBottom);
-        for (let i = 0; i <= visibleIndex; i += 4) {
-          context.lineTo(xOf(i), plotBottom - row.shade(i) * (plotBottom - plotTop));
-        }
-        context.lineTo(xOf(visibleIndex), plotBottom);
-        context.closePath();
-        context.fill();
-      }
-
-      context.strokeStyle = row.colour;
-      context.lineWidth = 2.3;
-      context.beginPath();
-      const stride = Math.max(1, Math.floor(trace.count / (plotWidth * 2)));
-      for (let i = 0; i <= visibleIndex; i += stride) {
-        const x = xOf(i);
-        const y = yOf(row.get(i));
-        if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
-      }
-      context.stroke();
-
-      if (index === 3) {
-        trace.outputSpikes.forEach(spikeTime => {
-          const start = Math.max(0, Math.round((spikeTime - WINDOW_START_MS) / SAMPLE_MS));
-          const end = Math.min(visibleIndex, start + Math.round(7 / SAMPLE_MS));
-          if (start > visibleIndex || end <= start) return;
-          context.strokeStyle = colours.spike;
-          context.lineWidth = 2.8;
-          context.beginPath();
-          for (let i = start; i <= end; i += 2) {
-            const x = xOf(i);
-            const y = yOf(row.get(i));
-            if (i === start) context.moveTo(x, y); else context.lineTo(x, y);
-          }
-          context.stroke();
-        });
-      }
-
-      trace.pulses.forEach(pulse => {
-        const index = Math.round((pulse - WINDOW_START_MS) / SAMPLE_MS);
-        if (index > visibleIndex) return;
-        context.strokeStyle = "rgba(181, 45, 50, .35)";
-        context.setLineDash([3, 3]);
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(xOf(index), plotTop);
-        context.lineTo(xOf(index), plotBottom);
-        context.stroke();
-        context.setLineDash([]);
-      });
-    });
-
-    const cursorX = xOf(visibleIndex);
-    context.strokeStyle = "#555b63";
-    context.setLineDash([3, 3]);
-    context.lineWidth = 1.5;
-    context.beginPath();
-    context.moveTo(cursorX, top);
-    context.lineTo(cursorX, top + 4 * rowHeight - 12);
-    context.stroke();
-    context.setLineDash([]);
-    context.fillStyle = "#555b63";
-    context.font = "bold 10px Arial";
-    context.textAlign = cursorX > width - 50 ? "right" : "left";
-    context.fillText("now", cursorX + (cursorX > width - 50 ? -5 : 5), top + 8);
-
-    context.fillStyle = colours.muted;
-    context.font = "11px Arial";
-    context.textAlign = "center";
-    for (let i = 0; i <= 5; i++) {
-      const x = left + (i / 5) * plotWidth;
-      const t = WINDOW_START_MS + (i / 5) * (windowEndMs - WINDOW_START_MS);
-      context.fillText(t.toFixed(0), x, height - 20);
-    }
-    context.fillText(narrow ? "time (ms)" : "time from the first presynaptic spike (milliseconds)", left + plotWidth / 2, height - 5);
-
-    function drawWrappedLabel(text, x, y, maxWidth, lineHeight) {
-      const words = text.split(" ");
-      let line = "";
-      words.forEach(word => {
-        const test = line ? `${line} ${word}` : word;
-        if (line && context.measureText(test).width > maxWidth) {
-          context.fillText(line, x, y);
-          line = word;
-          y += lineHeight;
-        } else {
-          line = test;
-        }
-      });
-      if (line) context.fillText(line, x, y);
-    }
+    if(matchMedia("(max-width:760px) and (max-height:700px), (max-width:959px) and (max-height:500px) and (orientation:landscape)").matches) rows=document.body.dataset.tracePair==='output'?rows.slice(2):rows.slice(0,2);
+    DemoPlot(scope,rows,trace.time,sampleAt(visibleIndex).time);
   }
 
   // ------------------------------------------------------ pathway animation
@@ -1139,104 +908,64 @@
     return points.at(-1);
   }
 
-  function updatePathway(sample, forcedStep = null, forcedProgress = null) {
-    const arrival = trace.pulses.reduce((best, pulse) => (sample.time >= pulse - 2 && pulse >= best ? pulse : best), -Infinity);
-    const age = arrival === -Infinity ? -Infinity : sample.time - arrival;
-
-    if (forcedStep === 1 || (forcedStep === null && age >= -2 && age < 0.2)) {
-      const fraction = forcedStep === 1 ? forcedProgress : Math.max(0, Math.min(1, (age + 2) / 2.2));
-      const point = pointOnPolyline(scene.axonPoints, fraction);
-      scene.travel.setAttribute("cx", point[0].toFixed(1));
-      scene.travel.setAttribute("cy", point[1].toFixed(1));
-      scene.travel.setAttribute("opacity", "1");
-    } else {
-      scene.travel.setAttribute("opacity", "0");
-    }
-
-    if (forcedStep === 2 || (forcedStep === null && age >= 0.2 && age < 0.9)) {
-      const fraction = forcedStep === 2 ? forcedProgress : Math.max(0, Math.min(1, (age - 0.2) / 0.7));
-      const point = pointOnPolyline(scene.wire1, fraction);
-      scene.wire1Dot.setAttribute("cx", point[0].toFixed(1));
-      scene.wire1Dot.setAttribute("cy", point[1].toFixed(1));
-      scene.wire1Dot.setAttribute("opacity", "1");
-    } else {
-      scene.wire1Dot.setAttribute("opacity", "0");
-    }
-
-    const excited = forcedStep !== null && forcedStep < 2 ? 0 : Math.max(0, Math.min(1, (sample.voltage - GATE_MV) / 55));
-    scene.terminal.setAttribute("fill", excited > 0.05 ? "#f6dcbf" : "#f2e4d5");
-    scene.vesicles.forEach((vesicle, index) => {
-      vesicle.setAttribute("fill", excited > 0.2 && index % 2 === 0 ? "#f6dcbf" : "#fff");
+  function updatePathway(sample) {
+    const arrival=trace.pulses.filter(pulse=>sample.time>=pulse-2).at(-1);
+    const age=arrival===undefined?-Infinity:sample.time-arrival;
+    const position=(dot,points,fraction,opacity)=>{
+      const point=pointOnPolyline(points,Math.max(0,Math.min(1,fraction)));
+      dot.setAttribute('cx',point[0]);dot.setAttribute('cy',point[1]);dot.setAttribute('opacity',opacity);
+    };
+    const travelling=age>=-2&&age<-.6, applied=age>=-.6&&age<0;
+    position(scene.travel,scene.axonPoints,(age+2)/1.4,travelling?1:0);
+    position(scene.wire1Dot,scene.wire1,(age+.6)/.6,applied?1:0);
+    phoneInput.setAttribute('cx',56+88*Math.max(0,Math.min(1,(age+2)/2)));
+    phoneInput.setAttribute('opacity',travelling||applied?1:0);
+    scene.terminal.setAttribute('fill',sample.voltage>GATE_MV?'color-mix(in oklch, var(--demo-input-soft) 65%, var(--demo-input))':'var(--demo-input-soft)');
+    scene.chipState.setAttribute('height',64*sample.state);scene.chipState.setAttribute('y',510-64*sample.state);
+    scene.chipState.setAttribute('opacity',.3+.7*Math.sqrt(sample.state));
+    phoneState.setAttribute('opacity',Math.sqrt(sample.state));
+    phoneState.setAttribute('stroke-width',1+4*Math.sqrt(sample.state));
+    const current=Math.max(0,Math.min(1,sample.current/Math.max(1,trace.peakCurrent)));
+    const flowing=sample.current>=.05, flowOpacity=flowing?.55+.45*current:0;
+    scene.currentLine.setAttribute('opacity',flowOpacity);
+    document.getElementById('phoneCurrentLine').setAttribute('opacity',flowOpacity);
+    phoneCurrent.setAttribute('opacity',flowing?1:0);
+    document.getElementById('neuronCurrentReadout').textContent=sample.current.toFixed(1)+' pA';
+    const currentPhase=sample.charge/4000;
+    phoneCurrent.setAttribute('stroke-dashoffset',-18*currentPhase);
+    document.getElementById('phoneCurrentLabel').textContent=flowing?'current':'no current';
+    scene.flowDots.forEach((dot,i)=>{
+      const fraction=((currentPhase+i)/scene.flowDots.length)%1;
+      position(dot,scene.wire2,fraction,flowing?1:0);
     });
-
-    scene.chipState.setAttribute("height", (6 + 58 * sample.state).toFixed(1));
-    scene.chipState.setAttribute("y", (446 + 64 - (6 + 58 * sample.state)).toFixed(1));
-    scene.chipState.setAttribute("opacity", (0.18 + 0.62 * sample.state).toFixed(2));
-
-    const currentFraction = Math.max(0, Math.min(1, sample.current / Math.max(1, trace.peakCurrent)));
-    const showCurrent = forcedStep === null || forcedStep === 4;
-    scene.flowDots.forEach((dot, index) => {
-      if (!showCurrent || currentFraction < 0.05) { dot.setAttribute("opacity", "0"); return; }
-      const offset = forcedStep === 4
-        ? ((forcedProgress + index / scene.flowDots.length) % 1)
-        : ((sample.time * 0.05) + index / scene.flowDots.length) % 1;
-      const point = pointOnPolyline(scene.wire2, offset);
-      dot.setAttribute("cx", point[0].toFixed(1));
-      dot.setAttribute("cy", point[1].toFixed(1));
-      dot.setAttribute("opacity", (0.25 + 0.75 * currentFraction).toFixed(2));
-    });
-    scene.injectionSite.setAttribute("opacity", showCurrent ? (0.25 + 0.7 * currentFraction).toFixed(2) : "0");
-
-    const depolarisation = Math.max(0, Math.min(1, (sample.membrane - REST_MV) / 14));
-    const showReceiver = forcedStep === null || forcedStep >= 5;
-    const forcedDepolarisation = forcedStep === 5 ? Math.sin(Math.PI * forcedProgress) : 0;
-    const visibleDepolarisation = Math.max(depolarisation, forcedDepolarisation);
-    scene.receiverBody.setAttribute("fill", !showReceiver || visibleDepolarisation < 0.06 ? "#e2eee0" : visibleDepolarisation > 0.6 ? "#cfe6cb" : "#d8ead5");
-
-    if (forcedStep === 5 && forcedProgress < 0.48) {
-      const point = pointOnPolyline(scene.receiverInput, forcedProgress / 0.48);
-      scene.receiverVoltage.setAttribute("cx", point[0].toFixed(1));
-      scene.receiverVoltage.setAttribute("cy", point[1].toFixed(1));
-      scene.receiverVoltage.setAttribute("opacity", "1");
-    } else {
-      scene.receiverVoltage.setAttribute("opacity", "0");
-    }
-
-    const latestOutputSpike = trace.outputSpikes.filter(time => time <= sample.time).at(-1);
-    const outputAge = latestOutputSpike === undefined ? Infinity : sample.time - latestOutputSpike;
-    const forcedOutputProgress = forcedStep === 5 && trace.outputSpikes.length > 0 && forcedProgress >= 0.48
-      ? (forcedProgress - 0.48) / 0.52
-      : null;
-    if (forcedOutputProgress !== null || (showReceiver && outputAge >= 0 && outputAge < 3)) {
-      const point = pointOnPolyline(scene.receiverAxon, forcedOutputProgress ?? (outputAge / 3));
-      scene.outputSpike.setAttribute("cx", point[0].toFixed(1));
-      scene.outputSpike.setAttribute("cy", point[1].toFixed(1));
-      scene.outputSpike.setAttribute("opacity", "1");
-    } else {
-      scene.outputSpike.setAttribute("opacity", "0");
-    }
+    scene.injectionSite.setAttribute('opacity',flowOpacity);
+    const depolarisation=Math.max(0,Math.min(1,(sample.membrane-REST_MV)/(FIRING_THRESHOLD_MV-REST_MV)));
+    const fill=`color-mix(in oklch, var(--demo-neuron-soft) ${100-depolarisation*50}%, var(--demo-voltage))`;
+    scene.receiverBody.setAttribute('fill',fill);phoneReceiver.setAttribute('fill',fill);
+    position(scene.receiverVoltage,scene.receiverInput,(age-.9)/1.5,age>=.9&&age<2.4&&current>.005?depolarisation:0);
+    const latest=trace.outputSpikes.filter(time=>time<=sample.time).at(-1);
+    const outputAge=latest===undefined?Infinity:sample.time-latest, outputActive=outputAge>=0&&outputAge<3;
+    const fraction=Math.max(0,Math.min(1,outputAge/3));
+    position(scene.outputSpike,scene.receiverAxon,fraction,outputActive?1:0);
+    const outputPath=document.getElementById('phoneOutputAxon');
+    const outputPoint=outputPath.getPointAtLength(outputPath.getTotalLength()*fraction);
+    phoneOutput.setAttribute('cx',outputPoint.x);phoneOutput.setAttribute('cy',outputPoint.y);phoneOutput.setAttribute('opacity',outputActive?1:0);
+    phoneReceiver.setAttribute('stroke',outputActive?colours.spike:colours.bio);phoneReceiver.setAttribute('stroke-width',outputActive?3.5:2.2);
+    scene.receiverBody.setAttribute('stroke',outputActive?colours.spike:colours.bio);
   }
 
   // ---------------------------------------------------------------- staging
 
   function activeStep(sample) {
-    const arrival = trace.pulses.filter(pulse => sample.time >= pulse - 2).pop();
-    if (arrival === undefined) return 1;
-    const age = sample.time - arrival;
-    if (age < 0.2) return 1;
-    if (age < 0.9) return 2;
-    if (age < 2.4) return 3;
-    if (age < 5) return 4;
-    return 5;
+    if(trace.outputSpikes.some(t=>sample.time>=t&&sample.time<t+3))return 5;
+    const arrival=trace.pulses.filter(pulse=>sample.time>=pulse-2).at(-1);
+    if(arrival===undefined||sample.time<arrival)return 1;
+    const age=sample.time-arrival;
+    if(age<=trace.time[trace.inputPeakIndex])return 2;
+    const i=Math.max(1,Math.round((sample.time-WINDOW_START_MS)/SAMPLE_MS));
+    if(trace.state[i]>trace.state[i-1])return 3;
+    return sample.current>1?4:5;
   }
-
-  const stepMessages = {
-    1: "The spike travels the axon. Electrode 1 samples the complete presynaptic voltage waveform at 20 kHz.",
-    2: "Every voltage sample is applied across the memristor. The device reads the waveform, not a spike time.",
-    3: "The applied voltage redistributes the conductive state. The conducting path improves and the conductance rises.",
-    4: "The memristor outputs conductance. The receiver computes the current as conductance times driving force.",
-    5: "The current changes the receiving neuron's voltage. An action potential appears if the voltage crosses −36 mV."
-  };
 
   function updateReadouts(sample) {
     // The teaching model works in millivolts. The device panel reports the same
@@ -1244,59 +973,23 @@
     readVoltage.textContent = (sample.voltage / 1000).toFixed(3) + " V";
     readState.textContent = sample.state.toFixed(2);
     readConductance.textContent = sample.conductance.toFixed(2) + " nS";
-    readPath.textContent = sample.state < 0.15 ? "weak" : sample.state < 0.55 ? "partial" : "continuous";
+    readPath.textContent = sample.current.toFixed(1) + " pA";
   }
 
   function outputEventForManualStages() {
-    return trace.outputSpikes.find(time => time >= INPUT_INTERVAL_MS)
+    return trace.outputSpikes.find(time => time >= inputInterval())
       ?? trace.outputSpikes[0];
   }
 
+  let lastForcedProgress = null;
   function render(index, phase, forcedStep = null, forcedProgress = null) {
+    lastForcedProgress = forcedProgress;
     const sample = sampleAt(index);
-    const displaySample = { ...sample };
-    if (forcedStep === 1) {
-      // Step 1 stops at electrode 1. The memristor has not received the
-      // sampled waveform yet, so keep the device panel at its resting input.
-      displaySample.voltage = REST_MV;
-      displaySample.state = 0;
-      displaySample.conductance = G_MIN_NS;
-      displaySample.current = 0;
-      displaySample.membrane = REST_MV;
-    } else if (forcedStep === 2) {
-      displaySample.state = 0;
-      displaySample.conductance = G_MIN_NS;
-      displaySample.current = 0;
-      displaySample.membrane = REST_MV;
-    } else if (forcedStep === 3) {
-      const formation = 0.10 + 0.50 * (forcedProgress ?? 1);
-      displaySample.state *= formation;
-      displaySample.conductance = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * displaySample.state;
-      displaySample.current = 0;
-      displaySample.membrane = REST_MV;
-    } else if (forcedStep === 4) {
-      const outputEvent = outputEventForManualStages();
-      if (outputEvent !== undefined) {
-        const eventIndex = Math.round((outputEvent - WINDOW_START_MS) / SAMPLE_MS);
-        displaySample.state = trace.state[Math.max(0, Math.min(trace.count - 1, eventIndex))];
-        displaySample.conductance = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * displaySample.state;
-      }
-      displaySample.membrane = REST_MV;
-    } else if (forcedStep === 5) {
-      const outputEvent = outputEventForManualStages();
-      if (outputEvent !== undefined) {
-        const eventIndex = Math.round((outputEvent - WINDOW_START_MS) / SAMPLE_MS);
-        const peakState = trace.state[Math.max(0, Math.min(trace.count - 1, eventIndex))];
-        const retainedFraction = 0.88 - 0.25 * (forcedProgress ?? 0);
-        displaySample.state = peakState * retainedFraction;
-        displaySample.conductance = G_MIN_NS + (G_MAX_NS - G_MIN_NS) * displaySample.state;
-      }
-    }
-    drawScope(Math.round(index));
-    drawDevice(displaySample, phase);
-    updatePathway(displaySample, forcedStep, forcedProgress);
-    updateReadouts(displaySample);
-    cursorOut.textContent = displaySample.time.toFixed(1) + " ms";
+    drawScope(index);
+    drawDevice(sample, phase);
+    updatePathway(sample);
+    updateReadouts(sample);
+    cursorOut.textContent = sample.time.toFixed(1) + " ms";
 
     const step = forcedStep === null ? activeStep(sample) : forcedStep;
     steps.forEach(element => {
@@ -1304,20 +997,17 @@
       element.classList.toggle("active", number === step);
       element.classList.toggle("not-reached", number > step);
     });
-    const inputInterval = mode === "single" ? null : INPUT_INTERVAL_MS;
-    const outputGaps = inputInterval === null ? [] : trace.outputSpikes.slice(1).map((time, index) =>
-      Math.max(1, Math.round((time - trace.outputSpikes[index]) / inputInterval))
-    );
-    const regularOutput = outputGaps.length > 0 && outputGaps.every(gap => gap === outputGaps[0]);
-    const regularGapWording = outputGaps[0] === 1 ? "every input" : `every ${outputGaps[0]} inputs`;
-    const outputNote = trace.outputSpikes.length === 0
-      ? " The receiving neuron remains below its firing threshold."
-      : mode === "single"
-        ? " The receiving neuron produces one postsynaptic action potential."
-        : regularOutput
-          ? ` The receiving neuron produces one postsynaptic spike after ${regularGapWording}.`
-          : ` ${trace.pulses.length} inputs produce ${trace.outputSpikes.length} postsynaptic spikes. The receiving neuron sometimes skips an input, so the output gaps are uneven.`;
-    status.innerHTML = `<strong>Step ${step}.</strong> ${stepMessages[step]}${step === 5 ? outputNote : ""}`;
+    const messages = {
+      1:'The input spike travels along the axon.',
+      2:'Voltage is applied across the memristor.',
+      3:'The memristor’s conductance rises.',
+      4:sample.voltage<=GATE_MV?'Current continues between input spikes.':'Current flows into the receiving neuron.',
+      5:trace.outputSpikes.some(t=>t<=sample.time&&sample.time<t+3)?'The neuron fires while current continues to flow.':trace.outputSpikes.some(t=>t<=sample.time)&&sample.current>=.05?'Current continues after the output spike.':'The receiving neuron remains below threshold.'
+    };
+    const statusText = index>=trace.count-1&&forcedStep===null
+      ? `${trace.pulses.length} input${trace.pulses.length===1?'':'s'} produced ${trace.outputSpikes.length} output spike${trace.outputSpikes.length===1?'':'s'}.`
+      : messages[step];
+    if(status.textContent !== statusText) status.textContent = statusText;
   }
 
   // --------------------------------------------------------------- playback
@@ -1326,24 +1016,25 @@
   let frame = null;
   let startClock = 0;
   let startIndex = 0;
-  let manualStep = 1;
+  let manualStep = 0;
   let manualStage = null;
 
   function replayDuration() {
     // 1x plays the whole window in six seconds, as on the biology page.
-    return 6000 / Number(speedSlider.value);
+    return (mode === 'single' ? 6000 : 14000) / Number(speedSlider.value);
   }
 
   function tick(now) {
     const progress = (now - startClock) / replayDuration();
-    const index = startIndex + progress * (trace.count - 1);
-    if (index >= trace.count - 1) {
+    const fraction = Math.min(1, startIndex + progress);
+    const index = (trace.clockMap.at(fraction)-WINDOW_START_MS)/SAMPLE_MS;
+    if (fraction >= 1) {
       cursorSlider.value = String(trace.count - 1);
       stop();
       render(trace.count - 1, now);
       return;
     }
-    cursorSlider.value = String(Math.round(index));
+    cursorSlider.value = String(index);
     render(index, now);
     frame = requestAnimationFrame(tick);
   }
@@ -1352,14 +1043,14 @@
     if (reducedMotion.matches) {
       cursorSlider.value = cursorSlider.max;
       render(trace.count - 1, null);
-      status.innerHTML = "<strong>Reduced motion.</strong> The full result is shown at once. Drag the time cursor to step through the chain.";
+
       return;
     }
     if (frame !== null) cancelAnimationFrame(frame);
     manualStage = null;
     playing = true;
     playButton.textContent = "Pause";
-    startIndex = Number(cursorSlider.value) >= trace.count - 1 ? 0 : Number(cursorSlider.value);
+    startIndex = Number(cursorSlider.value) >= trace.count - 1 ? 0 : trace.clockMap.fraction(sampleAt(Number(cursorSlider.value)).time);
     startClock = performance.now();
     frame = requestAnimationFrame(tick);
   }
@@ -1377,7 +1068,7 @@
     buildTrace();
     if (resetCursor) {
       cursorSlider.value = "0";
-      manualStep = 1;
+      manualStep = 0;
       nextStepButton.textContent = "Next step";
     }
     render(Number(cursorSlider.value), null);
@@ -1389,8 +1080,8 @@
     mode = next;
     modeSingle.setAttribute("aria-pressed", String(next === "single"));
     modeRegular.setAttribute("aria-pressed", String(next === "regular"));
+    frequencySlider.disabled = next === "single";
     rebuild(true);
-    startManualStepLoop();
   }
 
   modeSingle.addEventListener("click", () => setMode("single"));
@@ -1399,7 +1090,12 @@
   strengthSlider.addEventListener("input", () => {
     strengthOut.textContent = strengthSlider.value + " / 10";
     rebuild(true);
-    startManualStepLoop();
+
+  });
+
+  frequencySlider.addEventListener("input", () => {
+    frequencyOut.textContent = frequencySlider.value + " Hz";
+    rebuild(true);
   });
 
   speedSlider.addEventListener("input", () => {
@@ -1409,16 +1105,22 @@
 
   cursorSlider.addEventListener("input", () => {
     stop();
+    manualStage = null;
     render(Number(cursorSlider.value), null);
   });
 
-  playButton.addEventListener("click", () => { if (playing) { stop(); render(Number(cursorSlider.value), null); } else play(); });
+  playButton.addEventListener("click", () => {
+    if (playing || (manualStage !== null && frame !== null)) {
+      stop();
+    } else play();
+  });
+  document.addEventListener("demo:pause", stop);
 
   function manualStepWindow(step) {
     if ((step === 4 || step === 5) && trace.outputSpikes.length > 0) {
       // Use one later output event for both stages. Step 4 ends immediately
       // before that event. Step 5 starts at the event and then shows the
-      // retained device state relaxing before the next 20 ms input.
+      // retained device state relaxing between subsequent inputs.
       const outputSpike = outputEventForManualStages();
       if (step === 4) {
         return [Math.max(0.85, outputSpike - 4.5), Math.max(1.35, outputSpike - 0.25)];
@@ -1426,20 +1128,22 @@
       return [outputSpike, outputSpike + 8];
     }
     return {
-      1: [-1.8, 0.15],
-      2: [0.2, 0.85],
-      3: [0.2, 0.85],
+      1: [-1.8, -0.05],
+      2: [trace.time[trace.gateIndex], trace.time[trace.inputPeakIndex]],
+      3: [trace.time[trace.inputPeakIndex], trace.time[trace.statePeakIndex]],
       4: [0.85, 4.9],
       5: [5, 8]
     }[step];
   }
 
+  let manualClock = 0;
   function loopManualStep(now) {
     const [windowStart, windowEnd] = manualStepWindow(manualStep);
     const loopDuration = Math.max(1100, 1800 / Number(speedSlider.value));
-    const loopProgress = ((now - startClock) % loopDuration) / loopDuration;
+    const loopProgress = ((lastForcedProgress ?? 0) + (now - manualClock) / loopDuration) % 1;
+    manualClock = now;
     const time = windowStart + loopProgress * (windowEnd - windowStart);
-    const index = Math.round((time - WINDOW_START_MS) / SAMPLE_MS);
+    const index = (time - WINDOW_START_MS) / SAMPLE_MS;
     cursorSlider.value = String(index);
     render(index, now, manualStage, loopProgress);
     frame = requestAnimationFrame(loopManualStep);
@@ -1449,27 +1153,52 @@
     stop();
     manualStage = manualStep;
     if (reducedMotion.matches) {
-      const [, windowEnd] = manualStepWindow(manualStep);
-      const index = Math.round((windowEnd - WINDOW_START_MS) / SAMPLE_MS);
+      const [windowStart, windowEnd] = manualStepWindow(manualStep);
+      const time=manualStep===5?windowStart+1:(windowStart+windowEnd)/2;
+      const index = (time - WINDOW_START_MS) / SAMPLE_MS;
       cursorSlider.value = String(index);
       render(index, null, manualStage, 1);
       return;
     }
     startClock = performance.now();
+    manualClock = startClock;
+    lastForcedProgress = 0;
+    playButton.textContent = "Pause";
     frame = requestAnimationFrame(loopManualStep);
   }
 
   nextStepButton.addEventListener("click", () => {
     manualStep = manualStep >= 5 ? 1 : manualStep + 1;
     startManualStepLoop();
-    nextStepButton.textContent = manualStep === 5 ? "Start again" : "Next step";
+
   });
-  restartButton.addEventListener("click", () => { rebuild(true); startManualStepLoop(); });
+  restartButton.addEventListener("click", () => { rebuild(true); play(); });
 
   function handleResize() {
+    const landscape = matchMedia("(max-width:959px) and (max-height:500px) and (orientation:landscape)").matches;
+    svg.setAttribute("viewBox", landscape ? "0 0 600 320" : "0 0 490 550");
+    scene.upper.setAttribute("transform", landscape ? "translate(15,-35) scale(.55)" : "translate(8,0) scale(.65)");
+    scene.lower.setAttribute("transform", landscape ? "translate(250,-300) scale(.65)" : "translate(122.5,-185) scale(.75)");
+    scene.wire2 = landscape
+      ? [[176.7,227.9],[250,227.9],[250,146.55],[410.55,146.55]]
+      : [[199.1,310.7],[230,310.7],[230,330.25],[307.75,330.25]];
+    const path = "M" + scene.wire2.map(point => point.join(" ")).join(" L");
+    scene.currentWire.setAttribute("d",path); scene.currentLine.setAttribute("d",path);
+    scene.secondElectrode.setAttribute("x",landscape ? 350 : 262);
+    scene.secondElectrode.setAttribute("y",landscape ? 134.55 : 318.25);
+    const positions = landscape
+      ? [[190,55],[175,125],[215,255],[215,279],[450,205],[450,225],[465,307],[10,283],[215,309]]
+      : [[265,80],[250,210],[12,335],[12,367],[12,445],[12,477],[273,539],[235,265],[12,399]];
+    [...scene.mobileLabels.querySelectorAll("text")].forEach((label, index) => {
+      label.setAttribute("x",positions[index][0]); label.setAttribute("y",positions[index][1]);
+    });
+    scene.mobileLabels.querySelector("path").setAttribute("d",landscape ? "M75 270 L120 254" : "M228 256 L188 279.5");
+    const scale = Math.min(svg.clientWidth / (landscape ? 600 : 490), svg.clientHeight / (landscape ? 320 : 550));
+    const labelSize = !landscape && matchMedia("(min-width:761px)").matches ? 14 : 12;
+    scene.mobileLabels.setAttribute("font-size", Math.max(landscape ? 18 : 24, Math.min(32, labelSize / Math.max(.1, scale))));
     resizeCanvas(deviceCanvas, deviceContext);
     resizeCanvas(scope, scopeContext);
-    render(Number(cursorSlider.value), null);
+    render(Number(cursorSlider.value), null, manualStage, lastForcedProgress);
   }
 
   window.addEventListener("resize", handleResize);
@@ -1477,8 +1206,15 @@
 
   buildTrace();
   handleResize();
-  startManualStepLoop();
+  document.addEventListener('demo:preview', () => {
+    stop();
+    let index=Math.floor(trace.count*.55);
+    for(let i=index+1;i<trace.count*.75;i++) if(trace.state[i]>trace.state[index]) index=i;
+    cursorSlider.value=String(index); render(index,null);
+  });
+
 })();
 </script>
+<script src="../mobile-demo.js?v=20260910-landscape4"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <title>What happens at a synapse?</title>
-  <link rel="stylesheet" href="../demo-nav.css">
+  <link rel="stylesheet" href="../demo-nav.css?v=20260910-space">
   <style>
     :root {
       color-scheme: light;
@@ -404,8 +404,11 @@
       * { scroll-behavior: auto !important; }
     }
   </style>
+  <link rel="stylesheet" href="../mobile-demo.css?v=20260910-landscape4">
+  <link rel="stylesheet" href="../demo-theme.css?v=20260910-landscape4"><script src="../demo-theme.js?v=20260910-landscape4"></script><script src="../demo-visuals.js?v=20260910-landscape4"></script>
+<script src="../demo-input.js?v=20260910-waveform"></script>
 </head>
-<body>
+<body data-demo="biology">
 <nav class="demo-sequence" aria-label="Demo sequence">
   <a class="demo-sequence__home" href="../">All demos</a>
   <span class="demo-sequence__step">1 of 4</span>
@@ -415,10 +418,7 @@
   <h1>What happens at a synapse?</h1>
 
 <div>
-  <p class="intro">
-    Choose one input or a regular input train. Change the input strength to see
-    how several smaller inputs can build towards one output spike.
-  </p>
+  <p class="intro">Change input strength and frequency to see when the receiving neuron fires.</p>
 
   <div class="controls" aria-label="Simulation controls">
     <span class="segmented" role="group" aria-label="Input spike pattern">
@@ -433,99 +433,43 @@
       <input id="strength" type="range" min="1" max="10" value="5" step="1">
       <output id="strengthOut">5 / 10</output>
     </label>
+    <label>Synapse <select id="kind"><option value="exc">Excitatory</option><option value="inh">Inhibitory</option></select></label>
+    <label>Frequency <input id="frequency" type="range" min="5" max="100" step="5" value="50"><output id="frequencyOut">50 Hz</output></label>
     <label>
-      Replay speed
-      <input id="speed" type="range" min="0.1" max="3" value="1" step="0.05">
-      <output id="speedOut">1×</output>
+      Speed
+      <input id="speed" type="range" min="0.1" max="2" value="0.5" step="0.05">
+      <output id="speedOut">0.5×</output>
     </label>
   </div>
 
-  <div hidden>
-    <button id="send"></button><button id="clear"></button><button id="train"></button><button id="pause"></button>
-    <select id="kind"><option value="exc" selected>Excitatory</option></select>
-    <input id="frequency" type="range" min="50" max="50" value="50"><output id="frequencyOut">50 Hz</output>
-  </div>
 
-  <div class="status" id="status" aria-live="polite">
-    <strong>Ready.</strong> Smaller inputs accumulate. Stronger inputs approach one output spike for each input.
-  </div>
+
+  <div class="status" id="status" aria-live="polite">Press Play to begin.</div>
 
   <div class="workspace">
     <section class="anatomy">
       <h2>Where the signals occur</h2>
-      <p class="section-note">The animation slows the process down so each stage is visible.</p>
 
-      <svg id="diagram" viewBox="0 0 460 560" role="img" aria-labelledby="diagramTitle diagramDesc">
-        <title id="diagramTitle">Signal passing from one neuron, across a synapse, to a receiving neuron</title>
-        <desc id="diagramDesc">An electrical spike moves down the first neuron's axon, causes transmitter release at the synapse, opens channels on the receiving cell and may lead to a new spike if threshold is crossed.</desc>
-
-        <defs>
-          <marker id="arrowPre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0 0 L10 5 L0 10 Z" fill="var(--pre)"/>
-          </marker>
-          <marker id="arrowPost" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0 0 L10 5 L0 10 Z" fill="var(--voltage)"/>
-          </marker>
-        </defs>
-
-        <text x="20" y="26" class="diagram-label" font-weight="bold">First neuron</text>
-        <text x="20" y="45" class="diagram-small">The presynaptic neuron</text>
-
-        <circle cx="70" cy="105" r="42" fill="#f4dfd2" stroke="var(--pre)" stroke-width="3"/>
-        <circle cx="70" cy="105" r="13" fill="#fff" stroke="var(--pre)" stroke-width="2"/>
-        <path id="prePath" d="M112 105 C180 105 210 140 218 215" fill="none" stroke="var(--pre)" stroke-width="5" marker-end="url(#arrowPre)"/>
-        <text x="128" y="90" class="diagram-small">Axon: the nerve signal travels here</text>
-        <circle id="preDot" class="signal-dot" r="8" fill="var(--spike)"/>
-
-        <rect x="170" y="220" width="100" height="66" rx="25" fill="#f4dfd2" stroke="var(--pre)" stroke-width="3"/>
-        <circle cx="196" cy="245" r="8" fill="#fff" stroke="var(--pre)"/>
-        <circle cx="220" cy="257" r="8" fill="#fff" stroke="var(--pre)"/>
-        <circle cx="244" cy="242" r="8" fill="#fff" stroke="var(--pre)"/>
-        <text x="283" y="241" class="diagram-label">Synaptic terminal</text>
-        <text x="283" y="260" class="diagram-small">The end of the first neuron</text>
-
-        <line x1="170" y1="294" x2="270" y2="294" stroke="var(--pre)" stroke-width="3"/>
-        <line x1="170" y1="334" x2="270" y2="334" stroke="var(--synapse)" stroke-width="3"/>
-        <text x="283" y="316" class="diagram-label">Tiny gap</text>
-        <text x="283" y="334" class="diagram-small">Chemical transmitter crosses it</text>
-
-        <g id="transmitters">
-          <circle class="transmitter" cx="190" cy="298" r="5" fill="var(--pre)"/>
-          <circle class="transmitter" cx="210" cy="300" r="5" fill="var(--pre)"/>
-          <circle class="transmitter" cx="230" cy="297" r="5" fill="var(--pre)"/>
-          <circle class="transmitter" cx="250" cy="300" r="5" fill="var(--pre)"/>
-        </g>
-
-        <g id="channels" stroke="var(--synapse)" stroke-width="2">
-          <rect x="184" y="325" width="14" height="27" rx="3" fill="#fff"/>
-          <rect x="213" y="325" width="14" height="27" rx="3" fill="#fff"/>
-          <rect x="242" y="325" width="14" height="27" rx="3" fill="#fff"/>
-        </g>
-
-        <g id="ions">
-          <circle class="ion-flow" cx="191" cy="320" r="4" fill="var(--synapse)"/>
-          <circle class="ion-flow" cx="220" cy="320" r="4" fill="var(--synapse)"/>
-          <circle class="ion-flow" cx="249" cy="320" r="4" fill="var(--synapse)"/>
-        </g>
-
-        <path id="receivingPath" d="M220 353 L220 406" fill="none" stroke="var(--voltage)" stroke-width="4"/>
-        <text x="235" y="378" class="diagram-small">voltage change spreads through receiving neuron</text>
-        <ellipse id="receivingCell" class="cell-fill" cx="220" cy="450" rx="83" ry="50" fill="#e2eee0" stroke="var(--voltage)" stroke-width="3"/>
-        <circle cx="220" cy="450" r="17" fill="#fff" stroke="var(--voltage)" stroke-width="2"/>
-        <text x="20" y="380" class="diagram-label" font-weight="bold">Receiving neuron</text>
-        <text x="20" y="399" class="diagram-small">The postsynaptic neuron</text>
-
-        <path id="postPath" d="M303 450 C360 450 383 481 408 515" fill="none" stroke="var(--voltage)" stroke-width="5" marker-end="url(#arrowPost)"/>
-        <circle id="postDot" class="output-dot" r="8" fill="var(--spike)"/>
-        <text x="292" y="535" class="diagram-small">New spike only if</text>
-        <text x="292" y="551" class="diagram-small">threshold is crossed</text>
-      </svg>
+      <svg id="diagram" viewBox="0 0 460 650" role="img" aria-labelledby="diagramTitle diagramDesc">
+<title id="diagramTitle">Two branching neurons connected by a chemical synapse</title><desc id="diagramDesc">An input spike triggers transmitter release. Transmitter opens ion channels on a receiving dendrite. The receiving neuron can fire after its voltage reaches threshold.</desc>
+<g id="firstNeuron"></g><g id="secondNeuron"></g>
+<path id="prePath" d="M152 125 C225 160 200 190 220 220" stroke="var(--pre)" stroke-width="6" fill="none"/>
+<g id="bioSynapse">
+<rect x="170" y="220" width="100" height="70" rx="27" fill="var(--demo-input-soft)" stroke="var(--pre)" stroke-width="3"/>
+<g fill="var(--demo-paper)" stroke="var(--pre)"><circle cx="192" cy="246" r="8"/><circle cx="221" cy="260" r="8"/><circle cx="245" cy="243" r="8"/></g>
+<path d="M170 294 H270" stroke="var(--pre)" stroke-width="3"/><path d="M170 334 H270" stroke="var(--synapse)" stroke-width="3"/>
+<g id="channels" fill="var(--demo-paper)" stroke="var(--synapse)" stroke-width="2"><rect x="184" y="325" width="14" height="27" rx="3"/><rect x="213" y="325" width="14" height="27" rx="3"/><rect x="242" y="325" width="14" height="27" rx="3"/></g>
+</g>
+<path id="receivingPath" d="M220 353 C219 400 211 445 220 471" stroke="var(--voltage)" stroke-width="6" fill="none"/>
+<path id="postPath" d="M254 517 C309 532 358 574 422 603" stroke="var(--voltage)" stroke-width="6" fill="none"/>
+<g class="diagram-label"><text id="firstLabel" x="276" y="65" font-weight="bold">First neuron</text><text id="axonLabel" x="279" y="179">Axon</text><text id="terminalLabel" x="287" y="246">Terminal</text><text id="gapLabel" x="287" y="314">Synaptic gap</text><text id="channelLabel" x="287" y="349">Ion channels</text><text id="dendriteLabel" x="28" y="397">Dendrite</text><text id="receiverLabel" x="24" y="633" font-weight="bold">Receiving neuron</text><text id="outputLabel" x="328" y="633">Output axon</text></g>
+<circle id="preDot" r="8"/><circle id="postDot" r="8"/><g id="transmitters"></g><g id="ions"></g>
+</svg>
     </section>
 
     <section class="scope">
       <div>
-        <h2>When the waves occur</h2>
-        <p class="section-note">Time zero is the first incoming spike. In constant mode, later spikes are equally spaced.</p>
+        <h2>Signals over time</h2>
       </div>
       <canvas id="scope" aria-label="Three time-aligned graphs showing the incoming spike, synaptic current and receiving-cell voltage"></canvas>
       <div class="legend">
@@ -538,8 +482,7 @@
   </div>
 
   <section class="steps">
-    <h2>The sequence</h2>
-    <p class="section-note">Only the final step is optional. The receiving cell may change voltage without firing.</p>
+    <h2>Sequence</h2>
     <div class="step-list">
       <div class="step" data-step="1">
         <span class="step-number">Step 1</span>
@@ -549,41 +492,26 @@
       <div class="step" data-step="2">
         <span class="step-number">Step 2</span>
         <strong>Transmitter release</strong>
-        <p>The spike reaches the terminal and causes chemical transmitter to be released.</p>
+        <p>The terminal releases neurotransmitter when the spike arrives.</p>
       </div>
       <div class="step" data-step="3">
         <span class="step-number">Step 3</span>
         <strong>Synaptic current</strong>
-        <p>The transmitter opens channels. Ions flow across the receiving cell’s membrane.</p>
+        <p>Transmitter opens ion channels in the receiving membrane.</p>
       </div>
       <div class="step" data-step="4">
         <span class="step-number">Step 4</span>
         <strong>Voltage response</strong>
-        <p>The current changes the receiving neuron’s voltage over several milliseconds.</p>
+        <p>Synaptic current changes the receiving neuron’s voltage.</p>
       </div>
       <div class="step" data-step="5">
-        <span class="step-number">Step 5 - maybe</span>
+        <span class="step-number">Step 5</span>
         <strong>New nerve spike</strong>
-        <p>This happens only if the combined voltage reaches the cell’s firing threshold.</p>
+        <p>The receiving neuron fires if its voltage reaches threshold.</p>
       </div>
     </div>
-  </section>
 
-  <details class="technical-details">
-    <summary>Playback and model details</summary>
-    <div class="technical-content">
-      <div>
-        <h3>Playback</h3>
-        <p><strong>Play</strong> runs the complete sequence. <strong>Next step</strong> repeats one stage so its movement is easier to follow.</p>
-        <p>Input strength changes how much each input raises the receiving-cell voltage. Replay speed changes only the animation speed.</p>
-      </div>
-      <div>
-        <h3>Teaching model</h3>
-        <p>A leaky integrate-and-fire model combines the synaptic current. The receiving neuron fires when its voltage reaches the threshold.</p>
-        <p>The model explains accumulation and skipped outputs. The traces are teaching data rather than measured recordings.</p>
-      </div>
-    </div>
-  </details>
+  </section>
 
 </div>
 
@@ -591,12 +519,152 @@
 
 <script>
 (() => {
+  function seeded(seed) {
+    let value = seed >>> 0;
+    return () => {
+      value = (value + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(value ^ (value >>> 15), 1 | value);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function taperedPath(points, startWidth, endWidth) {
+    const left = [];
+    const right = [];
+    for (let i = 0; i < points.length; i++) {
+      const previous = points[Math.max(0, i - 1)];
+      const next = points[Math.min(points.length - 1, i + 1)];
+      let dx = next[0] - previous[0];
+      let dy = next[1] - previous[1];
+      const length = Math.hypot(dx, dy) || 1;
+      dx /= length;
+      dy /= length;
+      const fraction = i / Math.max(1, points.length - 1);
+      const half = (startWidth + (endWidth - startWidth) * fraction) / 2;
+      left.push([points[i][0] - dy * half, points[i][1] + dx * half]);
+      right.push([points[i][0] + dy * half, points[i][1] - dx * half]);
+    }
+    right.reverse();
+    const format = list => list.map(p => p[0].toFixed(2) + " " + p[1].toFixed(2)).join(" L");
+    return "M" + format(left) + " L" + format(right) + " Z";
+  }
+
+  // A neurite segment: a slightly curved polyline that drifts with the random
+  // walk so branches never look like straight rays.
+  function neurite(x, y, angle, length, steps, rng, curl) {
+    const points = [[x, y]];
+    let direction = angle;
+    for (let i = 0; i < steps; i++) {
+      direction += (rng() - 0.5) * curl;
+      const step = length / steps;
+      const last = points[points.length - 1];
+      points.push([last[0] + Math.cos(direction) * step, last[1] + Math.sin(direction) * step]);
+    }
+    return { points, endAngle: direction };
+  }
+
+  function dendriteTree(x, y, angle, length, width, depth, rng, output) {
+    const segment = neurite(x, y, angle, length, 7, rng, 0.34);
+    const endWidth = Math.max(0.7, width * 0.55);
+    output.push(taperedPath(segment.points, width, endWidth));
+    if (depth <= 0) return;
+    const tip = segment.points[segment.points.length - 1];
+    const spread = 0.42 + rng() * 0.3;
+    const children = depth > 1 ? 2 : (rng() > 0.35 ? 2 : 1);
+    for (let i = 0; i < children; i++) {
+      const side = children === 1 ? (rng() - 0.5) * 0.6 : (i === 0 ? -spread : spread);
+      dendriteTree(tip[0], tip[1], segment.endAngle + side, length * (0.62 + rng() * 0.18), endWidth, depth - 1, rng, output);
+    }
+  }
+
+  // Closed Catmull-Rom outline: an irregular soma that bulges where dendrites
+  // leave it, rather than a circle or an ellipse.
+  function somaPath(cx, cy, radius, angles, rng) {
+    const count = 26;
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      let bulge = 0;
+      angles.forEach(a => {
+        let difference = Math.abs(((angle - a + Math.PI) % (Math.PI * 2)) - Math.PI);
+        bulge = Math.max(bulge, Math.exp(-Math.pow(difference / 0.34, 2)));
+      });
+      const r = radius * (0.88 + 0.05 * Math.sin(i * 2.3) + (rng() - 0.5) * 0.07 + 0.26 * bulge);
+      points.push([cx + Math.cos(angle) * r, cy + Math.sin(angle) * r * 0.92]);
+    }
+    let d = "M" + points[0][0].toFixed(2) + " " + points[0][1].toFixed(2);
+    for (let i = 0; i < count; i++) {
+      const p0 = points[(i - 1 + count) % count];
+      const p1 = points[i];
+      const p2 = points[(i + 1) % count];
+      const p3 = points[(i + 2) % count];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += " C" + c1[0].toFixed(2) + " " + c1[1].toFixed(2) + "," + c2[0].toFixed(2) + " " + c2[1].toFixed(2) + "," + p2[0].toFixed(2) + " " + p2[1].toFixed(2);
+    }
+    return d + " Z";
+  }
+
+  function bezierPoints(p0, p1, p2, p3, count) {
+    const points = [];
+    for (let i = 0; i <= count; i++) {
+      const t = i / count;
+      const u = 1 - t;
+      points.push([
+        u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+        u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]
+      ]);
+    }
+    return points;
+  }
+
+  const NS = "http://www.w3.org/2000/svg";
+
+  function node(name, attributes, parent) {
+    const element = document.createElementNS(NS, name);
+    Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+    if (parent) parent.appendChild(element);
+    return element;
+  }
+
+  function label(x, y, text, className, parent) {
+    const element = node("text", { x, y, class: className }, parent);
+    element.textContent = text;
+    return element;
+  }
+
+  // Multipolar neuron: irregular soma, several tapering branched dendrites, one
+  // axon leaving a distinct hillock.
+  function drawNeuron(parent, options) {
+    const rng = seeded(options.seed);
+    const group = node("g", {}, parent);
+    const dendritePaths = [];
+    options.dendriteAngles.forEach(angle => {
+      const start = [
+        options.cx + Math.cos(angle) * options.radius * 0.85,
+        options.cy + Math.sin(angle) * options.radius * 0.8
+      ];
+      dendriteTree(start[0], start[1], angle, options.dendriteLength * (0.8 + rng() * 0.45), options.radius * 0.34, 2, rng, dendritePaths);
+    });
+    dendritePaths.forEach(d => node("path", { d, fill: options.fill, stroke: options.stroke, "stroke-width": 1.1, "stroke-linejoin": "round" }, group));
+
+    node("path", {
+      d: somaPath(options.cx, options.cy, options.radius, options.dendriteAngles.concat([options.axonAngle]), seeded(options.seed + 7)),
+      fill: options.fill,
+      stroke: options.stroke,
+      "stroke-width": 2.2
+    }, group);
+    node("ellipse", { cx: options.cx + options.radius * 0.05, cy: options.cy, rx: options.radius * 0.42, ry: options.radius * 0.36, fill: "var(--demo-paper)", stroke: options.stroke, "stroke-width": 1.4 }, group);
+    node("circle", { cx: options.cx + options.radius * 0.12, cy: options.cy + options.radius * 0.05, r: options.radius * 0.13, fill: options.stroke, opacity: .55 }, group);
+    return group;
+  }
+
+  drawNeuron(document.getElementById('firstNeuron'), {seed:11,cx:130,cy:108,radius:28,dendriteAngles:[-2.8,-2.1,-1.35,-.5,2.5],axonAngle:.6,dendriteLength:32,fill:'var(--demo-input-soft)',stroke:'var(--demo-input)'});
+  const biologicalReceiver = drawNeuron(document.getElementById('secondNeuron'), {seed:29,cx:220,cy:500,radius:34,dendriteAngles:[-2.6,-1.95,-.55,2.5,1.6],axonAngle:.35,dendriteLength:40,fill:'var(--demo-neuron-soft)',stroke:'var(--demo-voltage)'});
+  biologicalReceiver.querySelector('path:last-of-type').id = 'receivingCell';
   const canvas = document.getElementById("scope");
   const context = canvas.getContext("2d");
-  const sendButton = document.getElementById("send");
-  const clearButton = document.getElementById("clear");
-  const trainButton = document.getElementById("train");
-  const pauseButton = document.getElementById("pause");
   const speedSlider = document.getElementById("speed");
   const speedOut = document.getElementById("speedOut");
   const frequencySlider = document.getElementById("frequency");
@@ -626,59 +694,48 @@
   diagram.appendChild(eventLayer);
 
   const colours = {
-    pre: "#b75b27",
-    synapse: "#2674a8",
-    voltage: "#4c7d46",
-    spike: "#b52d32",
-    threshold: "#8c6b19",
-    grid: "#e3e4e6",
-    text: "#62666d"
+    pre: DemoTheme.colour('input'),
+    synapse: DemoTheme.colour('current'),
+    voltage: DemoTheme.colour('voltage'),
+    spike: DemoTheme.colour('spike'),
+    threshold: DemoTheme.colour('threshold'),
+    grid: DemoTheme.colour('grid'),
+    text: DemoTheme.colour('muted')
   };
 
-  const baseDuration = 6000;
   const firingLevel = 4;
-  let running = false;
-  let paused = false;
-  let runMode = "scenario";
-  let scenario = "regular";
-  let startTime = 0;
-  let pausedAt = 0;
-  let activeDuration = baseDuration;
-  let animationFrame = null;
-  let manualPulseTimes = [0];
-  let singleRange = { min: -1, max: 9 };
-  let singleSessionStarted = false;
-  let lastBiologicalTime = -1;
-  let trainExtraPulses = [];
-  let lastRenderedProgress = 0;
-  let responseCache = null;
-  let manualStep = 0;
-  let manualLooping = false;
-  let manualLoopStart = 0;
+  let scenario = 'regular', responseCache = null, animationFrame = null;
+  let running = false, manualLooping = false, manualStep = 0;
+  let lastRenderedProgress = 0, lastBiologicalTime = -1, previousClock = 0;
+  let playbackFraction = 0, manualFraction = 0;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-  function resizeCanvas() {
-    const rect = canvas.getBoundingClientRect();
-    const ratio = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.round(rect.width * ratio);
-    canvas.height = Math.round(rect.height * ratio);
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    drawGraphs(running ? currentProgress() : lastRenderedProgress);
+  let compactDiagram=false, lastDiagramStep=null;
+  function diagramLayout() {
+    compactDiagram=matchMedia('(max-width:760px) and (max-height:700px), (max-width:959px) and (max-height:500px) and (orientation:landscape)').matches;
+    diagram.setAttribute('viewBox',compactDiagram?'0 0 460 480':'0 0 460 650');
+    document.getElementById('firstNeuron').setAttribute('transform',compactDiagram?'translate(0 5) scale(.68)':'');
+    document.getElementById('secondNeuron').setAttribute('transform',compactDiagram?'translate(22 35) scale(.72)':'');
+    document.getElementById('bioSynapse').setAttribute('transform',compactDiagram?'translate(13 0) scale(.85)':'');
+    prePath.setAttribute('d',compactDiagram?'M103 90 C146 124 198 133 200 187':'M152 125 C225 160 200 190 220 220');
+    receivingPath.setAttribute('d',compactDiagram?'M200 300 C199 330 181 351 180 374':'M220 353 C219 400 211 445 220 471');
+    postPath.setAttribute('d',compactDiagram?'M205 408 C250 423 285 453 324 459':'M254 517 C309 532 358 574 422 603');
+    const positions=compactDiagram?[[233,70],[263,150],[263,210],[263,267],[263,298],[24,329],[265,370],[337,455]]:[[276,65],[279,179],[287,246],[287,314],[287,349],[28,397],[24,633],[328,633]];
+    ['firstLabel','axonLabel','terminalLabel','gapLabel','channelLabel','dendriteLabel','receiverLabel','outputLabel'].forEach((id,i)=>{
+      const label=document.getElementById(id);label.setAttribute('x',positions[i][0]);label.setAttribute('y',positions[i][1]);
+      label.style.display=compactDiagram&&['dendriteLabel','outputLabel'].includes(id)?'none':'';
+      label.style.fontSize=compactDiagram?'20px':'';
+    });
   }
-
-  function currentProgress(now = performance.now()) {
-    if (!running) return 0;
-    const clock = paused ? pausedAt : now;
-    return Math.max(0, Math.min(1, (clock - startTime) / activeDuration));
-  }
-
-  function replayDuration() {
-    return baseDuration / Number(speedSlider.value);
+  function resizeCanvas() { diagramLayout(); drawGraphs(lastRenderedProgress); updateDiagram(lastRenderedProgress,lastDiagramStep); }
+  function synapseCircle(x,y,radius,fill) {
+    return compactDiagram?makeCircle(13+.85*x,.85*y,radius*.85,fill):makeCircle(x,y,radius,fill);
   }
 
   function timeline() {
     if (scenario === "single") {
       return {
-        min: -1,
+        min: -5,
         max: 10,
         pulseTimes: [0],
         interval: null
@@ -687,7 +744,7 @@
     const interval = 1000 / Number(frequencySlider.value);
     const pulseTimes = Array.from({ length: 12 }, (_, index) => index * interval);
     return {
-      min: -1,
+      min: -5,
       max: pulseTimes.at(-1) + 30,
       pulseTimes,
       interval
@@ -695,7 +752,7 @@
   }
 
   function nerveSpike(t) {
-    return Math.exp(-Math.pow(t / 0.12, 2));
+    return DemoInputSpike(t);
   }
 
   function synapticCurrent(t) {
@@ -735,17 +792,19 @@
     const refractoryPeriod = 18;
     const simulationStart = Math.min(range.min, pulses[0] - 1);
     const times = [];
-    const voltages = [];
+    const voltages = [], currents = [], inputs = [];
     const spikeTimes = [];
     let voltage = 0;
     let lastSpike = -Infinity;
 
     for (let t = simulationStart; t <= range.max + timeStep / 2; t += timeStep) {
-      let current = 0;
+      let current = 0, pre = 0;
       pulses.forEach(pulseTime => {
         current += synapticCurrent(t - pulseTime) * strength * sign;
+        pre += nerveSpike(t - pulseTime);
       });
-      voltage += (-voltage / membraneTimeConstant + current * currentToVoltage) * timeStep;
+      if(t-lastSpike<refractoryPeriod) voltage=0;
+      else voltage += (-voltage / membraneTimeConstant + current * currentToVoltage) * timeStep;
 
       if (!inhibitory && voltage >= firingLevel && t - lastSpike >= refractoryPeriod) {
         if (t >= range.min) spikeTimes.push(t);
@@ -755,11 +814,11 @@
 
       if (t >= range.min - timeStep / 2) {
         times.push(t);
-        voltages.push(voltage);
+        voltages.push(voltage); currents.push(current); inputs.push(pre);
       }
     }
 
-    responseCache = { key, times, voltages, spikeTimes };
+    responseCache = { key, times, voltages, currents, inputs, spikeTimes, voltageMin:voltages.reduce((a,b)=>Math.min(a,b),0) };
     return responseCache;
   }
 
@@ -777,7 +836,7 @@
   function signalValues(t) {
     const strength = Number(strengthSlider.value);
     const inhibitory = kindSelect.value === "inh";
-    const currentSign = inhibitory ? -1 : 1;
+    const currentSign = inhibitory ? -0.65 : 1;
     const pulses = timeline().pulseTimes;
     let pre = 0;
     let current = 0;
@@ -806,166 +865,14 @@
   }
 
   function drawGraphs(progress) {
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    if (!width || !height) return;
     lastRenderedProgress = progress;
-
-    context.clearRect(0, 0, width, height);
-    const left = width < 330 ? 118 : width < 450 ? 140 : width < 700 ? 170 : 118;
-    const right = 20;
-    const plotWidth = width - left - right;
-    const top = 22;
-    const rowHeight = (height - 58) / 3;
-    const range = timeline();
-    let currentScale = 7;
-    let voltageScale = 6;
-    for (let i = 0; i <= 600; i++) {
-      const t = range.min + (i / 600) * (range.max - range.min);
-      const values = signalValues(t);
-      currentScale = Math.max(currentScale, Math.abs(values.current) * 1.15);
-      voltageScale = Math.max(voltageScale, Math.abs(values.voltage) * 1.15);
-    }
-    const labels = [
-      ["1. Incoming nerve spike", "electrical signal in first neuron"],
-      ["2. Synaptic current", "ions crossing receiving-cell membrane"],
-      ["3. Receiving-cell voltage", "may or may not reach firing threshold"]
-    ];
-
-    context.font = "13px Arial";
-    context.textAlign = "left";
-    context.textBaseline = "middle";
-
-    for (let row = 0; row < 3; row++) {
-      const rowTop = top + row * rowHeight;
-      const centre = rowTop + rowHeight * 0.55;
-      context.fillStyle = "#202124";
-      context.font = width < 450 ? "bold 11px Arial" : "bold 13px Arial";
-      wrapText(labels[row][0], 10, rowTop + 20, left - 22, 14);
-      context.fillStyle = colours.text;
-      context.font = width < 450 ? "10px Arial" : "11px Arial";
-      wrapText(labels[row][1], 10, rowTop + 52, left - 22, 14);
-
-      context.strokeStyle = colours.grid;
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(left, centre);
-      context.lineTo(width - right, centre);
-      context.stroke();
-
-      for (let i = 0; i <= 5; i++) {
-        const x = left + (i / 5) * plotWidth;
-        context.beginPath();
-        context.moveTo(x, rowTop + 10);
-        context.lineTo(x, rowTop + rowHeight - 8);
-        context.stroke();
-      }
-    }
-
-    const thresholdY = top + 2 * rowHeight + rowHeight * (0.55 - (firingLevel / voltageScale) * 0.28);
-    context.setLineDash([6, 4]);
-    context.strokeStyle = colours.threshold;
-    context.beginPath();
-    context.moveTo(left, thresholdY);
-    context.lineTo(width - right, thresholdY);
-    context.stroke();
-    context.setLineDash([]);
-    context.fillStyle = colours.threshold;
-    context.font = "11px Arial";
-    context.fillText("firing threshold", left + 6, thresholdY - 9);
-
-    const visibleTime = range.min + (range.max - range.min) * Math.max(progress, 0.001);
-    drawTrace(0, colours.pre, t => signalValues(t).pre, 1.15, false, visibleTime);
-    drawTrace(1, colours.synapse, t => signalValues(t).current, currentScale, true, visibleTime);
-    drawTrace(2, colours.voltage, t => signalValues(t).voltage, voltageScale, true, visibleTime);
-
-    const spikeTimes = findSpikeTimes() || [];
-    spikeTimes.forEach((spikeTime, index) => {
-      if (spikeTime > visibleTime) return;
-      const x = left + ((spikeTime - range.min) / (range.max - range.min)) * plotWidth;
-      const base = top + 2 * rowHeight + rowHeight * 0.55;
-      context.strokeStyle = colours.spike;
-      context.lineWidth = 3;
-      context.beginPath();
-      context.moveTo(x - 8, base);
-      context.lineTo(x, top + 2 * rowHeight + 12);
-      context.lineTo(x + 8, base);
-      context.stroke();
-      context.fillStyle = colours.spike;
-      context.font = "bold 11px Arial";
-      if (index === 0) context.fillText("new spike", x + 11, top + 2 * rowHeight + 18);
-    });
-
-    const nowX = left + ((visibleTime - range.min) / (range.max - range.min)) * plotWidth;
-    context.setLineDash([3, 3]);
-    context.strokeStyle = "#555b63";
-    context.lineWidth = 1.5;
-    context.beginPath();
-    context.moveTo(nowX, top + 4);
-    context.lineTo(nowX, top + 3 * rowHeight - 8);
-    context.stroke();
-    context.setLineDash([]);
-    context.fillStyle = "#555b63";
-    context.font = "bold 10px Arial";
-    context.textAlign = nowX > width - 55 ? "right" : "left";
-    context.fillText("now", nowX + (nowX > width - 55 ? -5 : 5), top + 8);
-
-    context.fillStyle = colours.text;
-    context.font = "11px Arial";
-    context.textAlign = "center";
-    for (let i = 0; i <= 5; i++) {
-      const x = left + (i / 5) * plotWidth;
-      const tick = range.min + (i / 5) * (range.max - range.min);
-      context.fillText(formatTime(tick), x, height - 17);
-    }
-    context.fillText(width < 450 ? "time (ms)" : "time in pulse sequence (milliseconds)", left + plotWidth / 2, height - 3);
-
-    function drawTrace(row, colour, fn, scale, signed, visible) {
-      const rowTop = top + row * rowHeight;
-      const centre = rowTop + rowHeight * 0.55;
-      const amplitude = rowHeight * 0.28;
-      context.strokeStyle = colour;
-      context.lineWidth = 2.5;
-      context.beginPath();
-      let begun = false;
-      for (let i = 0; i <= 1600; i++) {
-        const t = range.min + (i / 1600) * (range.max - range.min);
-        if (t > visible) break;
-        const value = fn(t);
-        const x = left + ((t - range.min) / (range.max - range.min)) * plotWidth;
-        const normalized = value / scale;
-        const y = signed ? centre - normalized * amplitude : centre - normalized * amplitude;
-        if (!begun) {
-          context.moveTo(x, y);
-          begun = true;
-        } else {
-          context.lineTo(x, y);
-        }
-      }
-      context.stroke();
-    }
-
-    function formatTime(value) {
-      if (Math.abs(value) >= 100) return Math.round(value).toString();
-      if (Math.abs(value) >= 10) return value.toFixed(0);
-      return value.toFixed(1).replace(".0", "");
-    }
-
-    function wrapText(text, x, y, maxWidth, lineHeight) {
-      const words = text.split(" ");
-      let line = "";
-      for (let i = 0; i < words.length; i++) {
-        const test = line + words[i] + " ";
-        if (context.measureText(test).width > maxWidth && i > 0) {
-          context.fillText(line, x, y);
-          line = words[i] + " ";
-          y += lineHeight;
-        } else {
-          line = test;
-        }
-      }
-      context.fillText(line, x, y);
-    }
+    const range = timeline(), response = responseTrace(), times = response.times;
+    const inhibitory = kindSelect.value === 'inh';
+    DemoPlot(canvas, [
+      {title:'1. Input voltage (relative)',colour:colours.pre,min:-.25,max:1.1,values:response.inputs},
+      {title:'2. Synaptic current (relative)',colour:colours.synapse,min:inhibitory?-7:0,max:inhibitory?1:7,values:response.currents},
+      {title:'3. Voltage change · threshold 4',colour:colours.voltage,min:inhibitory?Math.min(-4,response.voltageMin*1.1):0,max:6,threshold:firingLevel,thresholdColour:colours.threshold,values:response.voltages,spikes:response.spikeTimes}
+    ], times, range.min + progress * (range.max-range.min));
   }
 
   function animationState(progress) {
@@ -999,6 +906,7 @@
   }
 
   function updateDiagram(progress, forcedStep = null) {
+    lastDiagramStep=forcedStep;
     const state = animationState(progress);
     const age = state.eventAge;
     resetVisuals();
@@ -1009,26 +917,25 @@
     // A newly added incoming pulse must not erase voltage left by earlier ones.
     const inhibitory = kindSelect.value === "inh";
     const voltage = signalValues(state.biologicalTime).voltage;
-    if (Math.abs(voltage) < 0.03) {
-      receivingCell.setAttribute("fill", "#e2eee0");
-    } else if (inhibitory) {
-      receivingCell.setAttribute("fill", "#e7e3f2");
-    } else {
-      receivingCell.setAttribute("fill", voltage >= firingLevel ? "#f3d7d9" : "#d8ead5");
-    }
+    const intensity=Math.max(0,Math.min(1,Math.abs(voltage)/firingLevel));
+    const target=inhibitory?'device':'voltage';
+    receivingCell.setAttribute('fill',`color-mix(in oklch, var(--demo-neuron-soft) ${100-intensity*50}%, var(--demo-${target}))`);
+    receivingCell.setAttribute('stroke-width',2.2+intensity*1.8);
 
-    const activeStep = forcedStep ?? (age < 0 ? 1 :
+    const outputActive = (findSpikeTimes() || []).some(t => state.biologicalTime >= t && state.biologicalTime < t+2);
+    const activeStep = forcedStep ?? (outputActive ? 5 : age < 0 ? 1 :
       age < 0.35 ? 2 :
       age < 0.8 ? 3 :
       age < 4 ? 4 : 5);
 
-    const didFire = forcedStep === 5 ? willFire() : state.pulseFired;
+    const didFire = outputActive;
     steps.forEach((step, index) => {
       step.classList.toggle("active", index + 1 === activeStep);
       step.classList.toggle("not-reached", index === 4 && activeStep === 5 && !didFire);
     });
 
-    updateStatus(activeStep, didFire);
+    if(progress>=1&&forcedStep===null)status.textContent=completionText();
+    else updateStatus(activeStep, didFire);
   }
 
   function renderAllActiveEvents(biologicalTime) {
@@ -1046,14 +953,14 @@
       if (age >= 0 && age < 0.35) {
         const local = age / 0.35;
         [190, 210, 230, 250].forEach((x, index) => {
-          fragment.appendChild(makeCircle(x, 298 + local * 30 + (index % 2) * 2, 5, colours.pre));
+          fragment.appendChild(synapseCircle(x, 298 + local * 30 + (index % 2) * 2, 5, colours.pre));
         });
       }
 
       if (age >= 0.35 && age < 0.8) {
         const local = (age - 0.35) / 0.45;
         [191, 220, 249].forEach(x => {
-          fragment.appendChild(makeCircle(x, 320 + local * 38, 4, colours.synapse));
+          fragment.appendChild(synapseCircle(x, 320 + local * 38, 4, colours.synapse));
         });
       }
 
@@ -1090,7 +997,7 @@
     postDot.style.opacity = "0";
     transmitters.forEach(dot => dot.style.opacity = "0");
     ions.forEach(dot => dot.style.opacity = "0");
-    receivingCell.setAttribute("fill", "#e2eee0");
+    receivingCell.setAttribute("fill", "var(--demo-neuron-soft)");
     eventLayer.replaceChildren();
   }
 
@@ -1101,330 +1008,103 @@
   }
 
   function updateStatus(step, pulseFired) {
-    const inhibitory = kindSelect.value === "inh";
+    const inhibitory = kindSelect.value === 'inh';
+    const latestOutput=(findSpikeTimes()||[]).filter(t=>t<=lastBiologicalTime).at(-1);
+    const refractory=latestOutput!==undefined&&lastBiologicalTime-latestOutput<18;
     const messages = {
-      1: ["Incoming nerve spike.", "An electrical action potential is travelling down the first neuron."],
-      2: ["Transmitter release.", "The incoming spike has reached the synaptic terminal."],
-      3: ["Synaptic current.", `Channels open and current flows ${inhibitory ? "to oppose firing" : "to encourage firing"}.`],
-      4: ["Receiving-cell voltage.", `The voltage moves ${inhibitory ? "away from" : "towards"} the firing threshold.`],
-      5: pulseFired
-        ? ["Threshold crossed.", "The receiving neuron now produces its own separate nerve spike."]
-        : ["No new spike.", "The receiving cell changed voltage, but it did not cross the firing threshold."]
+      1:'The input spike travels along the axon.',
+      2:'The terminal releases neurotransmitter.',
+      3:'Transmitter opens ion channels.',
+      4:refractory?'The neuron is in its refractory period.':inhibitory?'The receiving neuron’s voltage falls.':'The receiving neuron’s voltage rises.',
+      5:pulseFired?'The receiving neuron produces an output spike.':'The receiving neuron stays below threshold.'
     };
-    const trainNote = scenario === "single" ? "" : trainPatternNote();
-    status.innerHTML = `<strong>${messages[step][0]}</strong> ${messages[step][1]}${trainNote}`;
+    const text = messages[step];
+    if(status.textContent !== text) status.textContent = text;
   }
 
-  function trainPatternNote() {
-    const spikes = findSpikeTimes() || [];
-    const interval = timeline().interval;
-    if (spikes.length === 0) return " No postsynaptic spikes occur in this window.";
-    if (spikes.length === 1) return " One postsynaptic spike occurs in this window.";
-
-    const gaps = spikes.slice(1).map((time, index) => Math.max(1, Math.round((time - spikes[index]) / interval)));
-    if (gaps.every(gap => gap === gaps[0])) {
-      const wording = gaps[0] === 1 ? "every input" : `every ${gaps[0]} inputs`;
-      return ` The receiving neuron produces one postsynaptic spike after ${wording}.`;
-    }
-    return ` ${timeline().pulseTimes.length} inputs produce ${spikes.length} postsynaptic spikes. The receiving neuron sometimes skips an input, so the output gaps are uneven.`;
+  function completionText() { const inputs=timeline().pulseTimes.length, outputs=(findSpikeTimes()||[]).length; return `${inputs} input${inputs===1?'':'s'} produced ${outputs} output spike${outputs===1?'':'s'}.`; }
+  function clockMap() {
+    const response = responseTrace(), range = timeline();
+    if(!response.clockMap) response.clockMap = DemoClockMap({
+      start:range.min,end:range.max
+    });
+    return response.clockMap;
   }
-
-  function animate(now) {
-    if (!running || paused) return;
-    const progress = currentProgress(now);
+  function renderTime(time, step = null) {
     const range = timeline();
-    lastBiologicalTime = range.min + progress * (range.max - range.min);
-    drawGraphs(progress);
-    updateDiagram(progress);
-    if (progress >= 1) {
-      if (runMode === "train") {
-        startTime = now;
-        trainExtraPulses = [];
-        animationFrame = requestAnimationFrame(animate);
-        return;
-      }
-      running = false;
-      lastBiologicalTime = range.max;
-      pauseButton.textContent = "Pause";
-      playScenario.textContent = "Play";
-      return;
-    }
-    animationFrame = requestAnimationFrame(animate);
+    lastBiologicalTime = time;
+    const progress = (time-range.min)/(range.max-range.min);
+    drawGraphs(progress); updateDiagram(progress,step);
   }
-
-  function start(mode) {
-    cancelAnimationFrame(animationFrame);
-    manualLooping = false;
-    runMode = mode;
-    if (mode === "train") trainExtraPulses = [];
-    running = true;
-    paused = false;
-    startTime = performance.now();
-    activeDuration = replayDuration();
-    pauseButton.textContent = "Pause";
-    playScenario.textContent = "Pause";
-    trainButton.textContent = mode === "train" ? "Stop constant pulses" : "Start constant pulses";
-    animationFrame = requestAnimationFrame(animate);
-  }
-
-  function beginSingleHistory() {
-    manualPulseTimes = [0];
-    singleRange = { min: -1, max: 9 };
-    singleSessionStarted = true;
-    sendButton.textContent = "Send another nerve spike";
-    lastBiologicalTime = singleRange.min;
-    start("single");
-  }
-
-  function addPulseToCurrentHistory() {
-    if (!singleSessionStarted || runMode !== "single") {
-      beginSingleHistory();
-      return;
-    }
-
-    const oldRange = timeline();
-    const oldNow = running
-      ? oldRange.min + currentProgress() * (oldRange.max - oldRange.min)
-      : lastBiologicalTime;
-    const arrivalTime = oldNow + 1;
-
-    manualPulseTimes.push(arrivalTime);
-    manualPulseTimes.sort((a, b) => a - b);
-    singleRange.max = Math.max(singleRange.max, arrivalTime + 9);
-
-    const newSpan = singleRange.max - singleRange.min;
-    activeDuration = baseDuration * (newSpan / 10) / Number(speedSlider.value);
-    const newProgress = (oldNow - singleRange.min) / newSpan;
-    startTime = performance.now() - newProgress * activeDuration;
-    lastBiologicalTime = oldNow;
-    runMode = "single";
-    running = true;
-    paused = false;
-    pauseButton.textContent = "Pause";
-    trainButton.textContent = "Start constant pulses";
-    cancelAnimationFrame(animationFrame);
-    animationFrame = requestAnimationFrame(animate);
-    status.innerHTML = `<strong>New pulse added.</strong> It is travelling towards the synapse; earlier responses remain on the graph.`;
-  }
-
-  function addPulseDuringTrain() {
-    const range = timeline();
-    const nowTime = range.min + currentProgress() * (range.max - range.min);
-    trainExtraPulses.push(nowTime + 1);
-    status.innerHTML = "<strong>Extra pulse added.</strong> The constant train and its existing history continue.";
-  }
-
-  function clearHistory() {
-    cancelAnimationFrame(animationFrame);
-    running = false;
-    paused = false;
-    runMode = "single";
-    manualPulseTimes = [0];
-    singleRange = { min: -1, max: 9 };
-    singleSessionStarted = false;
-    lastBiologicalTime = singleRange.min;
-    trainExtraPulses = [];
-    sendButton.textContent = "Send one nerve spike";
-    pauseButton.textContent = "Pause";
-    trainButton.textContent = "Start constant pulses";
-    drawGraphs(0);
-    updateDiagram(0);
-    status.innerHTML = "<strong>History cleared.</strong> Send one spike or start constant pulses.";
-  }
-
-  function resetForChangedSettings() {
-    const restartTrain = running && runMode === "train";
-    cancelAnimationFrame(animationFrame);
-    running = false;
-    paused = false;
-    pauseButton.textContent = "Pause";
-    trainButton.textContent = "Start constant pulses";
-    drawGraphs(0);
-    updateDiagram(0);
-    if (restartTrain) {
-      start("train");
-    } else {
-      status.innerHTML = "<strong>Settings changed.</strong> Send one spike or start constant pulses.";
-    }
-  }
-
-  sendButton.addEventListener("click", () => {
-    if (running && runMode === "train") {
-      addPulseDuringTrain();
-    } else {
-      addPulseToCurrentHistory();
-    }
-  });
-
-  clearButton.addEventListener("click", clearHistory);
-
-  trainButton.addEventListener("click", () => {
-    if (running && runMode === "train") {
-      cancelAnimationFrame(animationFrame);
-      running = false;
-      paused = false;
-      trainButton.textContent = "Start constant pulses";
-      pauseButton.textContent = "Pause";
-      status.innerHTML = "<strong>Pulse train stopped.</strong> Change the settings or start it again.";
-      return;
-    }
-    start("train");
-  });
-
-  pauseButton.addEventListener("click", () => {
-    if (!running) return;
-    if (paused) {
-      startTime += performance.now() - pausedAt;
-      paused = false;
-      pauseButton.textContent = "Pause";
-      animationFrame = requestAnimationFrame(animate);
-    } else {
-      paused = true;
-      pausedAt = performance.now();
-      pauseButton.textContent = "Continue";
-    }
-  });
-
-  strengthSlider.addEventListener("input", () => {
-    strengthOut.value = `${strengthSlider.value} / 10`;
-    resetScenario();
-  });
-
-  kindSelect.addEventListener("change", () => {
-    resetForChangedSettings();
-  });
-
-  frequencySlider.addEventListener("input", () => {
-    frequencyOut.value = `${frequencySlider.value} Hz`;
-    resetScenario();
-  });
-
-  speedSlider.addEventListener("input", () => {
-    const progress = running ? currentProgress() : 0;
-    speedOut.value = `${Number(speedSlider.value).toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}×`;
-    if (running) {
-      const now = performance.now();
-      activeDuration = replayDuration();
-      startTime = now - progress * activeDuration;
-      if (paused) pausedAt = now;
-    } else {
-      drawGraphs(0);
-    }
-  });
-
   function stopScenario() {
-    cancelAnimationFrame(animationFrame);
-    manualLooping = false;
-    running = false;
-    paused = false;
-    playScenario.textContent = "Play";
+    running=false; manualLooping=false; cancelAnimationFrame(animationFrame);
+    playScenario.textContent='Play';
   }
-
   function resetScenario() {
-    stopScenario();
-    manualStep = 0;
-    nextStepScenario.textContent = "Next step";
-    responseCache = null;
-    lastBiologicalTime = timeline().min;
-    lastRenderedProgress = 0;
-    drawGraphs(0);
-    updateDiagram(0);
-    const message = scenario === "single"
-      ? (willFire()
-        ? "One strong input crosses the firing threshold and produces one output spike."
-        : "One input changes the receiving-cell voltage but remains below threshold.")
-      : "Smaller inputs need time to accumulate. Stronger inputs approach one output spike for each input.";
-    status.innerHTML = `<strong>Ready.</strong> ${message}`;
+    stopScenario(); manualStep=0; playbackFraction=0; responseCache=null;
+    nextStepScenario.textContent='Next step'; renderTime(timeline().min);
+    status.textContent='Press Play to send the first input.';
   }
-
   function selectScenario(next) {
-    scenario = next;
-    scenarioSingle.setAttribute("aria-pressed", String(next === "single"));
-    scenarioRegular.setAttribute("aria-pressed", String(next === "regular"));
-    resetScenario();
+    scenario=next;
+    scenarioSingle.setAttribute('aria-pressed',String(next==='single'));
+    scenarioRegular.setAttribute('aria-pressed',String(next==='regular'));
+    frequencySlider.disabled=next==='single'; resetScenario();
   }
-
-  scenarioSingle.addEventListener("click", () => selectScenario("single"));
-  scenarioRegular.addEventListener("click", () => selectScenario("regular"));
-  playScenario.addEventListener("click", () => {
-    if (running && !paused) {
-      paused = true;
-      pausedAt = performance.now();
-      playScenario.textContent = "Continue";
-      cancelAnimationFrame(animationFrame);
-      return;
-    }
-    if (running && paused) {
-      startTime += performance.now() - pausedAt;
-      paused = false;
-      playScenario.textContent = "Pause";
-      animationFrame = requestAnimationFrame(animate);
-      return;
-    }
-    start("scenario");
-  });
-
-  function manualStepWindow(step) {
-    if (step === 5) {
-      const firstOutputSpike = (findSpikeTimes() || [])[0];
-      if (firstOutputSpike !== undefined) return [firstOutputSpike - 0.4, firstOutputSpike + 2.2];
-    }
-    return {
-      1: [-0.9, -0.05],
-      2: [0, 0.34],
-      3: [0.35, 0.79],
-      4: [0.8, 3.8],
-      5: [4, 8]
-    }[step];
-  }
-
-  function animateManualStep(now) {
-    if (!manualLooping) return;
-    const [windowStart, windowEnd] = manualStepWindow(manualStep);
-    const loopDuration = 1400 / Number(speedSlider.value);
-    const loopProgress = ((now - manualLoopStart) % loopDuration) / loopDuration;
-    const biologicalTime = windowStart + loopProgress * (windowEnd - windowStart);
-    const range = timeline();
-    const progress = Math.max(0, Math.min(1, (biologicalTime - range.min) / (range.max - range.min)));
-    lastBiologicalTime = biologicalTime;
-    drawGraphs(progress);
-    updateDiagram(progress, manualStep);
-    animationFrame = requestAnimationFrame(animateManualStep);
-  }
-
-  nextStepScenario.addEventListener("click", () => {
-    stopScenario();
-    manualStep = manualStep >= 5 ? 1 : manualStep + 1;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const [, windowEnd] = manualStepWindow(manualStep);
-      const range = timeline();
-      const progress = Math.max(0, Math.min(1, (windowEnd - range.min) / (range.max - range.min)));
-      lastBiologicalTime = windowEnd;
-      drawGraphs(progress);
-      updateDiagram(progress);
+  function animate(now) {
+    if(!running)return;
+    const elapsed=now-previousClock; previousClock=now;
+    if(manualLooping) {
+      manualFraction=(manualFraction+elapsed*Number(speedSlider.value)/1800)%1;
+      const [start,end]=manualStepWindow(manualStep);
+      renderTime(start+(end-start)*manualFraction,manualStep);
     } else {
-      manualLooping = true;
-      manualLoopStart = performance.now();
-      animationFrame = requestAnimationFrame(animateManualStep);
+      playbackFraction=Math.min(1,playbackFraction+elapsed*Number(speedSlider.value)/(scenario==='single'?6000:12000));
+      renderTime(clockMap().at(playbackFraction));
+      if(playbackFraction>=1){stopScenario();return;}
     }
-    nextStepScenario.textContent = manualStep === 5 ? "Start again" : "Next step";
-  });
-  restartScenario.addEventListener("click", resetScenario);
-
-  window.addEventListener("resize", resizeCanvas);
-  strengthOut.value = `${strengthSlider.value} / 10`;
-  frequencyOut.value = `${frequencySlider.value} Hz`;
-  speedOut.value = `${speedSlider.value}×`;
-  resizeCanvas();
-  updateDiagram(0);
-  resetScenario();
-
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    status.innerHTML = "<strong>Ready.</strong> Animation is paused because reduced motion is enabled.";
+    animationFrame=requestAnimationFrame(animate);
   }
+  function play() {
+    if(running){stopScenario();return;}
+    if(reducedMotion.matches){renderTime(timeline().max);return;}
+    manualLooping=false;
+    playbackFraction=lastRenderedProgress>=1?0:clockMap().fraction(lastBiologicalTime);
+    running=true;previousClock=performance.now();playScenario.textContent='Pause';
+    animationFrame=requestAnimationFrame(animate);
+  }
+  function manualStepWindow(step) {
+    const output=(findSpikeTimes()||[])[0];
+    if(step===5&&output!==undefined)return[output-.4,output+2.2];
+    if(step===4&&output!==undefined&&output<3.8){const end=output-.02;return[Math.min(.8,end/2),end];}
+    return {1:[-.9,-.05],2:[0,.34],3:[.35,.79],4:[.8,3.8],5:[4,8]}[step];
+  }
+  playScenario.addEventListener('click',play);
+  restartScenario.addEventListener('click',()=>{resetScenario();play();});
+  nextStepScenario.addEventListener('click',()=>{
+    stopScenario();manualStep=manualStep%5+1;manualFraction=0;
+    const [start,end]=manualStepWindow(manualStep);
+    if(reducedMotion.matches){renderTime((start+end)/2,manualStep);return;}
+    renderTime(start,manualStep);manualLooping=true;running=true;
+    previousClock=performance.now();playScenario.textContent='Pause';animationFrame=requestAnimationFrame(animate);
+  });
+  scenarioSingle.addEventListener('click',()=>selectScenario('single'));
+  scenarioRegular.addEventListener('click',()=>selectScenario('regular'));
+  strengthSlider.addEventListener('input',()=>{strengthOut.value=strengthSlider.value+' / 10';resetScenario();});
+  kindSelect.addEventListener('change',resetScenario);
+  frequencySlider.addEventListener('input',()=>{frequencyOut.value=frequencySlider.value+' Hz';resetScenario();});
+  speedSlider.addEventListener('input',()=>{speedOut.value=Number(speedSlider.value)+'×';});
+  document.addEventListener('demo:pause',stopScenario);
+  reducedMotion.addEventListener('change',stopScenario);
+  window.addEventListener('resize',resizeCanvas);
+  diagramLayout();
+  resetScenario();
+  document.addEventListener('demo:preview', () => { stopScenario(); playbackFraction=.68; renderTime(clockMap().at(playbackFraction)); });
+
 })();
 </script>
 
 
+<script src="../mobile-demo.js?v=20260910-landscape4"></script>
 </body>
 </html>

@@ -1,379 +1,11 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
-  <title>How can a memristor hold short-term memory?</title>
-  <link rel="stylesheet" href="../demo-nav.css">
-  <style>
-    :root {
-      color-scheme: light;
-      --background: oklch(0.955 0.012 88);
-      --paper: oklch(0.988 0.008 88);
-      --ink: oklch(0.25 0.018 255);
-      --muted: oklch(0.48 0.018 255);
-      --line: oklch(0.86 0.014 88);
-      --pulse: oklch(0.58 0.14 65);
-      --state: oklch(0.48 0.12 305);
-      --conductance: oklch(0.48 0.11 235);
-      --memory: oklch(0.42 0.1 305);
-      --soft-state: oklch(0.94 0.035 305);
-      --soft-memory: oklch(0.95 0.028 305);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background: var(--background);
-      color: var(--ink);
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.45;
-    }
-
-    main {
-      width: min(1120px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 28px 0 44px;
-    }
-
-    h1 {
-      margin: 0 0 7px;
-      font-size: clamp(28px, 4vw, 42px);
-      line-height: 1.1;
-    }
-
-    h2 {
-      margin: 0 0 5px;
-      font-size: 21px;
-    }
-
-    h3 {
-      margin: 0 0 5px;
-      font-size: 16px;
-    }
-
-    p { margin: 0; }
-
-    .intro {
-      max-width: 820px;
-      color: var(--muted);
-      font-size: 17px;
-    }
-
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px 18px;
-      margin: 22px 0 14px;
-      padding: 14px 0;
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-    }
-
-    .controls > *, .workspace > *, .technical-content > *, section { min-width: 0; }
-    .status, .section-note, .model-box, .boundary, .causal-sequence, details { overflow-wrap: anywhere; }
-
-    .control-group {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .group-label {
-      color: var(--ink);
-      font-size: 13px;
-      font-weight: bold;
-    }
-
-    button {
-      min-height: 44px;
-      border: 1px solid oklch(0.7 0.015 255);
-      border-radius: 4px;
-      background: var(--paper);
-      color: var(--ink);
-      padding: 9px 13px;
-      font: inherit;
-      cursor: pointer;
-    }
-
-    button.primary,
-    button.primary {
-      border-color: var(--pulse);
-      background: var(--pulse);
-      color: var(--paper);
-      font-weight: bold;
-    }
-
-    button[aria-pressed="true"] {
-      border-color: var(--state);
-      background: var(--soft-state);
-      color: var(--state);
-      font-weight: bold;
-    }
-
-    button:hover { background: oklch(0.94 0.015 235); }
-    button.primary:hover { background: oklch(0.51 0.14 65); }
-    button:disabled, input:disabled { cursor: not-allowed; opacity: .48; }
-    button:focus-visible,
-    input:focus-visible,
-    summary:focus-visible {
-      outline: 3px solid rgba(38, 116, 168, .25);
-      outline-offset: 2px;
-    }
-
-    label {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    input[type="range"] { min-height: 44px; accent-color: var(--state); }
-
-    output {
-      min-width: 56px;
-      color: var(--ink);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .status {
-      min-height: 48px;
-      margin-top: 12px;
-      padding: 11px 14px;
-      border: 1px solid oklch(0.82 0.045 235);
-      background: oklch(0.94 0.025 235);
-      font-size: 16px;
-    }
-
-    .status strong { display: inline-block; margin-right: 5px; }
-
-    .workspace {
-      display: grid;
-      grid-template-columns: minmax(310px, .72fr) minmax(560px, 1.5fr);
-      gap: 18px;
-      align-items: stretch;
-    }
-
-    section {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      padding: 17px;
-    }
-
-    .section-note {
-      margin-bottom: 12px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .device svg {
-      display: block;
-      width: 100%;
-      height: auto;
-      margin: 8px 0 16px;
-    }
-
-    .svg-label {
-      fill: var(--ink);
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 14px;
-    }
-
-    .svg-small {
-      fill: var(--muted);
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 12px;
-    }
-
-    .state-fill { fill: var(--state); opacity: .32; transition: width 100ms linear; }
-
-    .model-box {
-      padding: 13px;
-      border: 1px solid oklch(0.82 0.045 305);
-      background: var(--soft-state);
-      font-size: 14px;
-    }
-
-    .model-box p + p { margin-top: 7px; }
-
-    .equation {
-      color: var(--ink);
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 15px;
-    }
-
-    .interval-box {
-      margin-top: 14px;
-      padding: 13px;
-      border: 1px solid oklch(0.82 0.045 305);
-      background: var(--soft-memory);
-    }
-
-    .interval-box p {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .interval-meter {
-      position: relative;
-      height: 12px;
-      margin: 12px 0 7px;
-      overflow: hidden;
-      border: 1px solid #c7b985;
-      background: #fff;
-    }
-
-    .interval-meter span {
-      display: block;
-      height: 100%;
-      width: 0;
-      background: var(--memory);
-      transition: width 100ms linear;
-    }
-
-    .meter-labels {
-      display: flex;
-      justify-content: space-between;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .scope {
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      min-width: 0;
-    }
-
-    canvas {
-      display: block;
-      width: 100%;
-      height: 520px;
-      border: 1px solid var(--line);
-      background: var(--paper);
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 18px;
-      margin-top: 11px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .legend span {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .swatch {
-      display: inline-block;
-      width: 18px;
-      height: 3px;
-    }
-
-    .explanation {
-      margin-top: 18px;
-    }
-
-    .causal-sequence {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 22px;
-      margin: 12px 0 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .causal-sequence li { color: var(--muted); font-size: 14px; }
-    .causal-sequence strong { color: var(--state); }
-
-    details.technical-details {
-      margin: 14px 0 18px;
-      border: 1px solid var(--line);
-      background: var(--paper);
-    }
-
-    details.technical-details summary {
-      display: flex;
-      min-height: 44px;
-      align-items: center;
-      padding: 0 14px;
-      color: var(--state);
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .technical-content { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 14px 14px; }
-    .technical-content .model-box { min-width: 0; }
-
-    .advanced-controls {
-      display: grid;
-      align-content: start;
-      gap: 12px;
-      padding: 13px;
-      border: 1px solid var(--line);
-      background: oklch(0.97 0.01 88);
-    }
-
-    .advanced-controls label { justify-content: space-between; }
-
-    .boundary {
-      margin-top: 18px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .boundary strong { color: var(--ink); }
-
-    .visually-hidden {
-      position: absolute !important;
-      width: 1px !important;
-      height: 1px !important;
-      padding: 0 !important;
-      margin: -1px !important;
-      overflow: hidden !important;
-      clip: rect(0, 0, 0, 0) !important;
-      white-space: nowrap !important;
-      border: 0 !important;
-    }
-
-    @media (max-width: 940px) {
-      .workspace { grid-template-columns: 1fr; }
-      canvas { height: 500px; }
-    }
-
-    @media (max-width: 650px) {
-      main { width: min(100% - 20px, 1120px); padding-top: 20px; }
-      .controls { align-items: flex-start; }
-      .control-group { flex-basis: 100%; }
-      .control-group .group-label { flex-basis: 100%; }
-      .control-group button { min-width: 0; flex: 1 1 0; }
-      .controls > .primary { width: 100%; }
-      label { flex-wrap: wrap; }
-      input[type="range"] { max-width: 155px; }
-      canvas { height: 420px; }
-      .technical-content { grid-template-columns: 1fr; }
-      .advanced-controls label { display: grid; grid-template-columns: 1fr; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      * {
-        scroll-behavior: auto !important;
-        transition-duration: 0.001ms !important;
-        animation-duration: 0.001ms !important;
-      }
-    }
-  </style>
-</head>
-<body>
-<nav class="demo-sequence" aria-label="Demo sequence">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Short-term memory in a memristor</title><link rel="icon" href="data:,"><link rel="stylesheet" href="../demo-nav.css?v=20260910-space">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f4f1;color:#25282d;font:16px/1.45 Arial,Helvetica,sans-serif}main{max-width:1160px;margin:0 auto;padding:28px 24px 60px}h1{font-size:32px;line-height:1.15;margin:0 0 16px}h2{font-size:18px;margin:0 0 12px}p{margin:0 0 12px}a{color:inherit}.controls{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:22px 0}.controls label{display:flex;align-items:center;gap:8px;font-size:14px}input[type=range]{accent-color:#6b4fa8;width:140px}button,select{font:inherit;border:1px solid #c9cbd0;border-radius:5px;background:white;padding:10px 14px;color:inherit}button{cursor:pointer}.primary{color:white;background:#62458f;border-color:#62458f}output{min-width:40px}.status{min-height:40px;margin:12px 0;border-left:3px solid #6b4fa8;padding-left:12px;font-size:14px}.workspace{display:grid;grid-template-columns:1fr 1.35fr;gap:20px}section{border:1px solid #d9dade;border-radius:8px;background:white;padding:20px}.device svg{display:block;width:100%;height:440px}.scope canvas{width:100%;height:440px;display:block}.steps{margin-top:24px}.step-list{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.step-number{font-size:12px;color:#6b4fa8;display:block}.step strong{display:block;margin:4px 0}.step p{font-size:14px;color:#5f636a}.step.active{border-top:3px solid #6b4fa8}.svg-label{font-size:16px;font-weight:bold}.svg-small{font-size:12px;fill:#697078}.svg-value{font-size:20px;font-weight:bold;font-variant-numeric:tabular-nums}
+@media(max-width:800px){.workspace{grid-template-columns:1fr}.step-list{grid-template-columns:1fr}.controls label{width:100%}}
+</style><link rel="stylesheet" href="../mobile-demo.css?v=20260910-landscape4"><link rel="stylesheet" href="../demo-theme.css?v=20260910-landscape4"><script src="../demo-theme.js?v=20260910-landscape4"></script><script src="../demo-visuals.js?v=20260910-landscape4"></script></head>
+<body data-demo="memory"><nav class="demo-sequence" aria-label="Demo sequence">
   <a class="demo-sequence__home" href="../">All demos</a>
   <span class="demo-sequence__step">3 of 4</span>
   <span class="demo-sequence__actions">
@@ -381,638 +13,126 @@
     <a class="demo-sequence__button" href="model_output_comparison.html">Next →</a>
   </span>
 </nav>
-<main>
-  <h1>How can a memristor hold short-term memory?</h1>
-  <p class="intro">
-    A voltage pulse changes the device state. The state then relaxes towards its baseline.
-    A later pulse can arrive before this change disappears, so the device responds with recent-pulse history.
-  </p>
-
-  <div class="controls" aria-label="Memristor animation controls">
-    <div class="control-group" role="group" aria-label="Pulse pattern">
-      <span class="group-label">Scenario</span>
-      <button type="button" data-scenario="single" aria-pressed="false">One pulse</button>
-      <button type="button" data-scenario="pair" aria-pressed="true">Paired pulse</button>
-      <button type="button" data-scenario="train" aria-pressed="false">Short train</button>
-    </div>
-    <button class="primary" type="button" id="replay">Play memory sequence</button>
-  </div>
-
-  <div class="workspace">
-    <section class="device" aria-labelledby="deviceHeading">
-      <h2 id="deviceHeading">Device state</h2>
-      <p class="section-note">The filled region represents the temporary internal state in this illustration.</p>
-
-      <svg viewBox="0 0 410 250" role="img" aria-labelledby="deviceTitle deviceDesc">
-        <title id="deviceTitle">Illustrated memristor state between two electrodes</title>
-        <desc id="deviceDesc">A voltage pulse increases an illustrative internal state. The state increases conductance and then relaxes with time.</desc>
-        <defs>
-          <clipPath id="stateClip"><rect x="116" y="65" width="178" height="92" rx="7"/></clipPath>
-          <marker id="arrowPulse" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0 0 L10 5 L0 10 Z" fill="var(--pulse)"/>
-          </marker>
-        </defs>
-        <text x="24" y="20" class="svg-label">programming pulse</text>
-        <path d="M24 48 H50 L55 32 L61 48 H82" fill="none" stroke="var(--pulse)" stroke-width="3"/>
-        <line x1="24" y1="111" x2="90" y2="111" stroke="var(--pulse)" stroke-width="4" marker-end="url(#arrowPulse)"/>
-        <rect x="90" y="78" width="26" height="66" fill="#d6d8db" stroke="#7b7f85" stroke-width="2"/>
-        <rect x="116" y="65" width="178" height="92" rx="7" fill="#f6f7f8" stroke="var(--state)" stroke-width="3"/>
-        <rect id="stateFill" class="state-fill" x="116" y="65" width="0" height="92" fill="#b9d6e7" clip-path="url(#stateClip)"/>
-        <line id="stateFront" x1="116" y1="68" x2="116" y2="154" stroke="var(--state)" stroke-width="3"/>
-        <rect x="294" y="78" width="26" height="66" fill="#d6d8db" stroke="#7b7f85" stroke-width="2"/>
-        <line x1="320" y1="111" x2="382" y2="111" stroke="var(--conductance)" stroke-width="4"/>
-        <text x="386" y="36" text-anchor="end" class="svg-label">read conductance</text>
-        <text x="103" y="169" text-anchor="middle" class="svg-small">electrode</text>
-        <text x="205" y="169" text-anchor="middle" class="svg-small">active layer</text>
-        <text x="307" y="169" text-anchor="middle" class="svg-small">electrode</text>
-        <text x="205" y="187" text-anchor="middle" class="svg-label" font-weight="bold" id="stateReadout">state x = 0.00</text>
-        <text x="205" y="208" text-anchor="middle" class="svg-small" id="conductanceReadout">conductance G = 10.0 µS</text>
-        <text x="205" y="229" text-anchor="middle" class="svg-small">higher x → higher G in this illustration</text>
-      </svg>
-
-      <div class="interval-box" aria-live="polite">
-        <h3 id="intervalTitle">Short interval: memory remains</h3>
-        <div class="interval-meter" aria-hidden="true"><span id="memoryBar"></span></div>
-        <div class="meter-labels" aria-hidden="true"><span>relaxed</span><span>state remains</span></div>
-        <p id="intervalText">At 50 ms, about 70% of the first pulse's state change remains before the second pulse.</p>
-      </div>
-    </section>
-
-    <section class="scope" aria-labelledby="traceHeading">
-      <div>
-        <h2 id="traceHeading">Aligned pulse, state, and conductance traces</h2>
-        <p class="section-note">Each vertical grid line marks the same time in all three traces.</p>
-      </div>
-      <canvas id="scope" role="img" aria-describedby="traceDescription">
-        Three aligned traces show voltage pulses, the illustrative device state, and conductance over time.
-        The paired-pulse preview shows state and conductance remaining above baseline when the second pulse arrives.
-      </canvas>
-      <p id="traceDescription" class="visually-hidden">
-        The input trace contains two voltage pulses. Each pulse raises device state and conductance. The state and conductance decay between pulses.
-      </p>
-      <div class="status" id="status" role="status" aria-live="polite">
-        <strong>Key idea.</strong> The second pulse arrives before the temporary state returns to baseline.
-      </div>
-      <div class="legend" aria-hidden="true">
-        <span><i class="swatch" style="background:var(--pulse)"></i> input pulse</span>
-        <span><i class="swatch" style="background:var(--state)"></i> illustrative state x</span>
-        <span><i class="swatch" style="background:var(--conductance)"></i> conductance G</span>
-        <span><i class="swatch" style="background:var(--memory)"></i> state remaining before next pulse</span>
-      </div>
-    </section>
-  </div>
-
-  <section class="explanation" aria-labelledby="sequenceHeading">
-    <h2 id="sequenceHeading">What creates the short-term memory?</h2>
-    <ul class="causal-sequence">
-      <li><strong>1. Write:</strong> A pulse raises the temporary state.</li>
-      <li><strong>2. Retain:</strong> The state relaxes with time.</li>
-      <li><strong>3. Read:</strong> Conductance reports the remaining state.</li>
-    </ul>
-  </section>
-
-  <details class="technical-details">
-    <summary>Playback and model details</summary>
-    <div class="technical-content">
-      <div class="advanced-controls" aria-label="Advanced playback controls">
-        <div class="control-group" role="group" aria-label="Playback state">
-          <button type="button" id="pause" disabled>Pause</button>
-          <button type="button" id="clear">Clear graph</button>
-        </div>
-        <label>
-          Pulse interval
-          <input id="interval" type="range" min="20" max="280" value="50" step="10">
-          <output id="intervalOut" for="interval">50 ms</output>
-        </label>
-        <label>
-          Train frequency
-          <input id="frequency" type="range" min="2" max="50" value="20" step="2">
-          <output id="frequencyOut" for="frequency">20 Hz</output>
-        </label>
-        <label>
-          Replay speed
-          <input id="speed" type="range" min="0.1" max="3" value="1" step="0.05">
-          <output id="speedOut" for="speed">1×</output>
-        </label>
-      </div>
-      <div class="model-box">
-        <h3>Simple explanatory model</h3>
-        <p class="equation">At each pulse: x ← x + 0.34(1 − x)</p>
-        <p class="equation">Between pulses: x decays with a 140 ms time constant</p>
-        <p class="equation">G = 10 + 30x µS</p>
-        <p>The bounded state <em>x</em> is an explanatory variable. It is not a measured material quantity.</p>
-      </div>
-    </div>
-  </details>
-
-  <p class="boundary">
-    <strong>Evidence boundary:</strong> This page uses a simple synthetic illustration.
-    The traces are not measured Fan output, measured Bohao output, or a fit to either model.
-  </p>
+<main><h1>Short-term memory in a memristor</h1>
+<p class="intro">The same voltage pulse produces more current when conductance remains from an earlier pulse.</p>
+<div class="controls" aria-label="Simulation controls">
+<button class="primary" id="replay">Play</button><button id="nextStep">Next step</button><button id="restart">Restart</button>
+<label>Speed <input id="speed" type="range" min="0.1" max="2" step="0.05" value="0.5"><output id="speedOut">0.5×</output></label>
+<label>Input <select id="scenario"><option value="pair">Two pulses</option><option value="single">One pulse</option><option value="train">Five pulses</option></select></label>
+<label>Pulse interval <input id="interval" type="range" min="25" max="280" step="5" value="60"><output id="intervalOut">60 ms</output></label>
+<label>Relaxation time <input id="tau" type="range" min="40" max="300" step="10" value="140"><output id="tauOut">140 ms</output></label>
+</div>
+<div id="status" class="status" aria-live="polite">Press Play to apply the first pulse.</div>
+<div class="workspace">
+<section class="device"><h2>Input → device → output</h2>
+<svg id="memoryDiagram" viewBox="0 0 360 430" role="img" aria-label="Voltage pulses enter the memristor. Conductance persists between pulses. Output current equals voltage times conductance.">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M2 1 L8 5 L2 9" fill="none" stroke="var(--demo-wire)" stroke-width="1.8" stroke-linejoin="round"/></marker></defs>
+<text id="inputLabel" class="svg-label" x="12" y="24" fill="var(--demo-input)">1. Input voltage</text><text id="inputValue" class="svg-value" x="348" y="25" text-anchor="end" fill="var(--demo-input)">0.0 V</text>
+<path id="inputBaseline" d="M20 97 H340" stroke="var(--demo-grid)"/><path id="inputHistory" fill="none" stroke="var(--demo-input)" stroke-width="2.5"/>
+<path id="inputArrow" d="M180 108 V139" stroke="var(--demo-wire)" stroke-width="2" marker-end="url(#arrow)"/>
+<rect id="stateBox" x="12" y="150" width="336" height="120" rx="10" fill="var(--demo-device-soft)" stroke="var(--demo-device-track)"/>
+<text id="stateLabel" class="svg-label" x="28" y="177" fill="var(--demo-device)">2. Memristor</text><text id="conductanceValue" class="svg-value" x="330" y="178" text-anchor="end" fill="var(--demo-device)">10.0 µS</text>
+<rect id="stateTrack" x="28" y="201" width="302" height="22" rx="4" fill="var(--demo-device-track)"/><rect id="stateFill" x="28" y="201" width="0" height="22" rx="4" fill="var(--demo-device)"/>
+<text id="stateNote" class="svg-small" x="28" y="250">Conductance retained between pulses</text>
+<path id="outputArrow" d="M180 282 V313" stroke="var(--demo-wire)" stroke-width="2" marker-end="url(#arrow)"/>
+<text id="outputLabel" class="svg-label" x="12" y="340" fill="var(--demo-current)">3. Output current</text><text id="currentValue" class="svg-value" x="348" y="341" text-anchor="end" fill="var(--demo-current)">0.0 µA</text>
+<path id="outputBaseline" d="M20 407 H340" stroke="var(--demo-grid)"/><path id="outputHistory" fill="none" stroke="var(--demo-current)" stroke-width="2.5"/>
+<circle id="voltageDot" cx="180" cy="120" r="5" fill="var(--demo-input)" opacity="0"/><circle id="currentDot" cx="180" cy="295" r="5" fill="var(--demo-current)" opacity="0"/>
+</svg></section>
+<section class="scope"><h2>Voltage, conductance and current</h2><canvas id="scope" role="img" aria-label="Time-aligned voltage, conductance and current graphs"></canvas></section>
+</div>
+<section class="steps"><h2>Sequence</h2><div class="step-list">
+<div class="step" data-step="1"><span class="step-number">Step 1</span><strong>First pulse</strong><p>Applied voltage increases conductance. Current flows through the memristor.</p></div>
+<div class="step" data-step="2"><span class="step-number">Step 2</span><strong>Between pulses</strong><p>Voltage and current return to zero. Conductance decays gradually.</p></div>
+<div class="step" data-step="3"><span class="step-number">Step 3</span><strong>Next pulse</strong><p>The same voltage produces more current if conductance remains elevated.</p></div>
+<div class="step" data-step="4"><span class="step-number">Step 4</span><strong>Relaxation</strong><p>Conductance returns towards its initial value after stimulation stops.</p></div>
+</div></section>
 </main>
-
 <script>
 (() => {
-  "use strict";
-
-  const canvas = document.getElementById("scope");
-  const context = canvas.getContext("2d");
-  const scenarioButtons = [...document.querySelectorAll("[data-scenario]")];
-  const replayButton = document.getElementById("replay");
-  const pauseButton = document.getElementById("pause");
-  const clearButton = document.getElementById("clear");
-  const intervalSlider = document.getElementById("interval");
-  const intervalOut = document.getElementById("intervalOut");
-  const frequencySlider = document.getElementById("frequency");
-  const frequencyOut = document.getElementById("frequencyOut");
-  const speedSlider = document.getElementById("speed");
-  const speedOut = document.getElementById("speedOut");
-  const status = document.getElementById("status");
-  const stateFill = document.getElementById("stateFill");
-  const stateFront = document.getElementById("stateFront");
-  const stateReadout = document.getElementById("stateReadout");
-  const conductanceReadout = document.getElementById("conductanceReadout");
-  const intervalTitle = document.getElementById("intervalTitle");
-  const intervalText = document.getElementById("intervalText");
-  const memoryBar = document.getElementById("memoryBar");
-  const traceDescription = document.getElementById("traceDescription");
-  const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-  const styles = getComputedStyle(document.documentElement);
-  const colours = {
-    pulse: styles.getPropertyValue("--pulse").trim(),
-    state: styles.getPropertyValue("--state").trim(),
-    conductance: styles.getPropertyValue("--conductance").trim(),
-    memory: styles.getPropertyValue("--memory").trim(),
-    grid: styles.getPropertyValue("--line").trim(),
-    text: styles.getPropertyValue("--muted").trim(),
-    ink: styles.getPropertyValue("--ink").trim(),
-    shade: "oklch(0.48 0.12 305 / 0.10)"
-  };
-
-  const model = {
-    tauMs: 140,
-    pulseGain: 0.34,
-    baseConductance: 10,
-    conductanceRange: 30,
-    pulseWidthMs: 10
-  };
-
-  let scenario = "pair";
-  let running = false;
-  let paused = false;
-  let cleared = false;
-  let startClock = 0;
-  let pauseClock = 0;
-  let playbackProgress = 1;
-  let animationFrame = null;
-  let lastStageAnnouncement = "";
-
-  function pulseTimes() {
-    if (scenario === "single") return [80];
-    if (scenario === "pair") return [80, 80 + Number(intervalSlider.value)];
-    const period = 1000 / Number(frequencySlider.value);
-    return Array.from({ length: 6 }, (_, index) => 80 + index * period);
-  }
-
-  function timeRange() {
-    const pulses = pulseTimes();
-    const tail = scenario === "single" ? 420 : 340;
-    return { min: 0, max: Math.max(500, pulses[pulses.length - 1] + tail) };
-  }
-
-  function previewProgress() {
-    const pulses = pulseTimes();
-    const teachingTime = pulses.length > 1 ? pulses[1] + 18 : pulses[0] + 90;
-    return Math.min(1, teachingTime / timeRange().max);
-  }
-
-  function stateAt(timeMs) {
-    let state = 0;
-    let previousTime = 0;
-    for (const pulseTime of pulseTimes()) {
-      if (pulseTime > timeMs) break;
-      state *= Math.exp(-(pulseTime - previousTime) / model.tauMs);
-      state += model.pulseGain * (1 - state);
-      previousTime = pulseTime;
-    }
-    state *= Math.exp(-(timeMs - previousTime) / model.tauMs);
-    return Math.max(0, Math.min(1, state));
-  }
-
-  function pulseAt(timeMs) {
-    return pulseTimes().some(pulseTime => timeMs >= pulseTime && timeMs <= pulseTime + model.pulseWidthMs) ? 1 : 0;
-  }
-
-  function conductanceAt(timeMs) {
-    return model.baseConductance + model.conductanceRange * stateAt(timeMs);
-  }
-
-  function remainingFraction(intervalMs) {
-    return Math.exp(-intervalMs / model.tauMs);
-  }
-
-  function replayDuration() {
-    return 5200 / Number(speedSlider.value);
-  }
-
-  function currentProgress(now = performance.now()) {
-    if (!running) return playbackProgress;
-    const clock = paused ? pauseClock : now;
-    return Math.max(0, Math.min(1, (clock - startClock) / replayDuration()));
-  }
-
-  function resizeCanvas() {
-    if (!context) {
-      draw(playbackProgress);
-      return;
-    }
-    const rect = canvas.getBoundingClientRect();
-    const ratio = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.round(rect.width * ratio);
-    canvas.height = Math.round(rect.height * ratio);
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    draw(playbackProgress);
-  }
-
-  function draw(progress) {
-    if (!context) {
-      const range = timeRange();
-      updateDevice(cleared ? 0 : range.max * progress);
-      return;
-    }
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    if (!width || !height) return;
-
-    context.clearRect(0, 0, width, height);
-    const left = width < 520 ? 92 : 124;
-    const right = 18;
-    const top = 18;
-    const bottom = 42;
-    const plotWidth = width - left - right;
-    const plotHeight = height - top - bottom;
-    const rowHeight = plotHeight / 3;
-    const range = timeRange();
-    const visibleTime = cleared ? 0 : range.max * progress;
-    const labels = [
-      ["1. Input voltage", "normalized pulse"],
-      ["2. Device state x", "illustrative, 0 to 1"],
-      ["3. Conductance G", "microsiemens (µS)"]
-    ];
-
-    context.textAlign = "left";
-    context.textBaseline = "middle";
-
-    for (let row = 0; row < 3; row++) {
-      const rowTop = top + row * rowHeight;
-      const baseline = rowTop + rowHeight * 0.79;
-      context.fillStyle = colours.ink;
-      context.font = `bold ${width < 520 ? 11 : 13}px Arial`;
-      wrapText(labels[row][0], 8, rowTop + 20, left - 15, 14);
-      context.fillStyle = colours.text;
-      context.font = `${width < 520 ? 10 : 11}px Arial`;
-      wrapText(labels[row][1], 8, rowTop + 43, left - 15, 13);
-
-      context.strokeStyle = colours.grid;
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(left, baseline);
-      context.lineTo(width - right, baseline);
-      context.stroke();
-
-      for (let tick = 0; tick <= 5; tick++) {
-        const x = left + tick * plotWidth / 5;
-        context.beginPath();
-        context.moveTo(x, rowTop + 7);
-        context.lineTo(x, rowTop + rowHeight - 4);
-        context.stroke();
-      }
-    }
-
-    if (!cleared && pulseTimes().length > 1) {
-      const first = pulseTimes()[0];
-      const second = pulseTimes()[1];
-      const shadeStart = left + first / range.max * plotWidth;
-      const shadeEnd = left + second / range.max * plotWidth;
-      const shownEnd = left + Math.min(second, visibleTime) / range.max * plotWidth;
-      if (visibleTime > first) {
-        context.fillStyle = colours.shade;
-        context.fillRect(shadeStart, top, Math.max(0, shownEnd - shadeStart), plotHeight);
-      }
-      if (visibleTime >= second) {
-        context.fillStyle = colours.memory;
-        context.font = "bold 11px Arial";
-        context.textAlign = "center";
-        context.fillText(width < 520 ? "state remains" : "state retained across interval", (shadeStart + shadeEnd) / 2, top + rowHeight + 12);
-      }
-    }
-
-    if (!cleared) {
-      drawTrace(0, colours.pulse, pulseAt, 1, visibleTime);
-      drawTrace(1, colours.state, stateAt, 1, visibleTime);
-      drawTrace(2, colours.conductance, conductanceAt, 40, visibleTime);
-
-      for (const pulseTime of pulseTimes()) {
-        if (pulseTime > visibleTime) continue;
-        const x = left + pulseTime / range.max * plotWidth;
-        context.setLineDash([4, 4]);
-        context.strokeStyle = colours.pulse;
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(x, top);
-        context.lineTo(x, top + plotHeight);
-        context.stroke();
-        context.setLineDash([]);
-      }
-
-      const nowX = left + visibleTime / range.max * plotWidth;
-      context.setLineDash([3, 3]);
-      context.strokeStyle = colours.ink;
-      context.lineWidth = 1.5;
-      context.beginPath();
-      context.moveTo(nowX, top);
-      context.lineTo(nowX, top + plotHeight);
-      context.stroke();
-      context.setLineDash([]);
-    }
-
-    context.fillStyle = colours.text;
-    context.font = "11px Arial";
-    context.textAlign = "center";
-    for (let tick = 0; tick <= 5; tick++) {
-      const x = left + tick * plotWidth / 5;
-      const time = tick * range.max / 5;
-      context.fillText(`${Math.round(time)}`, x, height - 25);
-    }
-    context.fillText("time (ms)", left + plotWidth / 2, height - 9);
-
-    const deviceTime = cleared ? 0 : visibleTime;
-    updateDevice(deviceTime);
-
-    function drawTrace(row, colour, valueFunction, scale, visible) {
-      const rowTop = top + row * rowHeight;
-      const baseline = rowTop + rowHeight * 0.79;
-      const amplitude = rowHeight * 0.62;
-      context.strokeStyle = colour;
-      context.lineWidth = 2.6;
-      context.lineJoin = "round";
-      context.beginPath();
-      let started = false;
-      const samples = Math.max(500, Math.round(plotWidth * 2));
-      for (let index = 0; index <= samples; index++) {
-        const time = index / samples * range.max;
-        if (time > visible) break;
-        const x = left + time / range.max * plotWidth;
-        const normalized = valueFunction(time) / scale;
-        const y = baseline - normalized * amplitude;
-        if (!started) {
-          context.moveTo(x, y);
-          started = true;
-        } else {
-          context.lineTo(x, y);
-        }
-      }
-      context.stroke();
-    }
-  }
-
-  function wrapText(text, x, y, maxWidth, lineHeight) {
-    const words = text.split(" ");
-    let line = "";
-    for (let index = 0; index < words.length; index++) {
-      const test = `${line}${words[index]} `;
-      if (context.measureText(test).width > maxWidth && line) {
-        context.fillText(line.trim(), x, y);
-        line = `${words[index]} `;
-        y += lineHeight;
-      } else {
-        line = test;
-      }
-    }
-    context.fillText(line.trim(), x, y);
-  }
-
-  function updateDevice(timeMs) {
-    const state = stateAt(timeMs);
-    const fillWidth = 178 * state;
-    stateFill.setAttribute("width", fillWidth.toFixed(1));
-    stateFront.setAttribute("x1", (116 + fillWidth).toFixed(1));
-    stateFront.setAttribute("x2", (116 + fillWidth).toFixed(1));
-    stateReadout.textContent = `state x = ${state.toFixed(2)}`;
-    conductanceReadout.textContent = `conductance G = ${conductanceAt(timeMs).toFixed(1)} µS`;
-  }
-
-  function updateIntervalExplanation() {
-    const relevantInterval = scenario === "train"
-      ? 1000 / Number(frequencySlider.value)
-      : Number(intervalSlider.value);
-    const remaining = remainingFraction(relevantInterval);
-    const percent = Math.round(remaining * 100);
-    const isShort = remaining >= 0.45;
-    intervalTitle.textContent = isShort ? "Short interval: memory remains" : "Long interval: more relaxation";
-    intervalText.textContent = `At ${Math.round(relevantInterval)} ms, about ${percent}% of one pulse's state change remains before the next pulse.`;
-    memoryBar.style.width = `${percent}%`;
-  }
-
-  function updateAccessibleDescription() {
-    const pulses = pulseTimes();
-    const pattern = scenario === "single" ? "one pulse" : scenario === "pair" ? "two pulses" : "a six-pulse train";
-    const intervalDetail = scenario === "single"
-      ? "The state and conductance decay after the pulse."
-      : `The first interval is ${Math.round(pulses[1] - pulses[0])} milliseconds.`;
-    traceDescription.textContent = `Three aligned traces show ${pattern}, illustrative device state x, and conductance G. ${intervalDetail} Each pulse raises state and conductance. Both then decay towards baseline.`;
-  }
-
-  function scenarioName() {
-    if (scenario === "single") return "One pulse";
-    if (scenario === "pair") return "Paired pulse";
-    return "Short train";
-  }
-
-  function statusText(completed = false) {
-    const pulses = pulseTimes();
-    if (cleared) return ["History cleared.", "Select a pattern or replay the current pattern."];
-    if (!completed) return [`${scenarioName()}.`, "Watch each pulse raise the state and conductance."];
-    if (scenario === "single") return ["One pulse complete.", "The state and conductance are relaxing towards baseline."];
-    const gap = pulses[1] - pulses[0];
-    const percent = Math.round(remainingFraction(gap) * 100);
-    return [`${scenarioName()} complete.`, `${percent}% of one pulse's state change remains across the first ${Math.round(gap)} ms interval.`];
-  }
-
-  function setStatus(completed = false) {
-    const message = statusText(completed);
-    status.innerHTML = `<strong>${message[0]}</strong> ${message[1]}`;
-  }
-
-  function announceActiveStage(progress) {
-    const pulses = pulseTimes();
-    const visibleTime = timeRange().max * progress;
-    let key = "write";
-    let message = ["Stage 1: write.", "The voltage pulse raises the temporary device state."];
-    if (visibleTime >= pulses[0]) {
-      key = "retain";
-      message = ["Stage 2: retain and relax.", "The state remains after the pulse and then decays towards baseline."];
-    }
-    if (pulses.length > 1 && visibleTime >= pulses[1]) {
-      key = "read";
-      message = ["Stage 3: read.", "The later pulse starts from the remaining state, so conductance rises from a higher level."];
-    }
-    if (key !== lastStageAnnouncement) {
-      status.innerHTML = `<strong>${message[0]}</strong> ${message[1]}`;
-      lastStageAnnouncement = key;
-    }
-  }
-
-  function animate(now) {
-    if (!running || paused) return;
-    playbackProgress = currentProgress(now);
-    draw(playbackProgress);
-    announceActiveStage(playbackProgress);
-    if (playbackProgress >= 1) {
-      running = false;
-      paused = false;
-      pauseButton.disabled = true;
-      pauseButton.textContent = "Pause";
-      replayButton.textContent = "Replay sequence";
-      setStatus(true);
-      return;
-    }
-    animationFrame = requestAnimationFrame(animate);
-  }
-
-  function startReplay() {
-    cancelAnimationFrame(animationFrame);
-    cleared = false;
-    paused = false;
-    lastStageAnnouncement = "";
-    replayButton.textContent = "Replay sequence";
-    pauseButton.textContent = "Pause";
-    if (reducedMotionQuery.matches) {
-      running = false;
-      playbackProgress = 1;
-      draw(1);
-      pauseButton.disabled = true;
-      setStatus(true);
-      return;
-    }
-    running = true;
-    playbackProgress = 0;
-    pauseButton.disabled = false;
-    startClock = performance.now();
-    announceActiveStage(0);
-    animationFrame = requestAnimationFrame(animate);
-  }
-
-  function resetForSettingChange() {
-    cancelAnimationFrame(animationFrame);
-    running = false;
-    paused = false;
-    cleared = false;
-    pauseButton.textContent = "Pause";
-    pauseButton.disabled = true;
-    replayButton.textContent = "Play memory sequence";
-    playbackProgress = reducedMotionQuery.matches ? 1 : previewProgress();
-    lastStageAnnouncement = "";
-    updateIntervalExplanation();
-    updateAccessibleDescription();
-    draw(playbackProgress);
-    status.innerHTML = `<strong>${scenarioName()} preview.</strong> Play to follow how temporary state changes conductance.`;
-  }
-
-  scenarioButtons.forEach(button => {
-    button.addEventListener("click", () => {
-      scenario = button.dataset.scenario;
-      scenarioButtons.forEach(candidate => {
-        candidate.setAttribute("aria-pressed", String(candidate === button));
-      });
-      intervalSlider.disabled = scenario !== "pair";
-      frequencySlider.disabled = scenario !== "train";
-      resetForSettingChange();
-    });
-  });
-
-  replayButton.addEventListener("click", startReplay);
-
-  pauseButton.addEventListener("click", () => {
-    if (!running || reducedMotionQuery.matches) return;
-    if (paused) {
-      startClock += performance.now() - pauseClock;
-      paused = false;
-      pauseButton.disabled = false;
-      pauseButton.textContent = "Pause";
-      animationFrame = requestAnimationFrame(animate);
-      status.innerHTML = `<strong>Continuing.</strong> ${scenarioName()} playback has resumed.`;
-    } else {
-      paused = true;
-      pauseClock = performance.now();
-      pauseButton.textContent = "Continue";
-      status.innerHTML = `<strong>Paused.</strong> The traces and device state are held at the current time.`;
-    }
-  });
-
-  clearButton.addEventListener("click", () => {
-    cancelAnimationFrame(animationFrame);
-    running = false;
-    paused = false;
-    cleared = true;
-    playbackProgress = 0;
-    lastStageAnnouncement = "";
-    pauseButton.disabled = true;
-    pauseButton.textContent = "Pause";
-    replayButton.textContent = "Play memory sequence";
-    draw(0);
-    setStatus(false);
-  });
-
-  intervalSlider.addEventListener("input", () => {
-    intervalOut.value = `${intervalSlider.value} ms`;
-    resetForSettingChange();
-  });
-
-  frequencySlider.addEventListener("input", () => {
-    frequencyOut.value = `${frequencySlider.value} Hz`;
-    resetForSettingChange();
-  });
-
-  speedSlider.addEventListener("input", () => {
-    const oldProgress = currentProgress();
-    speedOut.value = `${Number(speedSlider.value).toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}×`;
-    if (running) {
-      playbackProgress = oldProgress;
-      const now = performance.now();
-      startClock = now - oldProgress * replayDuration();
-      if (paused) pauseClock = now;
-    }
-  });
-
-  reducedMotionQuery.addEventListener("change", () => {
-    resetForSettingChange();
-    if (reducedMotionQuery.matches) {
-      status.innerHTML = `<strong>Reduced motion enabled.</strong> The complete ${scenarioName().toLowerCase()} trace is shown without animation.`;
-    }
-  });
-
-  window.addEventListener("resize", resizeCanvas);
-
-  intervalSlider.disabled = false;
-  frequencySlider.disabled = true;
-  intervalOut.value = `${intervalSlider.value} ms`;
-  frequencyOut.value = `${frequencySlider.value} Hz`;
-  speedOut.value = `${speedSlider.value}×`;
-  updateIntervalExplanation();
-  updateAccessibleDescription();
-  resizeCanvas();
-  if (reducedMotionQuery.matches) {
-    playbackProgress = 1;
-    draw(1);
-    status.innerHTML = "<strong>Reduced motion enabled.</strong> The complete paired-pulse trace is shown without animation.";
-  } else {
-    playbackProgress = previewProgress();
-    draw(playbackProgress);
-    status.innerHTML = "<strong>Key idea.</strong> The second pulse arrives before the temporary state returns to baseline.";
-  }
+'use strict';
+const $ = id => document.getElementById(id);
+const scenario=$('scenario'), interval=$('interval'), tau=$('tau'), speed=$('speed');
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+let trace, time=0, running=false, frame=0, previousClock=0, step=0;
+function build(){
+ const gap=Number(interval.value), relaxation=Number(tau.value), count=scenario.value==='single'?1:scenario.value==='train'?5:2;
+ const pulses=Array.from({length:count},(_,i)=>40+i*gap), end=pulses.at(-1)+12+relaxation*2.5;
+ const times=[], voltage=[], conductance=[], current=[]; let x=0;
+ for(let t=0;t<=end;t+=0.25){
+  const v=pulses.some(p=>t>=p&&t<p+12)?1:0;
+  x=Math.max(0,Math.min(1,x+(v*(1-x)/25-x/relaxation)*0.25));
+  const g=10+30*x; times.push(t); voltage.push(v); conductance.push(g); current.push(v*g);
+ }
+ trace={times,voltage,conductance,current,pulses,end:times.at(-1)};
+}
+function historyPath(values,baseline,amplitude,max,plotWidth=320){
+ let path=''; for(let i=0;i<trace.times.length&&trace.times[i]<=time;i++){
+  path+=(i?' L':'M')+(20+plotWidth*trace.times[i]/trace.end).toFixed(1)+' '+(baseline-amplitude*values[i]/max).toFixed(1);
+ } return path;
+}
+let diagramSize='', diagramLayout;
+function layoutDiagram(){
+ const diagram=$('memoryDiagram'), narrow=matchMedia('(max-width:760px)').matches;
+ const width=diagram.clientWidth, height=diagram.clientHeight;
+ const size=width+'x'+height;
+ if(size===diagramSize)return diagramLayout;
+ diagramSize=size;
+ const plotBand=Math.max(48,Math.min(narrow?76:96,(height-150)/2));
+ const outputBand=Math.max(48,plotBand-14);
+ const boxTop=plotBand+26, boxBottom=height-outputBand-26;
+ const boxHeight=boxBottom-boxTop;
+ const inputBase=plotBand-4, outputBase=height-4;
+ const outputLabel=height-outputBand+16;
+ const barY=boxTop+36, barHeight=Math.max(12,boxHeight-64);
+ const set=(id,attrs)=>Object.entries(attrs).forEach(([name,value])=>$(id).setAttribute(name,String(value)));
+ set('memoryDiagram',{viewBox:`0 0 ${width} ${height}`});
+ set('inputLabel',{y:narrow?16:20});set('inputValue',{x:width-12,y:narrow?17:21});
+ set('inputBaseline',{d:`M20 ${inputBase} H${width-20}`});
+ set('inputArrow',{d:`M${width/2} ${inputBase+7} V${boxTop-8}`});
+ set('stateBox',{y:boxTop,width:width-24,height:boxHeight});
+ set('stateLabel',{y:boxTop+22});set('conductanceValue',{x:width-30,y:boxTop+23});
+ set('stateTrack',{y:barY,width:width-58,height:barHeight});set('stateFill',{y:barY,height:barHeight});
+ set('stateNote',{y:boxBottom-10});
+ set('outputArrow',{d:`M${width/2} ${boxBottom+7} V${outputLabel-20}`});
+ set('outputLabel',{y:outputLabel});set('currentValue',{x:width-12,y:outputLabel+1});
+ set('outputBaseline',{d:`M20 ${outputBase} H${width-20}`});
+ set('voltageDot',{cx:width/2,r:narrow?3.5:4});set('currentDot',{cx:width/2,r:narrow?3.5:4});
+ const amplitude=Math.max(12,Math.min(narrow?40:56,inputBase-(narrow?28:32)));
+ diagramLayout={inputBase,outputBase,amplitude,outputAmplitude:Math.min(amplitude,outputBase-outputLabel-10),plotWidth:width-40,stateWidth:width-58,inputDot:inputBase+9,outputDot:boxBottom+9,dotTravel:10};
+ return diagramLayout;
+}
+function draw(){
+ const layout=layoutDiagram();
+ const i=Math.max(0,Math.min(trace.times.length-1,Math.round(time/0.25)));
+ const v=trace.voltage[i],g=trace.conductance[i],current=trace.current[i];
+ $('inputValue').textContent=v.toFixed(1)+' V'; $('conductanceValue').textContent=g.toFixed(1)+' µS'; $('currentValue').textContent=current.toFixed(1)+' µA';
+ $('stateFill').setAttribute('width',String(layout.stateWidth*(g-10)/30));
+ $('inputHistory').setAttribute('d',historyPath(trace.voltage,layout.inputBase,layout.amplitude,1,layout.plotWidth)); $('outputHistory').setAttribute('d',historyPath(trace.current,layout.outputBase,layout.outputAmplitude,40,layout.plotWidth));
+ $('voltageDot').setAttribute('opacity',v); $('currentDot').setAttribute('opacity',current>0?1:0);
+ $('voltageDot').setAttribute('cy',String(layout.inputDot+(time%8)/8*layout.dotTravel)); $('currentDot').setAttribute('cy',String(layout.outputDot+(time%8)/8*layout.dotTravel));
+ const active=v>0?(time<trace.pulses[0]+12?1:3):time<trace.pulses[0]?0:time<trace.pulses.at(-1)?2:4;
+ document.querySelectorAll('.step').forEach(el=>el.classList.toggle('active',Number(el.dataset.step)===active));
+ const messages=['Press Play to apply the first pulse.','The first pulse increases conductance.','Conductance remains elevated while no current flows.','The next pulse produces more current.','Conductance decays after the final pulse.'];
+ $('status').textContent=messages[active];
+ DemoPlot($('scope'),[
+ {title:'1. Input voltage (V)',colour:DemoTheme.colour('input'),min:0,max:1.2,values:trace.voltage},
+ {title:'2. Conductance (µS)',colour:DemoTheme.colour('device'),min:10,max:40,baseline:10,values:trace.conductance},
+ {title:'3. Output current (µA)',colour:DemoTheme.colour('current'),min:0,max:40,values:trace.current}
+ ],trace.times,time);
+}
+function stop(){running=false;cancelAnimationFrame(frame);$('replay').textContent='Play';}
+function tick(now){if(!running)return; time=Math.min(trace.end,time+(now-previousClock)*Number(speed.value)*trace.end/12000);previousClock=now;draw();if(time>=trace.end)stop();else frame=requestAnimationFrame(tick);}
+function play(){if(running){stop();return;}if(time>=trace.end)time=0;if(reducedMotion.matches){time=trace.end;draw();return;}running=true;previousClock=performance.now();$('replay').textContent='Pause';frame=requestAnimationFrame(tick);}
+function reset(){stop();time=0;step=0;build();draw();}
+ $('replay').addEventListener('click',play);$('restart').addEventListener('click',()=>{reset();play();});
+$('nextStep').addEventListener('click',()=>{stop();step=scenario.value==='single'?(step===1?4:1):step%4+1;const first=trace.pulses[0],last=trace.pulses.at(-1);time=([0,first+11,(first+12+(trace.pulses[1]??first+60))/2,(trace.pulses[1]??last)+11,last+12+Number(tau.value)])[step];draw();});
+scenario.addEventListener('change',()=>{interval.disabled=scenario.value==='single';reset();});
+interval.addEventListener('input',()=>{$('intervalOut').textContent=interval.value+' ms';reset();});
+tau.addEventListener('input',()=>{$('tauOut').textContent=tau.value+' ms';reset();});
+speed.addEventListener('input',()=>{$('speedOut').textContent=Number(speed.value)+'×';});
+document.addEventListener('demo:pause',stop);window.addEventListener('resize',draw);reducedMotion.addEventListener('change',stop);
+build();draw();
+document.addEventListener('demo:preview',()=>{stop();time=(trace.pulses[1]??trace.pulses[0])+11;draw();});
 })();
-</script>
-</body>
-</html>
+</script><script src="../mobile-demo.js?v=20260910-landscape4"></script></body></html>
