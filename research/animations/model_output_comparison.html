@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <title>How do the synapse models compare?</title>
-  <link rel="stylesheet" href="../demo-nav.css">
+  <link rel="stylesheet" href="../demo-nav.css?v=20260910-space">
   <style>
     :root {
       color-scheme: light;
@@ -248,8 +248,10 @@
       * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
     }
   </style>
+  <link rel="stylesheet" href="../mobile-demo.css?v=20260910-landscape4">
+  <link rel="stylesheet" href="../demo-theme.css?v=20260910-landscape4"><script src="../demo-theme.js?v=20260910-landscape4"></script><script src="../demo-visuals.js?v=20260910-landscape4"></script>
 </head>
-<body>
+<body data-demo="comparison">
 <nav class="demo-sequence" aria-label="Demo sequence">
   <a class="demo-sequence__home" href="../">All demos</a>
   <span class="demo-sequence__step">4 of 4</span>
@@ -260,68 +262,65 @@
 </nav>
 <main>
   <h1>How do the synapse models compare?</h1>
-  <p class="intro">
-    Compare real EPSC outputs from the project platform. Each lane uses the same stored input protocol.
-  </p>
+  <p class="intro">Compare software synapses and memristor models against the same synthetic target.</p>
 
   <div class="controls" role="group" aria-label="Comparison controls">
-    <button class="primary" id="play" type="button">Play comparison</button>
-    <button id="pause" type="button" disabled>Pause</button>
-    <button id="replay" type="button">Replay</button>
+    <button class="primary" id="play" type="button">Play</button>
+    <button id="pause" type="button" disabled hidden>Pause</button>
+    <button id="replay" type="button">Restart</button>
     <label>
-      Replay speed
-      <input id="speed" type="range" min="0.1" max="2" value="1" step="0.05">
-      <output id="speedOut" for="speed">1×</output>
+      Speed
+      <input id="speed" type="range" min="0.1" max="2" value="0.5" step="0.05">
+      <output id="speedOut" for="speed">0.5×</output>
     </label>
     <label>
       Spike pattern
       <select id="pattern">
-        <option value="beato_irregular_7spikes">Beato irregular seven-spike train</option>
-        <option value="beato_accelerating_12spikes">Beato accelerating twelve-spike train</option>
-        <option value="paired_spikes_30ms">Two spikes, 30 ms apart</option>
-        <option value="single_spike">Single spike</option>
+        <option value="beato_irregular_7spikes">Irregular train (7 spikes) · Beato</option>
+        <option value="beato_accelerating_12spikes">Accelerating train (12 spikes) · Beato</option>
+        <option value="blum_dynamic_ramp_hold_aff1">Dynamic train (165 spikes) · Blum</option>
+        <option value="paired_spikes_30ms">Two spikes, 30 ms apart · calibration</option>
+        <option value="single_spike">Single spike · calibration</option>
       </select>
     </label>
   </div>
 
-  <div class="status" id="status" role="status" aria-live="polite">
-    <strong>Key frame.</strong> The initial view shows the early response to the selected platform protocol.
-  </div>
+  <div class="status" id="status" role="status" aria-live="polite">Press Play to begin.</div>
 
   <section class="comparison" aria-labelledby="comparisonTitle">
     <h2 id="comparisonTitle">Comparison</h2>
+    <label class="phone-model-choice" for="modelChoice">
+      Model to compare
+      <select id="modelChoice"><optgroup label="Software models"><option value="tm">Tsodyks–Markram · software</option><option value="exp2">Exp2Syn · software</option></optgroup><optgroup label="Memristor models"><option value="fan">Fan memristor model</option><option value="bohao">Bohao memristor model</option></optgroup><option value="all">All models</option></select>
+    </label>
     <div class="scope-wrap">
       <canvas id="scope" role="img" aria-describedby="scopeDescription">
-        Six aligned lanes compare input spikes, the Version 2 target, two software models, and two device reconstructions. Open the benchmark details below for full-protocol scores.
+        Aligned lanes compare input spikes, the Version 2 target, and the selected model. Choose All models to display all six lanes. Benchmark results contain full-protocol scores.
       </canvas>
-      <p class="canvas-description" id="scopeDescription">
-        Six aligned lanes show the stored presynaptic voltage, the Version 2 synthetic target, Tsodyks-Markram STP, NEURON Exp2Syn, Fan reconstruction with calibrated delay, and Bohao PPF with V2-calibrated parameters and calibrated delay. Longer protocols show their first 220 milliseconds. The traces appear progressively from left to right.
-      </p>
-    </div>
-    <div class="legend" aria-label="Trace legend">
-      <span><i class="swatch" style="background:var(--input)"></i> input spikes</span>
-      <span><i class="swatch" style="background:var(--target)"></i> Version 2 synthetic target</span>
-      <span><i class="swatch" style="background:var(--tm)"></i> Tsodyks–Markram STP</span>
-      <span><i class="swatch" style="background:var(--exp2)"></i> NEURON Exp2Syn</span>
-      <span><i class="swatch" style="background:var(--fan)"></i> Fan reconstruction + calibrated delay</span>
-      <span><i class="swatch" style="background:var(--bohao)"></i> Bohao PPF, V2-calibrated + delay</span>
+      <p class="canvas-description" id="scopeDescription">Normalized input, synthetic conductance target, and simulated model responses share one time axis.</p>
     </div>
 
-    <details>
-      <summary>Full benchmark results and method</summary>
-      <p class="benchmark-intro">These mean prediction waveform errors come from the complete stored prediction protocol set. The selected animation pattern does not generate these values. Lower is better.</p>
+
+    <section class="benchmark">
+      <h2>Benchmark results</h2>
+      <p class="benchmark-intro">These scores compare excitatory and inhibitory conductance responses with the platform’s synthetic targets.</p>
+      <p class="benchmark-intro">Higher overall scores mean a closer match. A score of 100 is a perfect match.</p>
       <dl class="scores" id="scores">
-        <div class="score"><dt>Tsodyks–Markram STP</dt><dd class="score-value">7.1%</dd><dd class="score-note">Selected reference model with short-term plasticity.</dd></div>
-        <div class="score"><dt>Fan reconstruction + calibrated delay</dt><dd class="score-value">8.6%</dd><dd class="score-note">Registered Fan reconstruction with the calibrated 1.15 ms delay.</dd></div>
-        <div class="score"><dt>NEURON Exp2Syn</dt><dd class="score-value">12.2%</dd><dd class="score-note">Registered NEURON double-exponential software model.</dd></div>
-        <div class="score"><dt>Bohao PPF, V2-calibrated parameters + calibrated delay</dt><dd class="score-value">16.8%</dd><dd class="score-note">Registered V2-calibrated Bohao PPF configuration with the calibrated 0.50 ms delay.</dd></div>
+        <div class="score"><dt>Tsodyks–Markram</dt><dd class="score-value" data-score-model="tm">—</dd><dd class="score-note">Software model</dd></div>
+        <div class="score"><dt>Fan memristor</dt><dd class="score-value" data-score-model="fan">—</dd><dd class="score-note">Device model · 1.15 ms calibrated delay</dd></div>
+        <div class="score"><dt>NEURON Exp2Syn</dt><dd class="score-value" data-score-model="exp2">—</dd><dd class="score-note">Software model</dd></div>
+        <div class="score"><dt>Bohao memristor</dt><dd class="score-value" data-score-model="bohao">—</dd><dd class="score-note">Device model · V2 parameters · 0.50 ms delay</dd></div>
       </dl>
-    </details>
+      <h3>Comparison method</h3>
+      <p>All models receive the same input spikes.</p>
+      <p>Scoring gives equal weight to magnitude and waveform shape, measured with relative RMSE and cosine similarity.</p>
+      <p>The graph’s 220 ms window moves through the full train. Scores use complete responses from all five prediction protocols, excluding calibration inputs.</p>
+    </section>
   </section>
 
 </main>
 
-<script src="model_output_comparison_data.js"></script>
+<script src="model_output_comparison_data.js?v=20260910-scores"></script>
 <script>
 (() => {
   "use strict";
@@ -334,12 +333,18 @@
   const speed = document.getElementById("speed");
   const speedOut = document.getElementById("speedOut");
   const pattern = document.getElementById("pattern");
+  const modelChoice = document.getElementById("modelChoice");
   const status = document.getElementById("status");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const platformData = window.MODEL_OUTPUT_COMPARISON_DATA;
 
+  for (const score of platformData?.benchmark?.models || []) {
+    const value = document.querySelector(`[data-score-model="${score.key}"]`);
+    if (value) value.textContent = `${score.overall_score.toFixed(1)} / 100`;
+  }
+
   if (!context || !platformData?.protocols) {
-    status.innerHTML = "<strong>Trace unavailable.</strong> The page could not load the exported platform waveforms. The benchmark details remain available below.";
+    status.innerHTML = "The stored waveforms could not load.";
     [playButton, pauseButton, replayButton, speed, pattern].forEach(control => { control.disabled = true; });
     return;
   }
@@ -363,19 +368,28 @@
   };
 
   const patterns = platformData.protocols;
+  const requestedProtocol = new URLSearchParams(location.search).get('protocol');
+  if (patterns[requestedProtocol] && [...pattern.options].some(option => option.value === requestedProtocol)) {
+    pattern.value = requestedProtocol;
+  }
+  const requestedModel = new URLSearchParams(location.search).get('model');
+  if ([...modelChoice.options].some(option => option.value === requestedModel)) {
+    modelChoice.value = requestedModel;
+  }
+  const normalizedTraces = new WeakMap();
 
   const laneDefinitions = [
-    { key: "input", title: "Presynaptic voltage", note: "stored Version 2 input", colour: colours.input },
-    { key: "target", title: "Version 2 target", note: "synthetic conductance target", colour: colours.target },
-    { key: "tm", title: "Tsodyks–Markram STP", note: "history-dependent reference model", colour: colours.tm },
-    { key: "exp2", title: "NEURON Exp2Syn", note: "double-exponential software model", colour: colours.exp2 },
-    { key: "fan", title: "Fan reconstruction + delay", note: "registered 1.15 ms delay", colour: colours.fan },
-    { key: "bohao", title: "Bohao PPF, V2 + delay", note: "V2-calibrated + 0.50 ms delay", colour: colours.bohao }
+    { key: "input", title: "Input voltage", note: "stored Version 2 input", colour: colours.input },
+    { key: "target", title: "Synaptic conductance target", note: "synthetic conductance target", colour: colours.target },
+    { key: "tm", title: "Tsodyks–Markram · software", note: "history-dependent reference model", colour: colours.tm },
+    { key: "exp2", title: "Exp2Syn · software", note: "double-exponential software model", colour: colours.exp2 },
+    { key: "fan", title: "Fan memristor model", note: "registered 1.15 ms delay", colour: colours.fan },
+    { key: "bohao", title: "Bohao memristor model", note: "V2-calibrated + 0.50 ms delay", colour: colours.bohao }
   ];
 
   const initialProgress = 0.34;
   const maximumViewMs = 220;
-  let progress = initialProgress;
+  let progress = initialFraction();
   let running = false;
   let paused = false;
   let startTime = 0;
@@ -390,8 +404,16 @@
     return patterns[pattern.value];
   }
 
-  function duration() {
-    return baseDuration / Number(speed.value);
+  function initialFraction() {
+    const times = selectedPattern().time_ms;
+    const span = times[times.length - 1] - times[0];
+    return initialProgress * Math.min(span, maximumViewMs) / span;
+  }
+
+  function duration(playbackSpeed = Number(speed.value)) {
+    const times = selectedPattern().time_ms;
+    const span = times[times.length - 1] - times[0];
+    return baseDuration * span / Math.min(span, maximumViewMs) / playbackSpeed;
   }
 
   function resizeCanvas() {
@@ -400,158 +422,42 @@
     canvas.width = Math.round(rect.width * ratio);
     canvas.height = Math.round(rect.height * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (running) playButton.textContent = paused ? "Resume" : "Pause";
     draw(progress);
   }
 
   function normalizedTrace(values) {
+    if (normalizedTraces.has(values)) return normalizedTraces.get(values);
     const baseline = values[0];
     const responses = values.map(value => value - baseline);
     const peak = Math.max(...responses.map(value => Math.abs(value))) || 1;
-    return responses.map(value => value / peak);
+    const normalized = responses.map(value => value / peak);
+    normalizedTraces.set(values, normalized);
+    return normalized;
   }
 
-  function selectedWindow(activePattern) {
+  function selectedTime(activePattern, fraction) {
+    const times = activePattern.time_ms;
+    return times[0] + (times[times.length - 1] - times[0]) * fraction;
+  }
+
+  function selectedWindow(activePattern, time) {
     const start = activePattern.time_ms[0];
     const fullEnd = activePattern.time_ms[activePattern.time_ms.length - 1];
-    return { start, end: Math.min(fullEnd, start + maximumViewMs) };
+    const span = Math.min(fullEnd - start, maximumViewMs);
+    const end = Math.min(fullEnd, Math.max(start + span, time));
+    return { start: end - span, end };
   }
 
   function draw(drawProgress) {
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    if (!width || !height) return;
-
-    context.clearRect(0, 0, width, height);
-    const compact = width < 660;
-    const left = compact ? 112 : 190;
-    const right = 22;
-    const top = 18;
-    const bottom = 42;
-    const plotWidth = Math.max(60, width - left - right);
-    const laneHeight = (height - top - bottom) / laneDefinitions.length;
-    const activePattern = selectedPattern();
-    const times = activePattern.time_ms;
-    const view = selectedWindow(activePattern);
-    const startTimeMs = view.start;
-    const endTimeMs = view.end;
-    const timeSpanMs = endTimeMs - startTimeMs;
-    const visibleTime = startTimeMs + timeSpanMs * drawProgress;
-
-    context.textAlign = "left";
-    context.textBaseline = "middle";
-
-    laneDefinitions.forEach((lane, laneIndex) => {
-      const laneTop = top + laneIndex * laneHeight;
-      const centre = laneTop + laneHeight * .58;
-      context.fillStyle = laneIndex % 2 ? colours.background : colours.paper;
-      context.fillRect(left, laneTop, plotWidth, laneHeight);
-
-      context.fillStyle = colours.ink;
-      context.font = `bold ${compact ? 11 : 13}px Arial`;
-      const titleBottom = wrapText(lane.title, 10, laneTop + 22, left - 22, compact ? 12 : 15);
-      if (!compact) {
-        context.fillStyle = colours.text;
-        context.font = "11px Arial";
-        wrapText(lane.note, 10, titleBottom + 16, left - 24, 13);
-      }
-
-      context.strokeStyle = colours.grid;
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(left, centre);
-      context.lineTo(width - right, centre);
-      context.stroke();
-
-      for (let tickIndex = 0; tickIndex <= 5; tickIndex += 1) {
-        const x = left + (tickIndex / 5) * plotWidth;
-        context.beginPath();
-        context.moveTo(x, laneTop + 5);
-        context.lineTo(x, laneTop + laneHeight - 5);
-        context.stroke();
-      }
-
-      activePattern.events_ms.forEach((event, eventIndex) => {
-        if (event < startTimeMs || event > endTimeMs) return;
-        const x = left + ((event - startTimeMs) / timeSpanMs) * plotWidth;
-        context.strokeStyle = colours.inputSoft;
-        context.setLineDash([3, 3]);
-        context.beginPath();
-        context.moveTo(x, laneTop + 5);
-        context.lineTo(x, laneTop + laneHeight - 5);
-        context.stroke();
-        context.setLineDash([]);
-        if (laneIndex === 0) {
-          context.fillStyle = colours.input;
-          context.font = "bold 10px Arial";
-          context.fillText(String(eventIndex + 1), x + 4, laneTop + 14);
-        }
-      });
-
-      context.strokeStyle = lane.colour;
-      context.lineWidth = lane.key === "target" ? 2 : 1.5;
-      context.lineJoin = "round";
-      context.lineCap = "round";
-      context.beginPath();
-      let begun = false;
-      const values = normalizedTrace(activePattern[lane.key]);
-      for (let sample = 0; sample < times.length; sample += 1) {
-        const time = times[sample];
-        if (time < startTimeMs) continue;
-        if (time > visibleTime) break;
-        const x = left + ((time - startTimeMs) / timeSpanMs) * plotWidth;
-        const scale = lane.key === "input" ? .82 : 1.0;
-        const y = centre - values[sample] * laneHeight * .44 * scale;
-        if (!begun) {
-          context.moveTo(x, y);
-          begun = true;
-        } else {
-          context.lineTo(x, y);
-        }
-      }
-      context.stroke();
-    });
-
-    const cursorX = left + drawProgress * plotWidth;
-    context.strokeStyle = colours.cursor;
-    context.lineWidth = 1.5;
-    context.setLineDash([4, 4]);
-    context.beginPath();
-    context.moveTo(cursorX, top);
-    context.lineTo(cursorX, height - bottom + 4);
-    context.stroke();
-    context.setLineDash([]);
-
-    context.fillStyle = colours.cursor;
-    context.font = "bold 10px Arial";
-    context.textAlign = cursorX > width - 60 ? "right" : "left";
-    context.fillText("now", cursorX + (cursorX > width - 60 ? -5 : 5), 8);
-
-    context.fillStyle = colours.text;
-    context.font = "11px Arial";
-    context.textAlign = "center";
-    for (let tickIndex = 0; tickIndex <= 5; tickIndex += 1) {
-      const x = left + (tickIndex / 5) * plotWidth;
-      const tick = Math.round(startTimeMs + (tickIndex / 5) * timeSpanMs);
-      context.fillText(`${tick}`, x, height - 21);
-    }
-    context.fillText(compact ? "time (ms)" : "time from start of sequence (milliseconds)", left + plotWidth / 2, height - 6);
-  }
-
-  function wrapText(text, x, y, maxWidth, lineHeight) {
-    const words = text.split(" ");
-    let line = "";
-    words.forEach((word, index) => {
-      const test = `${line}${word} `;
-      if (context.measureText(test).width > maxWidth && index > 0) {
-        context.fillText(line.trim(), x, y);
-        line = `${word} `;
-        y += lineHeight;
-      } else {
-        line = test;
-      }
-    });
-    context.fillText(line.trim(), x, y);
-    return y;
+    const active = selectedPattern(), time = selectedTime(active, drawProgress);
+    const window = selectedWindow(active, time);
+    const lanes = modelChoice.value === 'all' ? laneDefinitions
+      : laneDefinitions.filter(lane=>['input','target',modelChoice.value].includes(lane.key));
+    DemoPlot(canvas,lanes.map(lane=>({
+      title:lane.title,colour:lane.colour,min:lane.key==='input'?-.25:0,max:1.1,
+      values:normalizedTrace(active[lane.key])
+    })), active.time_ms, time, window);
   }
 
   function currentProgress(now = performance.now()) {
@@ -560,21 +466,9 @@
   }
 
   function updateStatus(force = false) {
-    const activePattern = selectedPattern();
-    const { start, end } = selectedWindow(activePattern);
-    const time = Math.round(start + (end - start) * progress);
-    const bucket = progress >= 1 ? 4 : Math.floor(progress * 4);
-    if (!force && !paused && bucket === lastStatusBucket) return;
-    lastStatusBucket = bucket;
-    if (progress >= 1) {
-      status.innerHTML = `<strong>Selected interval complete.</strong> Open the optional benchmark details for full-protocol error values.`;
-      return;
-    }
-    if (paused) {
-      status.innerHTML = `<strong>Paused at ${time} ms.</strong> Every lane remains aligned to the same ${activePattern.label}.`;
-      return;
-    }
-    status.innerHTML = `<strong>Comparing at ${time} ms.</strong> Every lane receives the same ${activePattern.label}.`;
+    const time=Math.round(selectedTime(selectedPattern(), progress));
+    const text=`The graphs show each response at ${time} ms.`;
+    if(status.textContent!==text)status.textContent=text;
   }
 
   function finish() {
@@ -583,7 +477,7 @@
     progress = 1;
     pauseButton.disabled = true;
     pauseButton.textContent = "Pause";
-    playButton.textContent = "Play comparison";
+    playButton.textContent = "Play";
     draw(progress);
     updateStatus(true);
   }
@@ -605,7 +499,7 @@
     if (reset || progress >= 1) progress = 0;
     if (reducedMotion.matches) {
       finish();
-      status.innerHTML = "<strong>Comparison shown.</strong> Reduced motion is active, so the completed traces appear without animation.";
+
       return;
     }
     running = true;
@@ -614,18 +508,22 @@
     lastStatusBucket = -1;
     pauseButton.disabled = false;
     pauseButton.textContent = "Pause";
-    playButton.textContent = "Playing";
+    playButton.textContent = "Pause";
     updateStatus(true);
     animationFrame = requestAnimationFrame(animate);
   }
 
   playButton.addEventListener("click", () => {
+    if (running && !paused) {
+      pauseButton.click();
+      return;
+    }
     if (paused) {
       const pausedDuration = performance.now() - pausedAt;
       startTime += pausedDuration;
       paused = false;
       pauseButton.textContent = "Pause";
-      playButton.textContent = "Playing";
+      playButton.textContent = "Pause";
       animationFrame = requestAnimationFrame(animate);
       return;
     }
@@ -639,14 +537,14 @@
       startTime += pausedDuration;
       paused = false;
       pauseButton.textContent = "Pause";
-      playButton.textContent = "Playing";
+      playButton.textContent = "Pause";
       animationFrame = requestAnimationFrame(animate);
     } else {
       paused = true;
       pausedAt = performance.now();
       cancelAnimationFrame(animationFrame);
       pauseButton.textContent = "Resume";
-      playButton.textContent = "Resume comparison";
+      playButton.textContent = "Resume";
       updateStatus(true);
     }
   });
@@ -655,7 +553,7 @@
 
   speed.addEventListener("input", () => {
     const clock = paused ? pausedAt : performance.now();
-    const priorDuration = baseDuration / previousSpeed;
+    const priorDuration = duration(previousSpeed);
     if (running) progress = Math.max(0, Math.min(1, (clock - startTime) / priorDuration));
     previousSpeed = Number(speed.value);
     speedOut.value = `${Number(speed.value).toFixed(2).replace(/\.00$/, "").replace(/0$/, "")}×`;
@@ -664,17 +562,26 @@
 
   pattern.addEventListener("change", () => {
     cancelAnimationFrame(animationFrame);
-    progress = initialProgress;
+    progress = initialFraction();
     running = false;
     paused = false;
     pauseButton.disabled = true;
     pauseButton.textContent = "Pause";
-    playButton.textContent = "Play comparison";
+    playButton.textContent = "Play";
     lastStatusBucket = -1;
     draw(progress);
-    status.innerHTML = `<strong>Key frame updated.</strong> The early response to the ${selectedPattern().label} is ready.`;
+    status.textContent = 'The graphs show the selected input.';
   });
 
+  function updateModelChoice() {
+    document.body.dataset.compareAll = String(modelChoice.value === 'all');
+    resizeCanvas();
+  }
+  modelChoice.addEventListener("change", updateModelChoice);
+
+  document.addEventListener("demo:pause", () => {
+    if (running && !paused) pauseButton.click();
+  });
   window.addEventListener("resize", () => {
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(resizeCanvas);
@@ -684,13 +591,15 @@
     if (event.matches) finish();
   });
 
-  resizeCanvas();
+  document.addEventListener('demo:preview', () => { progress=.68; draw(progress); updateStatus(true); });
+  updateModelChoice();
   if (reducedMotion.matches) {
     progress = 1;
     draw(progress);
-    status.innerHTML = "<strong>Reduced motion.</strong> The completed selected-pattern trace is shown without animation.";
+    updateStatus(true);
   }
 })();
 </script>
+<script src="../mobile-demo.js?v=20260910-landscape4"></script>
 </body>
 </html>

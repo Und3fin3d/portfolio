@@ -1,0 +1,152 @@
+/* Shared roles keep each signal identifiable across all four demos. */
+:root {
+  --demo-background: oklch(.965 .008 85);
+  --demo-paper: oklch(.995 .003 85);
+  --demo-ink: oklch(.26 .013 260);
+  --demo-muted: oklch(.49 .016 260);
+  --demo-line: oklch(.86 .008 260);
+  --demo-grid: oklch(.92 .006 260);
+  --demo-accent: oklch(.455 .113 302);
+  --demo-on-accent: oklch(.99 .003 302);
+  --demo-accent-soft: oklch(.94 .025 302);
+  --demo-input: oklch(.55 .14 58);
+  --demo-device: oklch(.49 .12 302);
+  --demo-current: oklch(.50 .115 240);
+  --demo-voltage: oklch(.49 .105 145);
+  --demo-spike: oklch(.49 .17 25);
+  --demo-threshold: oklch(.50 .09 85);
+  --demo-exp2: oklch(.50 .08 195);
+  --demo-bohao: oklch(.46 .13 335);
+  --demo-wire: oklch(.64 .013 260);
+  --demo-electrode: oklch(.83 .01 260);
+}
+:root[data-demo-theme="teal"] {
+  --demo-background: oklch(.97 .008 190);
+  --demo-paper: oklch(.995 .002 190);
+  --demo-ink: oklch(.25 .022 225);
+  --demo-muted: oklch(.47 .02 225);
+  --demo-line: oklch(.85 .014 205);
+  --demo-grid: oklch(.925 .01 205);
+  --demo-accent: oklch(.43 .075 190);
+  --demo-on-accent: oklch(.985 .008 190);
+  --demo-accent-soft: oklch(.94 .025 190);
+  --demo-input: oklch(.50 .13 50);
+  --demo-device: oklch(.48 .12 305);
+  --demo-current: oklch(.47 .11 240);
+  --demo-voltage: oklch(.46 .085 165);
+  --demo-spike: oklch(.50 .175 25);
+  --demo-threshold: oklch(.47 .085 80);
+  --demo-exp2: oklch(.47 .07 200);
+  --demo-bohao: oklch(.47 .14 345);
+}
+:root[data-demo-theme="plum"] {
+  --demo-background: oklch(.97 .011 65);
+  --demo-paper: oklch(.995 .004 65);
+  --demo-ink: oklch(.27 .027 325);
+  --demo-muted: oklch(.47 .026 325);
+  --demo-line: oklch(.86 .018 65);
+  --demo-grid: oklch(.925 .01 65);
+  --demo-accent: oklch(.45 .13 325);
+  --demo-on-accent: oklch(.99 .004 65);
+  --demo-accent-soft: oklch(.94 .025 325);
+  --demo-input: oklch(.52 .13 55);
+  --demo-device: oklch(.47 .14 300);
+  --demo-current: oklch(.48 .11 235);
+  --demo-voltage: oklch(.46 .075 165);
+  --demo-spike: oklch(.51 .175 20);
+  --demo-threshold: oklch(.48 .07 85);
+  --demo-exp2: oklch(.48 .07 195);
+  --demo-bohao: oklch(.49 .14 340);
+  --demo-wire: oklch(.62 .02 65);
+  --demo-electrode: oklch(.83 .015 65);
+}
+:root[data-demo-theme="midnight"] {
+  color-scheme: dark;
+  --demo-background: oklch(.18 .013 255);
+  --demo-paper: oklch(.225 .016 255);
+  --demo-ink: oklch(.94 .01 255);
+  --demo-muted: oklch(.75 .02 255);
+  --demo-line: oklch(.40 .02 255);
+  --demo-grid: oklch(.32 .018 255);
+  --demo-accent: oklch(.80 .09 180);
+  --demo-on-accent: oklch(.20 .02 220);
+  --demo-accent-soft: oklch(.31 .04 180);
+  --demo-input: oklch(.80 .145 70);
+  --demo-device: oklch(.77 .135 300);
+  --demo-current: oklch(.80 .095 230);
+  --demo-voltage: oklch(.79 .11 155);
+  --demo-spike: oklch(.75 .16 18);
+  --demo-threshold: oklch(.81 .11 95);
+  --demo-exp2: oklch(.76 .08 200);
+  --demo-bohao: oklch(.78 .14 330);
+  --demo-wire: oklch(.60 .025 255);
+  --demo-electrode: oklch(.38 .02 255);
+}
+:root {
+  --demo-input-soft: color-mix(in oklab, var(--demo-paper) 85%, var(--demo-input));
+  --demo-device-soft: color-mix(in oklab, var(--demo-paper) 90%, var(--demo-device));
+  --demo-device-track: color-mix(in oklab, var(--demo-paper) 77%, var(--demo-device));
+  --demo-neuron-soft: color-mix(in oklab, var(--demo-paper) 86%, var(--demo-voltage));
+  --demo-current-soft: color-mix(in oklab, var(--demo-paper) 70%, var(--demo-current));
+  --background: var(--demo-background);
+  --paper: var(--demo-paper);
+  --ink: var(--demo-ink);
+  --muted: var(--demo-muted);
+  --line: var(--demo-line);
+  --pre: var(--demo-input);
+  --elec: var(--demo-input);
+  --electrical: var(--demo-input);
+  --input: var(--demo-input);
+  --dev: var(--demo-device);
+  --memristor: var(--demo-device);
+  --fan: var(--demo-device);
+  --synapse: var(--demo-current);
+  --data: var(--demo-current);
+  --target: var(--demo-current);
+  --bio: var(--demo-voltage);
+  --biology: var(--demo-voltage);
+  --voltage: var(--demo-voltage);
+  --tm: var(--demo-voltage);
+  --spike: var(--demo-spike);
+  --threshold: var(--demo-threshold);
+  --exp2: var(--demo-exp2);
+  --bohao: var(--demo-bohao);
+  --memristor-deep: var(--demo-bohao);
+  --cursor: var(--demo-muted);
+  --wash: var(--demo-accent-soft);
+}
+body.demo-mobile { background: var(--demo-background); color: var(--demo-ink); }
+.demo-mobile .demo-sequence { background: var(--demo-paper); color: var(--demo-ink); border-color: var(--demo-line); backdrop-filter: none; }
+.demo-mobile .demo-sequence__step { color: var(--demo-muted); }
+.demo-mobile .demo-sequence__button { background: transparent; }
+.demo-mobile .demo-sequence__button:hover { color: var(--demo-accent); }
+.demo-mobile .phone-stage > .phone-panel { background: var(--demo-paper); border-color: var(--demo-line); }
+.demo-mobile canvas { background: var(--demo-paper); }
+.demo-mobile button, .demo-mobile select { color: var(--demo-ink); background: var(--demo-paper); border-color: var(--demo-line); }
+.demo-mobile button:hover { background: var(--demo-accent-soft); }
+.demo-mobile button[aria-pressed="true"] { background: var(--demo-accent-soft); color: var(--demo-accent); border-color: var(--demo-accent); }
+.demo-mobile button:disabled { color: var(--demo-muted); opacity: .55; }
+.demo-mobile .phone-tabs { border-color: var(--demo-line); }
+.demo-mobile .phone-tab { background: transparent; color: var(--demo-muted); border-color: transparent; }
+.demo-mobile .phone-tab[aria-selected="true"] { color: var(--demo-accent); border-bottom-color: var(--demo-accent); }
+.demo-mobile .phone-playback { border-color: var(--demo-line); background: var(--demo-paper); }
+.demo-mobile .phone-playback button.primary { background: var(--demo-accent); border-color: var(--demo-accent); color: var(--demo-on-accent); }
+.demo-mobile .phone-playback button.primary:hover { filter: brightness(.94); }
+.demo-mobile .phone-speed { background: var(--demo-background); }
+.demo-mobile input[type="range"] { accent-color: var(--demo-accent); }
+.demo-mobile .status { border: 0; padding: 0; color: var(--demo-muted); }
+.demo-mobile .phone-graph-note, .demo-mobile .phone-settings-note,
+.demo-mobile .phone-evidence, .demo-mobile .phone-hint, .demo-mobile .readouts,
+.demo-mobile .phone-panel--guide .step p, .demo-mobile .svg-small { color: var(--demo-muted); fill: var(--demo-muted); }
+.demo-mobile .readouts b { color: var(--demo-ink); }
+.demo-mobile .phone-panel--guide .step { background: transparent; border-color: var(--demo-line); }
+.demo-mobile .phone-panel--guide .step::before { background: var(--demo-accent-soft); color: var(--demo-accent); }
+.demo-mobile .phone-panel--guide .step.active::before { background: var(--demo-accent); color: var(--demo-on-accent); }
+.demo-mobile .score, .demo-mobile .score-grid, .demo-mobile details { border-color: var(--demo-line); background: var(--demo-paper); }
+.demo-mobile code { background: var(--demo-background); color: var(--demo-ink); }
+.demo-mobile .demo-picker { background: var(--demo-paper); color: var(--demo-ink); border-color: var(--demo-line); }
+.demo-mobile .demo-picker::backdrop { background: oklch(.18 .02 260 / .55); }
+.demo-mobile .demo-picker h3 { color: var(--demo-muted); }
+.demo-mobile .demo-picker-option[aria-pressed="true"] { color: var(--demo-accent); border-color: var(--demo-accent); background: var(--demo-accent-soft); }
+.demo-mobile :focus-visible { outline: 2px solid var(--demo-accent); outline-offset: 3px; }
+@media (min-width: 761px) { .demo-mobile .phone-playback { background: transparent; } }
