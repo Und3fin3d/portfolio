@@ -50,7 +50,7 @@
   /** @typedef {{ shape: number[], data: Float32Array }} Layer */
   /** @type {Record<string, Layer> | null} */
   let net = null;
-  let hasStarterDigit = true;
+  let hasStarterDigit = false;
   /** @param {string} b64 */
   const b64ToF32 = b64 => {
     const bin = atob(b64);
@@ -162,7 +162,7 @@
     guessEl.textContent = String(best);
     confEl.textContent = `p = ${(probs[best] * 100).toFixed(1)}%`;
     bars.forEach((b, i) => {
-      b.fill.style.width = `${(probs[i] * 100).toFixed(1)}%`;
+      b.fill.style.transform = `scaleX(${probs[i].toFixed(4)})`;
       b.pct.textContent = `${(probs[i] * 100).toFixed(1)}%`;
       b.li.classList.toggle("is-top", i === best);
     });
@@ -174,7 +174,7 @@
   const clearPrediction = () => {
     guessEl.textContent = "·";
     confEl.textContent = "";
-    bars.forEach(b => { b.fill.style.width = "0%"; b.pct.textContent = "–"; b.li.classList.remove("is-top"); });
+    bars.forEach(b => { b.fill.style.transform = "scaleX(0)"; b.pct.textContent = "–"; b.li.classList.remove("is-top"); });
     [...dots1, ...dots2].forEach(d => (d.style.opacity = "0.08"));
   };
 
@@ -187,6 +187,9 @@
     const [first, ...points] = await response.json();
     if (!first) return;
 
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    clearPrediction();
+    hasStarterDigit = true;
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(first.x, first.y);
@@ -199,17 +202,17 @@
     ctx.restore();
 
     predict();
-    hint.textContent = "start here: draw a digit, 0–9";
+    hint.textContent = "sample digit: draw to replace it";
   };
 
   const reset = () => {
     ctx.clearRect(0, 0, SIZE, SIZE);
     hasStarterDigit = false;
     clearPrediction();
-    hint.textContent = "draw a digit, 0–9";
+    hint.textContent = "draw a digit";
   };
 
-  drawStarterDigit();
+  drawStarterDigit().catch(() => { hint.textContent = "could not load the sample digit"; });
 
   /* ---- pointer drawing ---- */
   let drawing = false, raf = 0;
@@ -232,7 +235,7 @@
       ctx.clearRect(0, 0, SIZE, SIZE);
       hasStarterDigit = false;
       clearPrediction();
-      hint.textContent = "draw a digit, 0–9";
+      hint.textContent = "draw a digit";
     }
     drawing = true;
     last = pos(e);

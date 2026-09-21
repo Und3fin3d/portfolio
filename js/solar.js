@@ -527,8 +527,11 @@
 
   /* ---------- HUD ---------- */
   const dateEl = /** @type {HTMLElement} */ (document.getElementById("solar-date"));
+  const orbitSummary = /** @type {HTMLElement} */ (document.getElementById("orrery-summary"));
   const speedBtns = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".orrery__speeds button[data-speed]"))];
   const planetBtns = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".orrery__planets button[data-goto]"))];
+  const navLinks = [.../** @type {NodeListOf<HTMLAnchorElement>} */ (document.querySelectorAll(".site-head__nav--home a[href^='#']"))];
+  const menuCurrent = /** @type {HTMLElement} */ (document.getElementById("site-menu-current"));
   const gotoBtns = [
     .../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".site-head__name[data-goto]")),
     ...planetBtns,
@@ -537,7 +540,13 @@
   /** @param {number} s */
   const setSpeed = s => {
     speed = s;
-    speedBtns.forEach(b => b.classList.toggle("is-active", Number(b.dataset.speed) === s));
+    speedBtns.forEach(b => {
+      const active = Number(b.dataset.speed) === s;
+      b.classList.toggle("is-active", active);
+      b.setAttribute("aria-pressed", String(active));
+    });
+    const activeButton = speedBtns.find(b => Number(b.dataset.speed) === s);
+    orbitSummary.textContent = s === 0 ? "Orbit paused" : `Orbit · ${activeButton?.textContent?.trim() || "running"}`;
   };
   setSpeed(speed);
   speedBtns.forEach(b => b.addEventListener("click", () => setSpeed(Number(b.dataset.speed))));
@@ -556,6 +565,7 @@
 
     event.preventDefault();
     if (sel === "#top") {
+      if (location.hash !== "#top") history.pushState(null, "", "#top");
       window.scrollTo({ top: 0, left: 0, behavior: reduced ? "auto" : "smooth" });
       return;
     }
@@ -783,7 +793,7 @@
           ctx.fillStyle = "oklch(80% 0.16 48)";
           ctx.beginPath(); ctx.arc(b.s.x, b.s.y, R, 0, TAU); ctx.fill();
         }
-        if ((focusBody === "system" || focusBody === "sun") && b.R < 60) {
+        if (focusBody === "sun" && b.R < 60) {
           ctx.fillStyle = focusBody === "sun" ? ink : muted;
           ctx.fillText("sun", b.s.x + b.R + 8, b.s.y + 3.5);
         }
@@ -811,7 +821,7 @@
       /* No ring around the focused planet: the label alone marks it, set in
          ink against the muted labels of the others. */
       const overSun = Math.hypot(s.x - sunPos.x, s.y - sunPos.y) < sunPos.R + 14;
-      if (R < 60 && !overSun && (showAll || i === focusIdx || i === hover)) {
+      if (focusBody !== "system" && R < 60 && !overSun && (showAll || i === focusIdx || i === hover)) {
         ctx.fillStyle = hover === i || i === focusIdx ? ink : muted;
         ctx.fillText(name, s.x + R + 6, s.y + 3.5);
       }
@@ -826,6 +836,33 @@
   /** @type {number | null} */
   let cSm = null;
   let prev = performance.now();
+  /** @param {string} id */
+  const navTargetFor = id => ({
+    digits: "#digits",
+    chess: "#digits",
+    maze: "#digits",
+    projects: "#projects",
+    experience: "#projects",
+    background: "#background",
+    research: "#research",
+    contact: "#contact",
+  })[id] || "";
+  /** @param {number} index */
+  const updateChapterNav = index => {
+    const chapter = chapters[index];
+    const target = navTargetFor(chapter.el.id);
+    let activeLabel = chapter.body === "sun" ? "Home" : "Sections";
+    navLinks.forEach(link => {
+      const active = link.getAttribute("href") === target;
+      if (active) {
+        link.setAttribute("aria-current", "location");
+        activeLabel = link.dataset.label || link.textContent?.trim() || activeLabel;
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+    menuCurrent.textContent = activeLabel;
+  };
   /** @param {number} now */
   const tick = now => {
     if (!initialised) {
@@ -842,13 +879,14 @@
     /* a jump this big is an anchor navigation or a late layout shift, not a
        scroll: snap, so the camera never flies through every planet to get
        there. A smooth in-page scroll moves well under a chapter per frame. */
-    if (Math.abs(cRaw - cSm) > 1.2) cSm = cRaw;
+    if (reduced || Math.abs(cRaw - cSm) > 1.2) cSm = cRaw;
     else cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 3.2));
     cam = camFrom(cSm, T);
     const activeChapter = Math.round(cSm);
     if (activeChapter !== zoomChapter) {
       zoomChapter = activeChapter;
       zoomOffset = 0;
+      updateChapterNav(activeChapter);
     }
     dCam = Math.exp(cam.zl + zoomOffset);
 
@@ -880,7 +918,7 @@
         const root = document.documentElement;
         const prevBehavior = root.style.scrollBehavior;
         root.style.scrollBehavior = "auto";
-        target.scrollIntoView({ behavior: "instant", block: "center" });
+        target.scrollIntoView({ behavior: "instant", block: "start" });
         root.style.scrollBehavior = prevBehavior;
       }
     }
