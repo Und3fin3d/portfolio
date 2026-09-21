@@ -618,15 +618,25 @@
 
   /** @type {HTMLButtonElement[]} */
   const squares = [];
+  let focusSq = 20;
   for (let sq = 0; sq < 25; sq++) {
     const btn = document.createElement("button");
     btn.type = "button";
+    btn.setAttribute("role", "gridcell");
     const y = (sq / 5) | 0, x = sq % 5;
     if ((x + y) % 2 === 1) btn.classList.add("sq-dark");
     btn.dataset.sq = String(sq);
+    btn.tabIndex = sq === focusSq ? 0 : -1;
     boardEl.appendChild(btn);
     squares[sq] = btn;
   }
+
+  /** @param {number} sq  @param {boolean} [moveFocus] */
+  const setFocusSquare = (sq, moveFocus = true) => {
+    focusSq = sq;
+    squares.forEach((button, index) => (button.tabIndex = index === focusSq ? 0 : -1));
+    if (moveFocus) squares[focusSq].focus();
+  };
 
   let selected = -1, thinking = false, gameOver = false;
   /** @type {Move[]} */ let targets = [];
@@ -700,6 +710,7 @@
     const btn = /** @type {HTMLElement} */ (e.target).closest("button");
     if (!btn || thinking || gameOver || turn !== WHITE) return;
     const sq = Number(btn.dataset.sq);
+    setFocusSquare(sq, false);
     const chosen = targets.find(m => m.t === sq);
     if (chosen) {
       const u = make(chosen, WHITE);
@@ -714,10 +725,28 @@
     if (occ[WHITE] & (1 << sq)) {
       selected = sq;
       targets = legalMoves(WHITE).filter(m => m.f === sq);
+      setStatus(targets.length ? `${coord(sq)} selected. Choose a marked square.` : "That piece has no legal moves.");
     } else {
       selected = -1; targets = [];
+      setStatus("Select one of your pieces.");
     }
     render();
+  });
+
+  boardEl.addEventListener("keydown", event => {
+    const button = /** @type {HTMLElement} */ (event.target).closest("button");
+    if (!button) return;
+    const sq = Number(button.dataset.sq);
+    const row = Math.floor(sq / 5);
+    const col = sq % 5;
+    let next = sq;
+    if (event.key === "ArrowLeft" && col > 0) next--;
+    else if (event.key === "ArrowRight" && col < 4) next++;
+    else if (event.key === "ArrowUp" && row > 0) next -= 5;
+    else if (event.key === "ArrowDown" && row < 4) next += 5;
+    else return;
+    event.preventDefault();
+    setFocusSquare(next);
   });
 
   /** @type {HTMLElement} */ (document.getElementById("chess-new")).addEventListener("click", () => {

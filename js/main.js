@@ -61,3 +61,35 @@
     }, { passive: true });
   }, 2000);
 })();
+
+/* The home-page chapter menu uses native <details> so it still works without
+   JavaScript. These listeners only close it after a choice or Escape. */
+(() => {
+  const sections = /** @type {HTMLDetailsElement | null} */ (document.querySelector(".site-head__sections"));
+  if (!sections) return;
+  const compactHeader = window.matchMedia("(max-width: 900px)");
+  sections.open = !compactHeader.matches;
+  compactHeader.addEventListener("change", event => { sections.open = !event.matches; });
+
+  sections.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
+    if (compactHeader.matches) sections.open = false;
+  }));
+
+  document.addEventListener("keydown", event => {
+    if (!compactHeader.matches || event.key !== "Escape" || !sections.open) return;
+    sections.open = false;
+    /** @type {HTMLElement | null} */ (sections.querySelector("summary"))?.focus();
+  });
+
+  document.addEventListener("pointerdown", event => {
+    if (compactHeader.matches && sections.open && event.target instanceof Node && !sections.contains(event.target)) sections.open = false;
+  });
+})();
+
+(() => {
+  const controls = /** @type {HTMLDetailsElement | null} */ (document.querySelector(".orrery__disclosure"));
+  if (!controls) return;
+  const compactHud = window.matchMedia("(max-width: 780px)");
+  controls.open = !compactHud.matches;
+  compactHud.addEventListener("change", event => { controls.open = !event.matches; });
+})();
