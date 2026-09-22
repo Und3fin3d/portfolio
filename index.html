@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Literata:ital,opsz,wght@0,7..72,300..700;1,7..72,300..700&family=Azeret+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260921-simple-menu">
+<link rel="stylesheet" href="styles.css?v=20260922-glass-panels">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -305,14 +305,26 @@
           <ul class="colophon__list">
             <li>Orbital angles and positions are calculated from JPL Keplerian elements.</li>
             <li>Planet and Sun sizes are scaled to the square root of their true radii.</li>
-            <li>The bodies and the orbits therefore use different, non-linear scales.</li>
+            <li>Orbital distances use a logarithmic display scale to keep the inner orbits clear of the Sun.</li>
+            <li>Zoom changes every body through the same perspective projection. Zoom-out ends at the complete system view. Every planet retains its surface texture.</li>
             <li>For example, Jupiter’s true radius is about 11 times Earth’s, but it is drawn about √11 ≈ 3.3 times larger.</li>
           </ul>
           <p class="colophon__head">Imagery</p>
-          <p>Earth and Sun maps: <a href="https://svs.gsfc.nasa.gov/3615/" rel="noopener">NASA/GSFC Earth</a> and <a href="https://svs.gsfc.nasa.gov/30362/" rel="noopener">Sun</a>. Uranus and Neptune maps: NASA via ESO Supernova (<a href="https://supernova.eso.org/exhibition/images/uranusmap-10x5k-CC/" rel="noopener">Uranus</a>, <a href="https://supernova.eso.org/germany/exhibition/images/NEP0VTT1-CC-10x5k/" rel="noopener">Neptune</a>; <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>). Other textures: <a href="https://www.solarsystemscope.com/textures" rel="noopener">Solar System Scope</a> (CC BY 4.0). Milky Way backdrop: ESO / S. Brunier.</p>
+          <p>Sun colour comparisons: <a href="?sun=golden#top">golden highlights (default)</a>, <a href="?sun=white#top">white</a>, <a href="?sun=amber#top">amber</a>, <a href="?sun=orange#top">orange</a> and <a href="?sun=red#top">red-orange</a>. All use Matteo’s surface detail at the same exposure. The warmer colours are artistic options, not measured emission colours.</p>
+          <p><a href="?sun=custom#top">Custom Sun preview</a>: a 3D sphere using <a href="https://sdo.gsfc.nasa.gov/data/synoptic/">NASA/SDO AIA observations from a full solar rotation</a>. Credit NASA/SDO and the AIA science team. The surface combines observations from different dates. The orange colour and photographic prominence layers are illustrative. The layers approximate depth; they are not a measured 3D corona. No AI imagery is used.</p>
+          <p><a href="?materials=pedro#top">Pedro’s complete model comparison</a> uses <a href="https://sketchfab.com/3d-models/high-resolution-solar-system-59fcc3e1dc634ef192215a7e485f147e">High Resolution Solar system</a> by <a href="https://sketchfab.com/Pebegou">Pedro B. Goulart (Pebegou)</a>, under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. The preview adapts his meshes and materials to this orrery’s scale, lighting and rotation. The colours are artistic interpretations.</p>
+          <p>The Sun uses Matteo Pascale’s <a href="https://www.blendkit.com/asset-gallery-detail/c4662bed-ab69-4164-8fba-e8c67ae00b89/">Realistic Sun scene</a>, under the <a href="https://www.blendkit.com/docs/licenses/">Blendkit Royalty Free licence</a>. Its baked procedural detail is recoloured in the browser with reduced exposure. Custom animated plasma loops surround the Sun. They are illustrative, not a measured plasma simulation. His <a href="https://www.blendkit.com/asset-gallery-detail/9b27d1a5-f9ce-4802-8eeb-0b14417b8158/">Earth scene</a> remains an <a href="?materials=matteo#maze">optional Earth preview</a>, with adapted lighting and atmosphere. <a href="?materials=original#top">View original materials</a>.</p>
+          <p>Earth: <a href="https://sos.noaa.gov/catalog/datasets/blue-marble/" rel="noopener">NASA/GSFC Blue Marble</a>, with satellite cloud and polar imagery. Mars: <a href="https://sos.noaa.gov/catalog/datasets/mars/" rel="noopener">NASA via NOAA Science On a Sphere</a>. These are global image composites.</p>
+          <p>Original Sun comparison: an artist-prepared <a href="https://www.solarsystemscope.com/textures/" rel="noopener">Solar System Scope global texture</a> (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>), recoloured with the darker orange palette of the original SDO image. This is an illustrative reconstruction. The separate <a href="https://sdo.gsfc.nasa.gov/assets/img/browse/2026/07/10/" rel="noopener">NASA/SDO prominence photograph</a> rotates on a fixed plane. It does not represent a measured 3D corona. NASA imagery follows its <a href="https://www.nasa.gov/nasa-brand-center/images-and-media/" rel="noopener">media usage guidelines</a>.</p>
+          <p>Uranus and Neptune: atmospheric reconstructions credited to NASA by ESO Supernova (<a href="https://supernova.eso.org/exhibition/images/uranusmap-10x5k-CC/" rel="noopener">Uranus</a>, <a href="https://supernova.eso.org/germany/exhibition/images/NEP0VTT1-CC-10x5k/" rel="noopener">Neptune</a>; <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>). These are not direct global photographs.</p>
+          <p>Other textures and Saturn’s rings: <a href="https://www.solarsystemscope.com/textures" rel="noopener">Solar System Scope</a> (CC BY 4.0). Milky Way backdrop: ESO / S. Brunier. Body orientation, rotation speed, and lighting are illustrative. <a href="assets/planets/SOURCES.md">Asset sources and processing details</a>.</p>
         </div>
       </details>
     </div>
+  </section>
+
+  <section class="chapter chapter--system" id="system" data-body="system" aria-label="The solar system">
+    <p class="chapter__kicker">Click a planet to revisit a section.</p>
   </section>
 
 </main>
@@ -349,7 +361,8 @@
 </div>
 
 <script src="js/main.js?v=20260921-menu-behaviour" defer></script>
-<script src="js/solar.js?v=20260921-simple-menu" defer></script>
+<script src="js/solar-surfaces.js?v=20260922-plasma-volume" defer></script>
+<script src="js/solar.js?v=20260922-pedro-preview" defer></script>
 <script src="js/nn-demo.js?v=20260921-no-sample-button" defer></script>
 <script src="js/chess.js" defer></script>
 <script src="js/maze.js" defer></script>

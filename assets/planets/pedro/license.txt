@@ -1,0 +1,11 @@
+Model Information:
+* title:	High Resolution Solar system
+* source:	https://sketchfab.com/3d-models/high-resolution-solar-system-59fcc3e1dc634ef192215a7e485f147e
+* author:	Pebegou (https://sketchfab.com/Pebegou)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "High Resolution Solar system" (https://sketchfab.com/3d-models/high-resolution-solar-system-59fcc3e1dc634ef192215a7e485f147e) by Pebegou (https://sketchfab.com/Pebegou) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
