@@ -151,7 +151,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   height: 100%;
   display: block;
   z-index: 0;
-  touch-action: pan-y;   /* one-finger page scroll; drag, twist and pinch stay interactive */
+  touch-action: none;
 }
 
 main {
@@ -189,17 +189,15 @@ main {
   pointer-events: auto;
   width: min(680px, 100%);
   padding: clamp(1.4rem, 3vw, 2.4rem);
+  border: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--paper) 84%, transparent);
+  backdrop-filter: blur(5px);
 }
 
 #projects .chapter__inner { width: min(800px, 100%); }
 
-.chapter[data-side="l"] .chapter__inner:not(.chapter__inner--bare) {
-  background: linear-gradient(270deg, transparent 0, var(--paper) 3rem);
-}
-
 .chapter[data-side="r"] .chapter__inner {
   margin-left: auto;
-  background: linear-gradient(90deg, transparent 0, var(--paper) 3rem);
 }
 
 .chapter__inner--bare {
@@ -207,6 +205,12 @@ main {
   background: none;
   backdrop-filter: none;
   padding: 0;
+}
+
+.chapter--system {
+  align-items: start;
+  justify-items: center;
+  padding-top: 6rem;
 }
 
 .chapter__eph {
