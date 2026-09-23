@@ -107,6 +107,14 @@ class OrrerySurfaces {
       vec3 displayColour(vec3 colour) {
         return mix(1.055 * pow(colour, vec3(1.0 / 2.4)) - 0.055, colour * 12.92, step(colour, vec3(0.0031308)));
       }
+      vec3 surfaceColour(vec2 uv) {
+        ${gradients ? `
+          vec2 dx = dFdx(uv), dy = dFdy(uv);
+          dx.x -= floor(dx.x + 0.5);
+          dy.x -= floor(dy.x + 0.5);
+          return texture2DGradEXT(surface, uv, dx, dy).rgb;
+        ` : "return texture2D(surface, uv).rgb;"}
+      }
       vec3 rotate(vec3 p, float angle) {
         float c = cos(angle), s = sin(angle);
         vec3 axis = vec3(0.0, sin(tilt), cos(tilt));
@@ -159,14 +167,12 @@ class OrrerySurfaces {
         vec3 world = view * n;
         vec3 local = vec3(world.x, world.y * cos(tilt) - world.z * sin(tilt), world.y * sin(tilt) + world.z * cos(tilt));
         vec2 uv = vec2(fract(atan(local.y, local.x) / (2.0 * PI) + 0.5 + phase / (2.0 * PI)), 0.5 - asin(clamp(local.z, -1.0, 1.0)) / PI);
-        ${gradients ? `
-          vec2 dx = dFdx(uv), dy = dFdy(uv);
-          dx.x -= floor(dx.x + 0.5);
-          dy.x -= floor(dy.x + 0.5);
-          vec3 colour = texture2DGradEXT(surface, uv, dx, dy).rgb;
-        ` : "vec3 colour = texture2D(surface, uv).rgb;"}
+        vec3 colour = surfaceColour(uv);
         if (kind == 2.0) {
           if (matteo > 0.5) {
+            vec2 spun = mat2(cos(phase), sin(phase), -sin(phase), cos(phase)) * local.xy;
+            vec2 capUV = vec2(atan(local.z, spun.x) / (2.0 * PI) + 0.5, 0.5 + asin(clamp(spun.y, -1.0, 1.0)) / PI);
+            colour = mix(colour, surfaceColour(capUV), smoothstep(0.8, 0.94, abs(local.z)));
             float intensity = dot(linearColour(colour), vec3(0.2126, 0.7152, 0.0722));
             vec3 emission = mix(vec3(intensity), linearColour(colour), sunPreserveColour);
             colour = displayColour(sunColour * emission * 0.82 * (0.96 + 0.04 * n.z));
@@ -276,13 +282,28 @@ class OrrerySurfaces {
     return true;
   }
 
+  surfacePixel(name, lon, lat) {
+    const map = this.maps[name];
+    const pixel = (u, v) => {
+      const x = Math.floor(((u % 1 + 1) % 1) * map.width);
+      const y = Math.min(map.height - 1, Math.floor(v * map.height));
+      const offset = (y * map.width + x) * 4;
+      return [0, 1, 2].map(c => map.pixels[offset + c] / 255);
+    };
+    const colour = pixel(lon / (Math.PI * 2) + 0.5, 0.5 - lat / Math.PI);
+    if (name !== "sun" || !this.matteoSun) return colour;
+    const z = Math.sin(lat);
+    const cap = pixel(Math.atan2(z, Math.cos(lat) * Math.cos(lon)) / (Math.PI * 2) + 0.5, 0.5 + Math.asin(Math.cos(lat) * Math.sin(lon)) / Math.PI);
+    const t = Math.max(0, Math.min(1, (Math.abs(z) - 0.8) / 0.14));
+    const weight = t * t * (3 - 2 * t);
+    return colour.map((value, c) => value * (1 - weight) + cap[c] * weight);
+  }
+
   drawSoftware(name, view, tilt, phase) {
     const size = Math.min(256, this.canvas.width);
     this.canvas.width = this.canvas.height = size;
     const ctx = this.canvas.getContext("2d");
     const image = ctx.createImageData(size, size);
-    const map = this.maps[name];
-    const w = map.width, h = map.height;
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const nx = ((x + 0.5) / size * 2 - 1) * 1.25;
@@ -295,18 +316,16 @@ class OrrerySurfaces {
         const wz = view[2] * nx + view[5] * ny + view[8] * nz;
         const lon = Math.atan2(wy * Math.cos(tilt) - wz * Math.sin(tilt), wx) + phase;
         const lat = Math.asin(wy * Math.sin(tilt) + wz * Math.cos(tilt));
-        const u = ((lon / (Math.PI * 2) + 0.5) % 1 + 1) % 1;
-        const v = 0.5 - lat / Math.PI;
-        const source = (Math.min(h - 1, Math.floor(v * h)) * w + Math.floor(u * w)) * 4;
+        const colour = this.surfacePixel(name, lon, lat);
         const target = (y * size + x) * 4;
         const light = 0.36 + 0.64 * Math.max(0, -0.35 * nx + 0.28 * ny + 0.9 * nz);
         const solar = name === "sun" && this.matteoSun;
         const intensity = solar ? [0.2126, 0.7152, 0.0722].reduce((sum, weight, c) => {
-          const value = map.pixels[source + c] / 255;
+          const value = colour[c];
           return sum + weight * (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
         }, 0) * 0.82 * (0.96 + 0.04 * nz) : 0;
         for (let c = 0; c < 3; c++) {
-          const value = map.pixels[source + c] / 255;
+          const value = colour[c];
           const linear = value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
           const emission = this.sunPreserveColour ? linear * 0.82 * (0.96 + 0.04 * nz) : intensity;
           const channel = emission * this.sunColour[c];
