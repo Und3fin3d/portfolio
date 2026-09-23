@@ -2,7 +2,7 @@ import * as THREE from './vendor/three/three.module.js';
 import { mergeGeometries } from './vendor/three/BufferGeometryUtils.js';
 
 export class SolarFlares {
-  constructor() {
+  constructor(sunColour, sunPreserveColour) {
     this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     this.renderer.setClearColor(0x000000, 0);
     this.camera = new THREE.OrthographicCamera(-1.5, 1.5, 1.5, -1.5, 0.1, 30);
@@ -12,7 +12,7 @@ export class SolarFlares {
     this.scene.add(occluder);
     this.model = new THREE.Group();
     this.scene.add(this.model);
-    this.material = this.plasmaMaterial();
+    this.material = this.plasmaMaterial(sunColour, sunPreserveColour);
     const regions = [
       [0.25, 0.26, 0.24, 0.13, 0.35],
       [-2.72, -0.18, 0.18, 0.11, -0.6],
@@ -26,9 +26,13 @@ export class SolarFlares {
     this.model.add(new THREE.Mesh(geometry, this.material));
   }
 
-  plasmaMaterial() {
+  plasmaMaterial(sunColour, sunPreserveColour) {
     return new THREE.ShaderMaterial({
-      uniforms: { phase: { value: 0 } },
+      uniforms: {
+        phase: { value: 0 },
+        sunColour: { value: new THREE.Vector3(...sunColour) },
+        sunPreserveColour: { value: sunPreserveColour ? 1 : 0 }
+      },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -51,6 +55,8 @@ export class SolarFlares {
       `,
       fragmentShader: `
         uniform float phase;
+        uniform vec3 sunColour;
+        uniform float sunPreserveColour;
         varying vec3 localPoint;
         varying vec3 viewNormal;
         varying vec2 strandUV;
@@ -74,9 +80,12 @@ export class SolarFlares {
           float softEdge = pow(max(0.0, normalize(viewNormal).z), 1.4);
           float root = 1.0 - smoothstep(1.005, 1.07, length(localPoint));
           float plasma = smoothstep(0.17, 0.8, wisps);
-          vec3 colour = mix(vec3(1.0, 0.17, 0.018), vec3(1.0, 0.64, 0.2), plasma * 0.7 + root * 0.3);
+          vec3 colour = mix(vec3(1.0, 0.26, 0.045), vec3(1.0, 0.86, 0.62), plasma * 0.7 + root * 0.3);
+          float intensity = dot(colour, vec3(0.2126, 0.7152, 0.0722));
+          colour = mix(vec3(intensity), colour, sunPreserveColour) * sunColour * 0.82;
           float alpha = softEdge * strength * plasma;
           gl_FragColor = vec4(colour, alpha);
+          #include <colorspace_fragment>
         }
       `
     });
