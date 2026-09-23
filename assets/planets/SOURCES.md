@@ -87,6 +87,8 @@ Linear RGB multipliers are white `[1, 1, 1]`, amber `[1, 0.46, 0.13]`, orange `[
 
 No new raster asset or generated imagery is used. The original texture licence and credit apply to every variant.
 
+The Matteo Sun uses a second, perpendicular texture projection at its poles. A smooth blend replaces the pinched polar regions with equatorial detail from the same licensed map. Both projections rotate with the sphere. This is an artistic remapping, not additional solar observations. The colour treatment, texture file and flare geometry remain unchanged. The software fallback uses the same remapping.
+
 ## Three.js solar flare treatment
 
 `js/solar-flares.js` adds seven fixed regions of plasma strands to the current Matteo Sun. Each region uses asymmetric nested 3D curves, fine emissive tubes and wider translucent tubes. Shader noise varies their density and follows the existing surface animation clock. The curves keep their attachment points on the sphere. The group uses the same axial tilt and rotational phase as the surface. An invisible depth-writing sphere hides geometry behind the Sun.
