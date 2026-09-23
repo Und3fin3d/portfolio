@@ -36,8 +36,8 @@ class OrrerySurfaces {
   async loadFlares(materials, sun) {
     if (!this.matteoSun || sun === "custom" || materials === "pedro" || new URLSearchParams(location.search).get("flares") === "off") return;
     try {
-      const { SolarFlares } = await import("./solar-flares.js?v=20260922-plasma-volume");
-      this.flares = new SolarFlares();
+      const { SolarFlares } = await import("./solar-flares.js?v=20260923-solar-colour");
+      this.flares = new SolarFlares(this.sunColour, this.sunPreserveColour);
     } catch (error) {
       console.error("Solar flares could not load. Keeping the Sun surface.", error);
     }
