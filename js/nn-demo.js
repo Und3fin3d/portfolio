@@ -234,6 +234,7 @@
       clearPrediction();
       hint.textContent = "draw a digit, 0–9";
     }
+    document.dispatchEvent(new CustomEvent("portfolio-engagement", { detail: "Neural network used" }));
     drawing = true;
     last = pos(e);
     ctx.beginPath();

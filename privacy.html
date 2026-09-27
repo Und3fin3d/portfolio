@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Privacy — William Greenfield</title>
+  <link rel="stylesheet" href="/analytics/dashboard/dashboard.css">
+</head>
+<body>
+<main>
+  <a href="/">William Greenfield / Home</a>
+  <h1>Privacy and analytics</h1>
+  <p id="collection-status">Checking analytics settings…</p>
+  <p>I use site statistics to improve this portfolio. The analytics described below are collected only when the service is configured.</p>
+  <h2>Your choice</h2>
+  <p>You can turn analytics off for this browser. This clears the temporary journey stored in this tab. It does not remove statistics already counted.</p>
+  <button id="privacy-toggle" type="button" disabled>Loading preference…</button>
+  <p id="preference-status" role="status"></p>
+  <h2>What is measured</h2>
+  <p>Page visits, broad traffic sources, CV and poster clicks, contact and project links, demo actions, and article reading milestones. Reading milestones estimate engagement; they do not prove that someone read the text.</p>
+  <p>A short journey is kept in this tab's session storage to count the order of these actions across pages. It has no visitor identifier. It resets after 30 minutes without a recorded action or when the UTC date changes. Expiry is checked when the page runs; suspended tabs may retain expired data until then. Closing the tab normally clears it.</p>
+  <p>Each action sends its journey prefix, page, source category, date, and a random delivery receipt. Receipts prevent duplicate counting and do not link separate actions. The server stores daily counters, not a table of individual visits. Journeys stop at 40 steps. Browser family, device category, and approximate city and country are counted separately from journeys.</p>
+  <h2>Network data and storage</h2>
+  <p>The hosting providers receive your IP address and browser information when handling requests. Cloudflare can derive an approximate location from the IP address. The analytics application does not store IP addresses, full browser strings, full referring URLs, typed text, or precise event times.</p>
+  <p>Aggregate statistics are retained to compare site performance over time. Delivery receipts expire after two to three days. Cloudflare recovery copies can retain deleted database data for a further seven days. Low-volume statistics can still describe a single visit; aggregate storage does not guarantee anonymity.</p>
+  <p>The service uses Cloudflare Workers and D1. GitHub Pages hosts this portfolio. The statistics dashboard is private. There are no advertising profiles or attempts to recognise returning people.</p>
+  <h2>Browser preferences</h2>
+  <p>Global Privacy Control and Do Not Track disable collection. Your opt-out is stored locally in this browser. Clearing site data removes that preference. Analytics remains off if browser storage is unavailable.</p>
+  <p>For questions about this site or its statistics, email <a href="mailto:mail@williamgreenfield.com">mail@williamgreenfield.com</a>.</p>
+</main>
+<script type="module" src="/analytics/privacy.js"></script>
+</body>
+</html>

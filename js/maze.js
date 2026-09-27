@@ -271,11 +271,11 @@
       algoBtns.forEach(b => b.classList.remove("is-active"));
       btn.classList.add("is-active");
       algo = btn.dataset.algo || "astar";
-      if (walls.length) runSolve();
+      if (walls.length) { document.dispatchEvent(new CustomEvent("portfolio-engagement", { detail: "Maze used" })); runSolve(); }
     });
   });
-  /** @type {HTMLElement} */ (document.getElementById("maze-new")).addEventListener("click", () => newMaze(true));
-  /** @type {HTMLElement} */ (document.getElementById("maze-solve")).addEventListener("click", () => { if (walls.length) runSolve(); });
+  /** @type {HTMLElement} */ (document.getElementById("maze-new")).addEventListener("click", () => { document.dispatchEvent(new CustomEvent("portfolio-engagement", { detail: "Maze used" })); newMaze(true); });
+  /** @type {HTMLElement} */ (document.getElementById("maze-solve")).addEventListener("click", () => { if (walls.length) { document.dispatchEvent(new CustomEvent("portfolio-engagement", { detail: "Maze used" })); runSolve(); } });
 
   let resizeTimer = 0;
   window.addEventListener("resize", () => {

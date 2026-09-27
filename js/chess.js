@@ -702,6 +702,7 @@
     const sq = Number(btn.dataset.sq);
     const chosen = targets.find(m => m.t === sq);
     if (chosen) {
+      document.dispatchEvent(new CustomEvent("portfolio-engagement", { detail: "Chess used" }));
       const u = make(chosen, WHITE);
       history.push({ m: chosen, u, color: WHITE });
       lastMove = chosen;
