@@ -1,6 +1,4 @@
 class OrrerySurfaces {
-  static CAMERA_FPS = 24;
-
   static visibleBox(ctx, x, y, radius, extent, dpr) {
     const [x0, y0] = [Math.max(0, x - radius * extent), Math.max(0, y - radius * extent)];
     const [x1, y1] = [Math.min(ctx.canvas.width / dpr, x + radius * extent), Math.min(ctx.canvas.height / dpr, y + radius * extent)];
@@ -10,25 +8,40 @@ class OrrerySurfaces {
     return { x0, y0, w: x1 - x0, h: y1 - y0, dw, dh, bw: bucket(dw), bh: bucket(dh), window: [(x0 - x) / radius, (y - y1) / radius, (x1 - x) / radius, (y - y0) / radius] };
   }
 
-  static wrap(angle) {
-    return angle - 2 * Math.PI * Math.round(angle / (2 * Math.PI));
-  }
-
   trueSpin(name, days) {
     const [start, rate] = this.rotation[name];
     return -(((start + rate * days) % 360 + 360) % 360) * Math.PI / 180;
   }
 
-  spinOf(name) {
-    const frames = performance.now() / 1000 * OrrerySurfaces.CAMERA_FPS, k = Math.floor(frames);
-    const at = frame => this.trueSpin(name, this.days + this.speed * (frame - frames) / OrrerySurfaces.CAMERA_FPS);
-    const start = at(k);
-    return start + OrrerySurfaces.wrap(at(k + 1) - start) * (frames - k);
+  sunAzimuth(name, days) {
+    const pos = this.orbitPosition(name, days);
+    if (!pos) return 0;
+    const tilt = this.tilts[name] * Math.PI / 180;
+    return Math.atan2(-pos.y * Math.cos(tilt) + pos.z * Math.sin(tilt), -pos.x);
+  }
+
+  faceOf(name, days) {
+    return this.trueSpin(name, days) + this.sunAzimuth(name, days);
+  }
+
+  faceRate(name) {
+    const turn = this.sunAzimuth(name, this.days + 0.01) - this.sunAzimuth(name, this.days - 0.01);
+    return (Math.atan2(Math.sin(turn), Math.cos(turn)) / 0.02 - this.rotation[name][1] * Math.PI / 180) * this.speed;
   }
 
   apparentRate(name) {
-    const perFrame = this.rotation[name][1] * Math.PI / 180 * this.speed / OrrerySurfaces.CAMERA_FPS;
-    return Math.abs(OrrerySurfaces.wrap(perFrame)) * OrrerySurfaces.CAMERA_FPS;
+    const calm = 0.1 * (this.rotation[name][1] / this.rotation.earth[1]) ** 0.35;
+    return Math.min(Math.abs(this.faceRate(name)), calm);
+  }
+
+  spinOf(name) {
+    const rate = this.faceRate(name), shown = this.apparentRate(name), face = this.faces[name];
+    if (Math.abs(rate) <= shown || !face) this.faces[name] = { value: this.faceOf(name, this.days), clock: this.clock };
+    else if (face.clock !== this.clock) {
+      face.value = (face.value + Math.sign(rate) * shown * (this.clock - face.clock)) % (2 * Math.PI);
+      face.clock = this.clock;
+    }
+    return this.faces[name].value - this.sunAzimuth(name, this.days);
   }
 
   constructor() {
@@ -38,6 +51,9 @@ class OrrerySurfaces {
     this.time = 0;
     this.days = 0;
     this.speed = 0;
+    this.clock = 0;
+    this.orbitPosition = () => null;
+    this.faces = {};
     this.rotation = {
       sun: [84.176, 14.1844], mercury: [329.5469, 6.1385025], venus: [160.2, 1.4813688],
       earth: [280.46061837, 360.98564736629], mars: [176.63, 350.89198226], jupiter: [284.95, 870.536],
