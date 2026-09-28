@@ -765,7 +765,7 @@
   };
   /** @param {number} now */
   const tick = now => {
-    const dt = Math.min(0.1, (now - prev) / 1000);
+    const dt = Math.max(0, Math.min(0.1, (now - prev) / 1000));
     prev = now;
     simMs += dt * speed * 86400000;
     if (!reduced && speed !== 0) {
@@ -815,6 +815,12 @@
   };
   recalcCenters();
   settle();
+  /* styles.css sets scroll-behavior: smooth, so the browser's own jump to a
+     fragment animated up from the top, dragged the camera through every
+     planet, and was still moving when the load handler jumped, carrying the
+     page past its target. Suspend smooth scrolling until the jump is done. */
+  const root = document.documentElement;
+  if (location.hash) root.style.scrollBehavior = "auto";
   window.addEventListener("load", () => {
     canvas.classList.add("is-lit");
     recalcCenters();
@@ -824,19 +830,9 @@
          hero chapter. Keep the fragment for new-tab fallback semantics. */
       window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     } else if (hash) {
-      const target = document.querySelector(hash);
-      if (target) {
-        /* behavior "auto" defers to CSS, and styles.css sets
-           scroll-behavior: smooth, so this animated up from the top and
-           dragged the camera through every planet on its way. Force a real
-           jump by suspending smooth scrolling for the duration. */
-        const root = document.documentElement;
-        const prevBehavior = root.style.scrollBehavior;
-        root.style.scrollBehavior = "auto";
-        target.scrollIntoView({ behavior: "instant", block: "start" });
-        root.style.scrollBehavior = prevBehavior;
-      }
+      document.querySelector(hash)?.scrollIntoView({ behavior: "instant", block: "start" });
     }
+    root.style.scrollBehavior = "";
     settle();
   });
   requestAnimationFrame(tick);
