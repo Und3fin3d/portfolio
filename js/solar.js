@@ -77,7 +77,8 @@
     ringPixels = cctx.getImageData(0, Math.floor(c.height / 2), c.width, 1).data;
   });
   ringMap.src = "assets/planets/textures/saturn-ring.png";
-  const drawSphere = (name, x, y, R) => surfaces.draw(ctx, name, x, y, R, yaw, elev, dpr);
+  /** @param {string} name  @param {number} x  @param {number} y  @param {number} R  @param {number[]} [light] */
+  const drawSphere = (name, x, y, R, light) => surfaces.draw(ctx, name, x, y, R, yaw, elev, dpr, light);
 
   /** @param {number} x  @param {number} y  @param {number} R  @param {boolean} front */
   const drawSaturnRings = (x, y, R, front) => {
@@ -112,12 +113,12 @@
     }
   };
 
-  /** @param {number} x  @param {number} y  @param {number} R */
-  const drawSaturn = (x, y, R) => {
+  /** @param {number} x  @param {number} y  @param {number} R  @param {number[]} light */
+  const drawSaturn = (x, y, R, light) => {
     if (surfaces.pedro) return drawSphere("saturn", x, y, R);
     if (!surfaces.maps.saturn || !ringPixels) return false;
     drawSaturnRings(x, y, R, false);
-    drawSphere("saturn", x, y, R);
+    drawSphere("saturn", x, y, R, light);
     drawSaturnRings(x, y, R, true);
     return true;
   };
@@ -222,13 +223,15 @@
   let hover = -1;
 
   /* ---------- camera ---------- */
-  let yaw = -0.55;
-  let elev = 56 * D2R;
-  let yawTarget = yaw, elevTarget = elev;
+  const YAW = -0.55;
+  let yaw = YAW, spin = 0;
+  const ELEV = 56 * D2R, PLANET_ELEV = 7 * D2R;
+  let elev = ELEV, lean = 0;
+  let spinTarget = 0, leanTarget = 0;
   let zoomOffset = 0, zoomTarget = 0;
   let zoomChapter = -1;
   let userSpun = false;
-  const ZOOM_MIN = -1.35;
+  const ZOOM_MIN = -1.35, SUN_ZOOM_MIN = -2.6;
 
   const ORBIT_CORE = 0.12;
   const K = 90;
@@ -253,7 +256,7 @@
   /** @param {{ body: string, side: string }} c */
   const anchorOf = c => {
     if (narrow) return { x: 0.5, y: c.body === "sun" ? 0.26 : c.body === "system" ? 0.55 : 0.22 };
-    if (c.body === "sun") return { x: 0.68, y: 0.5 };
+    if (c.body === "sun") return { x: 0.77, y: 0.44 };
     if (c.body === "system") return { x: 0.5, y: 0.52 };
     return c.side === "l" ? { x: 0.74, y: 0.46 } : { x: 0.26, y: 0.46 };
   };
@@ -278,11 +281,16 @@
     return c;
   };
 
+  /** @param {Vec3} F */
+  const sunsideYaw = F => Math.atan2(F.x, F.y);
+
   /** @param {number} k  @param {number} T */
   const camTargetOf = (k, T) => {
     const c = chapters[k];
     const a = anchorOf(c);
-    return { F: bodyPos(c.body, T), zl: Math.log(distOf(c.body)), ax: a.x, ay: a.y };
+    const F = bodyPos(c.body, T);
+    const planet = IDX[c.body] !== undefined;
+    return { F, zl: Math.log(distOf(c.body)), ax: a.x, ay: a.y, yaw: planet ? sunsideYaw(F) : YAW, elev: planet ? PLANET_ELEV : ELEV };
   };
 
   /* the camera is derived EXACTLY from a smoothed chapter coordinate each
@@ -294,7 +302,7 @@
      (where a big focus move costs little on screen), have it locked on
      the target by ~70%: so the final approach is a pure zoom onto an
      already-centred planet, never a last-moment sideways catch-up */
-  let cam = { F: { x: 0, y: 0, z: 0 }, zl: Math.log(1000), ax: 0.5, ay: 0.5 };
+  let cam = { F: { x: 0, y: 0, z: 0 }, zl: Math.log(1000), ax: 0.5, ay: 0.5, yaw: YAW, elev: ELEV };
   /** @param {number} c  @param {number} T */
   const camFrom = (c, T) => {
     const k = Math.floor(c);
@@ -309,6 +317,8 @@
       zl: A.zl + (B.zl - A.zl) * g,
       ax: A.ax + (B.ax - A.ax) * fF,
       ay: A.ay + (B.ay - A.ay) * fF,
+      yaw: A.yaw + Math.atan2(Math.sin(B.yaw - A.yaw), Math.cos(B.yaw - A.yaw)) * fF,
+      elev: A.elev + (B.elev - A.elev) * g,
     };
     /* dolly out to see both orbits mid-flight, then close in */
     const bodyA = chapters[k].body, bodyB = chapters[k + 1].body;
@@ -318,6 +328,7 @@
       if (zlMid > Math.max(A.zl, B.zl)) {
         const zlC = 2 * zlMid - (A.zl + B.zl) / 2;
         out.zl = (1 - g) * (1 - g) * A.zl + 2 * g * (1 - g) * zlC + g * g * B.zl;
+        out.elev += 4 * g * (1 - g) * (ELEV - out.elev) * 0.85;
       }
     }
     return out;
@@ -373,19 +384,25 @@
     ...planetBtns,
   ];
 
+  const REALTIME = 1 / 86400;
+  /** @param {number} ms */
+  const siderealSpin = ms => -TAU * (0.779057273264 + 1.00273781191135448 * (ms / 86400000 + 2440587.5 - 2451545.0));
+  surfaces.earthSpin = siderealSpin(simMs);
+  /** @param {HTMLElement} b */
+  const speedOf = b => b.dataset.speed === "realtime" ? REALTIME : Number(b.dataset.speed);
   /** @param {number} s */
   const setSpeed = s => {
     speed = s;
     speedBtns.forEach(b => {
-      const active = Number(b.dataset.speed) === s;
+      const active = speedOf(b) === s;
       b.classList.toggle("is-active", active);
       b.setAttribute("aria-pressed", String(active));
     });
-    const activeButton = speedBtns.find(b => Number(b.dataset.speed) === s);
+    const activeButton = speedBtns.find(b => speedOf(b) === s);
     orbitSummary.textContent = s === 0 ? "Orbit paused" : `Orbit · ${activeButton?.textContent?.trim() || "running"}`;
   };
   setSpeed(speed);
-  speedBtns.forEach(b => b.addEventListener("click", () => setSpeed(Number(b.dataset.speed))));
+  speedBtns.forEach(b => b.addEventListener("click", () => setSpeed(speedOf(b))));
   /** @type {HTMLElement} */ (document.getElementById("solar-today")).addEventListener("click", () => { simMs = Date.now(); });
 
   /** @param {Element} el */
@@ -438,7 +455,7 @@
   /** @param {number} value */
   const setZoom = value => {
     const limit = Math.log(distOf("system")) - cam.zl;
-    zoomTarget = Math.min(Math.max(0, limit), Math.max(ZOOM_MIN, value));
+    zoomTarget = Math.min(Math.max(0, limit), Math.max(chapters[zoomChapter]?.body === "sun" ? SUN_ZOOM_MIN : ZOOM_MIN, value));
   };
   const ZOOM_STEP = 0.28;
   /** @type {HTMLElement} */ (document.getElementById("solar-zoom-in")).addEventListener("click", () => {
@@ -492,9 +509,9 @@
       const pinch = pinchState();
       if (!pinch) return;
       setZoom(zoomTarget + Math.log(pinchDistance / pinch.distance));
-      yawTarget += shortestAngle(pinch.angle - pinchAngle);
-      yawTarget += (pinch.x - pinchX) * 0.0025;
-      elevTarget += (pinch.y - pinchY) * 0.004;
+      spinTarget += shortestAngle(pinch.angle - pinchAngle);
+      spinTarget += (pinch.x - pinchX) * 0.0025;
+      leanTarget += (pinch.y - pinchY) * 0.004;
       pinchDistance = pinch.distance;
       pinchAngle = pinch.angle;
       pinchX = pinch.x;
@@ -506,8 +523,8 @@
       moved += Math.abs(dx) + Math.abs(dy);
       if (moved > 4) {
         userSpun = true;
-        yawTarget += dx * 0.006;
-        elevTarget += dy * 0.006;
+        spinTarget += dx * 0.006;
+        leanTarget += dy * 0.006;
         canvas.style.cursor = "grabbing";
       }
       px0 = e.clientX;
@@ -559,7 +576,7 @@
   canvas.addEventListener("gesturechange", e => {
     e.preventDefault();
     setZoom(zoomTarget + Math.log(nativeScale / e.scale));
-    yawTarget += (e.rotation - nativeRotation) * D2R;
+    spinTarget += (e.rotation - nativeRotation) * D2R;
     nativeScale = e.scale;
     nativeRotation = e.rotation;
   }, { passive: false });
@@ -592,6 +609,34 @@
     ctx.drawImage(backdrop, (cw - dw) / 2 + ox, (ch - dh) / 2 + oy, dw, dh);
   };
 
+  /** @param {number} weight */
+  const drawHeroScrim = weight => {
+    if (weight <= 0) return;
+    ctx.fillStyle = `rgba(12, 16, 20, ${0.38 * weight})`;
+    ctx.fillRect(0, 0, cw, ch);
+    const scrim = narrow ? ctx.createLinearGradient(0, ch * 0.3, 0, ch * 0.62) : ctx.createLinearGradient(0, 0, cw * 0.58, 0);
+    scrim.addColorStop(0, `rgba(12, 16, 20, ${narrow ? 0 : 0.5 * weight})`);
+    scrim.addColorStop(narrow ? 1 : 0.55, `rgba(12, 16, 20, ${(narrow ? 0.5 : 0.3) * weight})`);
+    if (!narrow) scrim.addColorStop(1, "rgba(12, 16, 20, 0)");
+    ctx.fillStyle = scrim;
+    ctx.fillRect(0, 0, cw, ch);
+  };
+
+  /** @param {number} x  @param {number} y  @param {number} R */
+  const drawSunGlare = (x, y, R) => {
+    const reach = 4.7;
+    const glare = ctx.createRadialGradient(x, y, R, x, y, R * reach);
+    for (let k = 0; k <= 12; k++) {
+      const t = k / 12;
+      glare.addColorStop(t, `rgba(255, 190, 128, ${0.4 * Math.pow(1 + t * (reach - 1), -1.8) * (1 - t * t)})`);
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = glare;
+    ctx.fillRect(x - R * reach, y - R * reach, R * reach * 2, R * reach * 2);
+    ctx.restore();
+  };
+
   function drawOrbits(focusIdx) {
     const orbitGold = "oklch(78% 0.115 82)";
     /* orbit paths, pen up where they pass behind the camera */
@@ -613,20 +658,28 @@
 
   }
 
+  /** @param {Vec3} pt  @returns {number[]} */
+  const sunlightAt = pt => {
+    const w = warp(pt);
+    const cyaw = Math.cos(yaw), syaw = Math.sin(yaw), se = Math.sin(elev), ce = Math.cos(elev);
+    const y1 = -w.x * syaw - w.y * cyaw;
+    return [-w.x * cyaw + w.y * syaw, y1 * se - w.z * ce, -y1 * ce - w.z * se];
+  };
+
   function projectBodies(T) {
     /* one universal size rule: no body gets special treatment */
-    /** @type {{ sun: boolean, i: number, p: (typeof EL)[number] | null, s: Proj, R: number }[]} */
+    /** @type {{ sun: boolean, i: number, p: (typeof EL)[number] | null, s: Proj, R: number, light: number[] }[]} */
     const bodies = EL.map((p, i) => {
       const pos = positionAt(p, T);
       const s = project(pos);
       const R = p.px * BODY_SCALE * s.s;
       screenPos[i] = { ...s, R };
-      return { sun: false, i, p, s, R };
+      return { sun: false, i, p, s, R, light: sunlightAt(pos) };
     });
     const sunS = project({ x: 0, y: 0, z: 0 });
     const sunR = SUNPX * BODY_SCALE * sunS.s;
     sunPos = { ...sunS, R: sunR };
-    bodies.push({ sun: true, i: -1, p: null, s: sunS, R: sunR });
+    bodies.push({ sun: true, i: -1, p: null, s: sunS, R: sunR, light: [0, 0, 1] });
     bodies.sort((a, b) => a.s.zd - b.s.zd);
 
     return bodies;
@@ -634,11 +687,11 @@
 
   function drawPlanet(b, focusBody, focusIdx, ink, muted) {
     const showAll = focusBody === "system" || Math.min(cw, ch) > 500;
-    const { i, s, R } = b;
+    const { i, s, R, light } = b;
     const p = /** @type {(typeof EL)[number]} */ (b.p);
     const name = p.name.toLowerCase();
     if (s.x + R * 2.5 < 0 || s.x - R * 2.5 > cw || s.y + R * 2.5 < 0 || s.y - R * 2.5 > ch) return;
-    const textured = name === "saturn" ? drawSaturn(s.x, s.y, R) : drawSphere(name, s.x, s.y, R);
+    const textured = name === "saturn" ? drawSaturn(s.x, s.y, R, light) : drawSphere(name, s.x, s.y, R, light);
     if (!textured) return;
     /* No ring around the focused planet: the label alone marks it, set in
        ink against the muted labels of the others. */
@@ -653,8 +706,13 @@
     const ink = css("--ink"), muted = css("--muted");
     const focusBody = chapters[Math.round(c)].body;
     const focusIdx = IDX[focusBody] ?? -1;
+    const heroWeight = Math.max(0, 1 - c);
     drawBackdrop();
+    if (surfaces.maps.sun && backdrop.complete) canvas.classList.add("is-lit");
+    drawHeroScrim(heroWeight);
+    ctx.globalAlpha = 1 - 0.6 * heroWeight;
     drawOrbits(focusIdx);
+    ctx.globalAlpha = 1;
     ctx.font = "10.5px " + (css("--font-mono") || "monospace");
     for (const b of projectBodies(T)) {
       if (b.s.clip) continue;
@@ -662,6 +720,7 @@
         drawPlanet(b, focusBody, focusIdx, ink, muted);
         continue;
       }
+      if (surfaces.photosphere && surfaces.maps.sun) drawSunGlare(b.s.x, b.s.y, b.R);
       if (!drawSphere("sun", b.s.x, b.s.y, b.R)) continue;
       if (focusBody === "sun" && b.R < 60) {
         ctx.fillStyle = ink;
@@ -673,7 +732,6 @@
   }
 
   /* ---------- loop ---------- */
-  let initialised = false;
   /** @type {number | null} */
   let cSm = null;
   let prev = performance.now();
@@ -693,6 +751,7 @@
     const chapter = chapters[index];
     const target = navTargetFor(chapter.el.id);
     let activeLabel = chapter.body === "sun" ? "Home" : "Sections";
+    document.documentElement.classList.toggle("is-hero", chapter.body === "sun");
     navLinks.forEach(link => {
       const active = link.getAttribute("href") === target;
       if (active) {
@@ -706,14 +765,14 @@
   };
   /** @param {number} now */
   const tick = now => {
-    if (!initialised) {
-      requestAnimationFrame(tick);
-      return;
-    }
     const dt = Math.min(0.1, (now - prev) / 1000);
     prev = now;
     simMs += dt * speed * 86400000;
-    if (!reduced && speed !== 0) surfaces.phase += dt * 0.045;
+    if (!reduced && speed !== 0) {
+      surfaces.phase += dt * 0.045;
+      surfaces.time += dt;
+    }
+    surfaces.earthSpin = speed === REALTIME ? siderealSpin(simMs) : surfaces.earthSpin - (reduced || speed === 0 ? 0 : dt * 0.045);
     const T = centuries(simMs);
 
     const cRaw = chapterAt();
@@ -731,12 +790,14 @@
       updateChapterNav(activeChapter);
     }
     const inputBlend = 1 - Math.exp(-dt * 18);
-    yaw += (yawTarget - yaw) * inputBlend;
-    elev += (elevTarget - elev) * inputBlend;
+    spin += (spinTarget - spin) * inputBlend;
+    yaw = cam.yaw + spin;
+    lean += (leanTarget - lean) * inputBlend;
+    elev = cam.elev + lean;
     zoomOffset += (zoomTarget - zoomOffset) * inputBlend;
     updateCameraDistance();
 
-    if (chapters[activeChapter].body === "system" && !userSpun && !dragging && !reduced) yawTarget += dt * 0.02;
+    if (chapters[activeChapter].body === "system" && !userSpun && !dragging && !reduced) spinTarget += dt * 0.02;
 
     planetBtns.forEach((b, i) => b.classList.toggle("is-active", i === Math.round(cRaw)));
 
@@ -747,7 +808,15 @@
   resize();
   window.addEventListener("resize", resize);
   if (window.ResizeObserver) new ResizeObserver(recalcCenters).observe(document.body);
+  const settle = () => {
+    cSm = chapterAt();
+    cam = camFrom(cSm, centuries(simMs));
+    updateCameraDistance();
+  };
+  recalcCenters();
+  settle();
   window.addEventListener("load", () => {
+    canvas.classList.add("is-lit");
     recalcCenters();
     const hash = location.hash;
     if (hash === "#top") {
@@ -768,10 +837,7 @@
         root.style.scrollBehavior = prevBehavior;
       }
     }
-    cSm = chapterAt();
-    cam = camFrom(cSm, centuries(simMs));
-    updateCameraDistance();
-    initialised = true;
+    settle();
   });
   requestAnimationFrame(tick);
 

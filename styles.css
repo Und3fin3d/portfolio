@@ -13,6 +13,7 @@
   --bronze:     oklch(74% 0.105 70);
   --muted:      oklch(64% 0.014 240);
   --dawn:       oklch(92% 0.01 235);
+  --sunlit:     oklch(95% 0.022 80);
   --hairline:   color-mix(in oklab, var(--ink) 16%, transparent);
   --grid-line:  color-mix(in oklab, var(--blue) 5%, transparent);
   --grid-major: color-mix(in oklab, var(--blue) 8%, transparent);
@@ -79,6 +80,12 @@ strong { font-weight: 700; }
   padding: 0.7rem var(--gutter);
   background: var(--paper);
   border-bottom: 1px solid var(--hairline);
+  transition: background-color 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.is-hero .site-head {
+  background-color: transparent;
+  border-bottom-color: transparent;
 }
 
 .site-head__name {
@@ -152,6 +159,20 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   display: block;
   z-index: 0;
   touch-action: none;
+  opacity: 0;
+  transition: opacity 1.4s var(--ease);
+}
+
+#solar-canvas.is-lit { opacity: 1; }
+
+.chapter--hero .reveal { animation: hero-rise 0.9s var(--ease) both; }
+.chapter--hero .reveal:nth-child(2) { animation-delay: 0.08s; }
+.chapter--hero .reveal:nth-child(3) { animation-delay: 0.16s; }
+.chapter--hero .reveal:nth-child(4) { animation-delay: 0.24s; }
+.chapter--hero .reveal:nth-child(5) { animation-delay: 0.32s; }
+
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(14px); }
 }
 
 main {
@@ -160,7 +181,7 @@ main {
   pointer-events: none;  /* the open sky stays draggable between panels */
 }
 
-.hero__dot { color: var(--signal); }
+.hero__dot { color: oklch(90% 0.09 85); }
 
 /* ---------- chapters ---------- */
 
@@ -253,12 +274,13 @@ main {
   line-height: 1.03;
   letter-spacing: -0.015em;
   text-wrap: balance;
-  color: var(--signal);
+  color: var(--sunlit);
 }
 
 .hero-intro {
   max-width: 38ch;
   margin-top: 1rem;
+  font-style: italic;
   color: var(--muted);
 }
 
@@ -280,19 +302,15 @@ main {
 
 .hero-hooks li {
   position: relative;
-  padding-left: 1.05rem;
+  padding-left: 1.4rem;
   text-shadow: 0 1px 14px var(--paper);
 }
 
 .hero-hooks li::before {
-  content: "";
+  content: "—";
   position: absolute;
   left: 0;
-  top: 0.62em;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--signal);
+  color: color-mix(in oklab, var(--muted) 80%, transparent);
 }
 
 .hero-avail {
@@ -311,6 +329,14 @@ main {
 }
 
 .chapter--hero .chapter__actions { align-items: center; margin-top: 1.2rem; }
+
+.chapter--hero .btn--primary {
+  background: transparent;
+  border-color: color-mix(in oklab, var(--sunlit) 55%, transparent);
+  color: var(--sunlit);
+}
+
+.chapter--hero .btn--primary:hover { background: var(--sunlit); border-color: var(--sunlit); color: var(--paper); }
 
 .hero-link {
   display: inline-flex;
@@ -428,7 +454,16 @@ main {
   color: var(--muted);
   border-top: 1px solid var(--hairline);
   background: var(--paper);
+  transition: background-color 0.3s var(--ease), border-color 0.3s var(--ease);
 }
+
+.is-hero .hud {
+  background-color: transparent;
+  border-top-color: transparent;
+  text-shadow: 0 1px 10px var(--paper);
+}
+
+.is-hero .hud .orrery__zoom button { background: color-mix(in oklab, var(--paper) 55%, transparent); }
 
 .orrery__clock { color: var(--ink); min-width: 11ch; }
 
@@ -1196,6 +1231,8 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  #solar-canvas { transition: none; }
+  .chapter--hero .reveal { animation: none; }
   .reveal { opacity: 1; transform: none; }
   .is-visible { transition: none; }
 }
@@ -1203,6 +1240,8 @@ main {
 /* ---------- responsive ---------- */
 
 @media (max-width: 780px) {
+  .is-hero .hud { background-image: linear-gradient(to top, var(--paper) 55%, transparent); }
+
   .chapter { align-items: end; padding-bottom: 8rem; }
   .chapter__inner { margin-top: 34vh; }
   .chapter .demo__stage--chess,
