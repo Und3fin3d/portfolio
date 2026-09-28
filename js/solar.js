@@ -766,7 +766,7 @@
     prev = now;
     simMs += dt * speed * 86400000;
     if (!reduced && speed !== 0) surfaces.time += dt;
-    Object.assign(surfaces, { days: simMs / 86400000 + 2440587.5 - 2451545.0, speed, frameDt: dt || 1 / 60 });
+    Object.assign(surfaces, { days: simMs / 86400000 + 2440587.5 - 2451545.0, speed });
     const T = centuries(simMs);
 
     const cRaw = chapterAt();
