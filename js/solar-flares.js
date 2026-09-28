@@ -95,8 +95,9 @@ export class SolarFlares {
       sunPreserveColour: { value: sunPreserveColour ? 1 : 0 }
     };
     this.anchors = regions.map(([longitude, latitude]) => new THREE.Vector3(Math.cos(longitude) * Math.cos(latitude), Math.sin(longitude) * Math.cos(latitude), Math.sin(latitude)));
-    this.nextEruption = 30;
-    this.eruptingRegion = null;
+    this.eruptAge = -1;
+    this.wait = 30;
+    this.clock = 0;
     const geometry = mergeGeometries(regions.flatMap((region, i) => [...this.regionGeometry(region, i), ...this.arcadeGeometry(region, i)]));
     this.model.add(new THREE.Mesh(geometry, this.filamentMaterial()));
     this.model.add(new THREE.Mesh(geometry, this.emissionMaterial()));
@@ -227,39 +228,40 @@ export class SolarFlares {
     return geometry;
   }
 
-  erupt(time, phase, tilt) {
-    if (time >= this.nextEruption + 120) {
-      this.nextEruption = time + 120 + Math.random() * 120;
-      this.eruptingRegion = null;
-    }
-    const age = time - this.nextEruption;
-    if (age >= 0 && this.eruptingRegion === null) {
-      const facing = spin => {
-        const turn = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-tilt, 0, -(phase + spin)));
+  erupt(dt, spin, sunRate, tilt) {
+    const pace = Math.max(1, sunRate * 120 / 0.7);
+    if (this.eruptAge < 0) {
+      this.wait -= dt;
+      if (this.wait > 0) return;
+      const facing = angle => {
+        const turn = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-tilt, 0, -angle));
         const eye = this.camera.position.clone().normalize();
         return this.anchors.map(anchor => anchor.clone().applyMatrix4(turn).dot(eye));
       };
-      const now = facing(0), later = facing(-0.3);
+      const now = facing(spin), later = facing(spin - sunRate * 22 / pace);
       const limb = later.map((dot, i) => Math.abs(dot - 0.1) + (dot < now[i] ? 1 : 0));
-      this.eruptingRegion = limb.indexOf(Math.min(...limb));
-      this.uniforms.eruptRegion.value = this.eruptingRegion;
+      this.uniforms.eruptRegion.value = limb.indexOf(Math.min(...limb));
+      this.eruptAge = 0;
     }
-    this.uniforms.eruptAge.value = age >= 0 ? age : -1;
+    this.eruptAge += dt * pace;
+    if (this.eruptAge >= 120) [this.eruptAge, this.wait] = [-1, 45 + Math.random() * 75];
+    this.uniforms.eruptAge.value = this.eruptAge;
   }
 
-  draw(ctx, box, yaw, elevation, phase, tilt, time) {
+  draw(ctx, box, yaw, elevation, spin, sunRate, tilt, time) {
     const canvas = this.renderer.domElement;
     if (canvas.width !== box.bw || canvas.height !== box.bh) this.renderer.setSize(box.bw, box.bh, false);
     this.renderer.setViewport(0, 0, box.dw, box.dh);
     [this.camera.left, this.camera.bottom, this.camera.right, this.camera.top] = box.window;
     this.camera.updateProjectionMatrix();
-    this.model.rotation.set(-tilt, 0, -phase);
-    this.uniforms.phase.value = phase;
+    this.model.rotation.set(-tilt, 0, -spin);
+    this.uniforms.phase.value = time * 0.0135;
     const cy = Math.cos(yaw), sy = Math.sin(yaw), ce = Math.cos(elevation), se = Math.sin(elevation);
     this.camera.position.set(-sy * ce, -cy * ce, se).multiplyScalar(10);
     this.camera.up.set(sy * se, cy * se, ce);
     this.camera.lookAt(0, 0, 0);
-    this.erupt(time, phase, tilt);
+    this.erupt(Math.min(0.1, time - this.clock), spin, sunRate, tilt);
+    this.clock = time;
     this.renderer.render(this.scene, this.camera);
     ctx.drawImage(canvas, 0, box.bh - box.dh, box.dw, box.dh, box.x0, box.y0, box.w, box.h);
   }
