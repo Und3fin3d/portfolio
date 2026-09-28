@@ -65,6 +65,7 @@
   const IDX = Object.fromEntries(EL.map((p, i) => [p.name.toLowerCase(), i]));
 
   const surfaces = new OrrerySurfaces();
+
   let ringPixels = null;
 
   const ringMap = new Image();
@@ -78,6 +79,8 @@
   });
   ringMap.src = "assets/planets/textures/saturn-ring.png";
   /** @param {string} name  @param {number} x  @param {number} y  @param {number} R  @param {number[]} [light] */
+  /** @param {string} name  @param {number} days */
+  surfaces.orbitPosition = (name, days) => IDX[name] === undefined ? null : positionAt(EL[IDX[name]], days / 36525);
   const drawSphere = (name, x, y, R, light) => surfaces.draw(ctx, name, x, y, R, yaw, elev, dpr, light);
 
   /** @param {number} x  @param {number} y  @param {number} R  @param {boolean} front */
@@ -766,7 +769,7 @@
     prev = now;
     simMs += dt * speed * 86400000;
     if (!reduced && speed !== 0) surfaces.time += dt;
-    Object.assign(surfaces, { days: simMs / 86400000 + 2440587.5 - 2451545.0, speed });
+    Object.assign(surfaces, { days: simMs / 86400000 + 2440587.5 - 2451545.0, speed, clock: now / 1000 });
     const T = centuries(simMs);
 
     const cRaw = chapterAt();
