@@ -8,12 +8,28 @@ class OrrerySurfaces {
     return { x0, y0, w: x1 - x0, h: y1 - y0, dw, dh, bw: bucket(dw), bh: bucket(dh), window: [(x0 - x) / radius, (y - y1) / radius, (x1 - x) / radius, (y - y0) / radius] };
   }
 
+  spinOf(name, days = this.days) {
+    const [start, rate] = this.rotation[name];
+    return -(((start + rate * days) % 360 + 360) % 360) * Math.PI / 180;
+  }
+
+  smearOf(name) {
+    return Math.min(2 * Math.PI, this.rotation[name][1] * Math.PI / 180 * Math.abs(this.speed) * this.frameDt);
+  }
+
   constructor() {
     this.canvas = document.createElement("canvas");
     this.gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
     this.maps = {};
-    this.phase = 0;
     this.time = 0;
+    this.days = 0;
+    this.speed = 0;
+    this.frameDt = 1 / 60;
+    this.rotation = {
+      sun: [84.176, 14.1844], mercury: [329.5469, 6.1385025], venus: [160.2, 1.4813688],
+      earth: [280.46061837, 360.98564736629], mars: [176.63, 350.89198226], jupiter: [284.95, 870.536],
+      saturn: [38.9, 810.7939024], uranus: [203.81, 501.1600928], neptune: [249.978, 541.1397757]
+    };
     this.regions = [
       [0.25, 0.26, 0.22, 0.12, 0.35],
       [-1.9, -0.18, 0.16, 0.11, -0.6],
@@ -125,6 +141,7 @@ class OrrerySurfaces {
       uniform float photosphere;
       uniform float discPx;
       uniform float time;
+      uniform float smear;
       uniform vec3 light;
       const float PI = 3.14159265359;
       vec3 linearColour(vec3 colour) {
@@ -176,6 +193,25 @@ class OrrerySurfaces {
           dy.x -= floor(dy.x + 0.5);
           return texture2DGradEXT(surface, uv, dx, dy).rgb;
         ` : "return texture2D(surface, uv).rgb;"}
+      }
+      vec3 smearSample(vec2 uv, float stepU) {
+        ${gradients ? `
+          vec2 dx = dFdx(uv), dy = dFdy(uv);
+          dx.x -= floor(dx.x + 0.5);
+          dy.x -= floor(dy.x + 0.5);
+          return texture2DGradEXT(surface, uv, vec2(max(abs(dx.x), stepU), dx.y), dy).rgb;
+        ` : "return texture2D(surface, uv).rgb;"}
+      }
+      vec3 spunColour(vec2 uv) {
+        if (smear < 0.01) return surfaceColour(uv);
+        float count = clamp(ceil(smear / 0.02), 2.0, 48.0);
+        float span = smear / (2.0 * PI);
+        vec3 sum = vec3(0.0);
+        for (int i = 0; i < 48; i++) {
+          if (float(i) >= count) break;
+          sum += smearSample(uv + vec2(((float(i) + 0.5) / count - 0.5) * span, 0.0), span / count);
+        }
+        return sum / count;
       }
       vec3 rotate(vec3 p, float angle) {
         float c = cos(angle), s = sin(angle);
@@ -230,7 +266,7 @@ class OrrerySurfaces {
         vec2 uv = vec2(fract(atan(local.y, local.x) / (2.0 * PI) + 0.5 + phase / (2.0 * PI)), 0.5 - asin(clamp(local.z, -1.0, 1.0)) / PI);
         vec3 frame = vec3(mat2(cos(phase), sin(phase), -sin(phase), cos(phase)) * local.xy, local.z);
         if (kind == 2.0 && photosphere > 0.5) uv += (vec2(valueNoise(frame * 3.0 + time * 0.02), valueNoise(frame * 3.0 + 17.0 - time * 0.02)) - 0.5) * 0.012;
-        vec3 colour = surfaceColour(uv);
+        vec3 colour = spunColour(uv);
         if (kind == 2.0) {
           if (matteo > 0.5) {
             vec2 spun = mat2(cos(phase), sin(phase), -sin(phase), cos(phase)) * local.xy;
@@ -240,7 +276,7 @@ class OrrerySurfaces {
             vec3 emission = mix(vec3(intensity), linearColour(colour), sunPreserveColour);
             float shade = 1.0;
             if (photosphere > 0.5) {
-              float cells = smoothstep(2.0, 5.0, discPx / 500.0) * n.z;
+              float cells = smoothstep(2.0, 5.0, discPx / 500.0) * n.z * (1.0 - smoothstep(0.01, 0.1, smear));
               if (cells > 0.001) shade = mix(1.0, granulation(frame * 500.0), cells);
             }
             colour = photosphere > 0.5 ? photosphereColour(intensity, n.z, shade) : displayColour(sunColour * emission * 0.82 * (0.96 + 0.04 * n.z));
@@ -270,7 +306,7 @@ class OrrerySurfaces {
     const position = gl.getAttribLocation(this.program, "position");
     gl.enableVertexAttribArray(position);
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-    this.uniforms = Object.fromEntries(["surface", "corona", "clouds", "land", "night", "matteo", "sunColour", "sunPreserveColour", "view", "tilt", "phase", "kind", "edge", "photosphere", "discPx", "time", "light", "window"].map(name => [name, gl.getUniformLocation(this.program, name)]));
+    this.uniforms = Object.fromEntries(["surface", "corona", "clouds", "land", "night", "matteo", "sunColour", "sunPreserveColour", "view", "tilt", "phase", "kind", "edge", "photosphere", "discPx", "time", "smear", "light", "window"].map(name => [name, gl.getUniformLocation(this.program, name)]));
     gl.uniform1i(this.uniforms.surface, 0);
     gl.uniform1i(this.uniforms.corona, 1);
     gl.uniform1i(this.uniforms.clouds, 2);
@@ -318,15 +354,15 @@ class OrrerySurfaces {
   }
 
   draw(ctx, name, x, y, radius, yaw, elevation, dpr, light = [-0.35, 0.28, 0.9]) {
-    if (name === "sun" && this.customSun) return this.customSun.draw(ctx, x, y, radius, yaw, elevation, dpr, this.phase * 0.3);
-    if (this.pedro) return this.pedro.draw(ctx, name, x, y, radius, yaw, elevation, dpr, this.phase * (name === "sun" ? 0.3 : 1), this.tilts[name] * Math.PI / 180);
+    if (name === "sun" && this.customSun) return this.customSun.draw(ctx, x, y, radius, yaw, elevation, dpr, -this.spinOf("sun"));
+    if (this.pedro) return this.pedro.draw(ctx, name, x, y, radius, yaw, elevation, dpr, -this.spinOf(name), this.tilts[name] * Math.PI / 180);
     if (!this.maps[name] || radius <= 0) return false;
     const box = OrrerySurfaces.visibleBox(ctx, x, y, radius, 1.25, dpr);
     if (!box) return true;
     const cy = Math.cos(yaw), sy = Math.sin(yaw), ce = Math.cos(elevation), se = Math.sin(elevation);
     const view = [cy, -sy, 0, sy * se, cy * se, ce, -sy * ce, -cy * ce, se];
     const tilt = this.tilts[name] * Math.PI / 180;
-    const phase = name === "earth" && this.earthSpin !== undefined ? this.earthSpin : -this.phase * (name === "sun" ? 0.3 : 1);
+    const phase = this.spinOf(name);
     if (this.gl) {
       const gl = this.gl;
       if (this.canvas.width !== box.bw || this.canvas.height !== box.bh) [this.canvas.width, this.canvas.height] = [box.bw, box.bh];
@@ -351,6 +387,7 @@ class OrrerySurfaces {
       gl.uniform1f(this.uniforms.photosphere, this.photosphere ? 1 : 0);
       gl.uniform1f(this.uniforms.discPx, radius * dpr);
       gl.uniform1f(this.uniforms.time, this.time);
+      gl.uniform1f(this.uniforms.smear, this.smearOf(name));
       gl.uniform3fv(this.uniforms.light, light.map(v => v / Math.hypot(...light)));
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       ctx.drawImage(this.canvas, 0, box.bh - box.dh, box.dw, box.dh, box.x0, box.y0, box.w, box.h);
@@ -360,7 +397,11 @@ class OrrerySurfaces {
       ctx.drawImage(this.canvas, x - radius * 1.25, y - radius * 1.25, radius * 2.5, radius * 2.5);
     }
     const flareBox = name === "sun" && this.flares && OrrerySurfaces.visibleBox(ctx, x, y, radius, this.flares.extent, dpr);
-    if (flareBox) this.flares.draw(ctx, flareBox, yaw, elevation, phase, tilt, this.time);
+    if (flareBox) {
+      ctx.globalAlpha = 1 - Math.min(1, Math.max(0, (this.smearOf("sun") - 0.03) / 0.2));
+      if (ctx.globalAlpha > 0) this.flares.draw(ctx, flareBox, yaw, elevation, phase, this.rotation.sun[1] * Math.PI / 180 * Math.abs(this.speed), tilt, this.time);
+      ctx.globalAlpha = 1;
+    }
     return true;
   }
 

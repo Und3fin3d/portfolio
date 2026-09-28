@@ -385,9 +385,6 @@
   ];
 
   const REALTIME = 1 / 86400;
-  /** @param {number} ms */
-  const siderealSpin = ms => -TAU * (0.779057273264 + 1.00273781191135448 * (ms / 86400000 + 2440587.5 - 2451545.0));
-  surfaces.earthSpin = siderealSpin(simMs);
   /** @param {HTMLElement} b */
   const speedOf = b => b.dataset.speed === "realtime" ? REALTIME : Number(b.dataset.speed);
   /** @param {number} s */
@@ -768,11 +765,8 @@
     const dt = Math.max(0, Math.min(0.1, (now - prev) / 1000));
     prev = now;
     simMs += dt * speed * 86400000;
-    if (!reduced && speed !== 0) {
-      surfaces.phase += dt * 0.045;
-      surfaces.time += dt;
-    }
-    surfaces.earthSpin = speed === REALTIME ? siderealSpin(simMs) : surfaces.earthSpin - (reduced || speed === 0 ? 0 : dt * 0.045);
+    if (!reduced && speed !== 0) surfaces.time += dt;
+    Object.assign(surfaces, { days: simMs / 86400000 + 2440587.5 - 2451545.0, speed, frameDt: dt || 1 / 60 });
     const T = centuries(simMs);
 
     const cRaw = chapterAt();
