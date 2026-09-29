@@ -211,8 +211,8 @@
     const inner = c.el.querySelector(".chapter__inner");
     if (!inner || IDX[c.body] === undefined) return;
     const r = inner.getBoundingClientRect(), gap = 32, short = Math.min(cw, ch);
-    const R = Math.max(40, Math.min(0.30 * short, (c.side === "l" ? cw - r.right - gap : r.left - gap) / 1.4));
-    framing[c.body] = { frac: R / short, x: (c.side === "l" ? r.right + gap + R : r.left - gap - R) / cw };
+    const R = Math.max(40, Math.min(0.30 * short, ((c.side === "l" ? cw - r.right : r.left) - gap - 24) / 2));
+    framing[c.body] = { frac: R / short, x: (c.side === "l" ? (r.right + gap + cw) / 2 : (r.left - gap) / 2) / cw };
   });
   const recalcCenters = () => {
     /* getBoundingClientRect: offsetTop would be relative to <main> */
