@@ -170,6 +170,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
 .chapter--hero .reveal:nth-child(3) { animation-delay: 0.16s; }
 .chapter--hero .reveal:nth-child(4) { animation-delay: 0.24s; }
 .chapter--hero .reveal:nth-child(5) { animation-delay: 0.32s; }
+.chapter--hero .reveal:nth-child(6) { animation-delay: 0.4s; }
 
 @keyframes hero-rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -277,11 +278,18 @@ main {
   color: var(--sunlit);
 }
 
-.hero-intro {
-  max-width: 38ch;
-  margin-top: 1rem;
-  font-style: italic;
+.hero-tag {
+  margin-top: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
   color: var(--muted);
+}
+
+.hero-intro {
+  max-width: 44ch;
+  margin-top: 1rem;
+  color: color-mix(in oklab, var(--sunlit) 88%, var(--muted));
+  text-shadow: 0 1px 14px var(--paper);
 }
 
 .chapter__sub {
