@@ -293,7 +293,7 @@
   const updateOrbitViews = (T, dt) => chapters.forEach((c, k) => {
     const i = IDX[c.body];
     if (i === undefined) return;
-    const fast = TAU / periodDays[i] * Math.abs(speed) > 0.1;
+    const fast = Math.abs(speed) >= 30 && TAU / periodDays[i] * Math.abs(speed) > 0.1;
     if (fast && !orbitFast[k]) yawHold[k] = turnTowards(sunsideYaw(bodyPos(c.body, T)), yawHold[k], wide[k]);
     orbitFast[k] = fast;
     wide[k] = reduced ? +fast : wide[k] + (+fast - wide[k]) * (1 - Math.exp(-dt * 2));
@@ -805,6 +805,8 @@
     if (activeChapter !== zoomChapter) {
       zoomChapter = activeChapter;
       zoomOffset = zoomTarget = 0;
+      spinTarget = leanTarget = 0;
+      userSpun = false;
       updateChapterNav(activeChapter);
     }
     const inputBlend = 1 - Math.exp(-dt * 18);
