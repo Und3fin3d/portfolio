@@ -336,6 +336,18 @@
      the target by ~70%: so the final approach is a pure zoom onto an
      already-centred planet, never a last-moment sideways catch-up */
   let cam = { F: { x: 0, y: 0, z: 0 }, zl: Math.log(1000), ax: 0.5, ay: 0.5, yaw: YAW, elev: ELEV };
+  /** @param {{ F: Vec3, zl: number, ax: number, ay: number, yaw: number, elev: number }} v */
+  const sunCrowds = v => {
+    const d = Math.exp(v.zl), cy = Math.cos(v.yaw), sy = Math.sin(v.yaw), ce = Math.cos(v.elev), se = Math.sin(v.elev);
+    const y1 = -v.F.x * sy - v.F.y * cy;
+    const den = d - (-y1 * ce - v.F.z * se);
+    if (den <= 0) return false;
+    const R = SUNPX * BODY_SCALE * FL / den;
+    const x = v.ax * cw + (-v.F.x * cy + v.F.y * sy) * FL / den, y = v.ay * ch - (y1 * se - v.F.z * ce) * FL / den;
+    const reach = Math.hypot(Math.max(0, -x, x - cw), Math.max(0, -y, y - ch));
+    return R > 0.32 * Math.min(cw, ch) && reach < 5 * R;
+  };
+
   /** @param {number} c  @param {number} T */
   const camFrom = (c, T) => {
     const k = Math.floor(c);
@@ -364,6 +376,8 @@
         out.elev += 4 * g * (1 - g) * (ELEV - out.elev) * 0.85;
       }
     }
+    for (let i = 0; i < 160 && out.elev < 88 * D2R && sunCrowds(out); i++) out.elev += 0.5 * D2R;
+    for (let i = 0; i < 120 && sunCrowds(out); i++) out.zl += 0.02;
     return out;
   };
 
