@@ -31,7 +31,8 @@ class OrrerySurfaces {
 
   apparentRate(name) {
     const calm = 0.1 * Math.max(1, (this.rotation[name][1] / this.rotation.earth[1]) ** 0.35);
-    return Math.min(Math.abs(this.faceRate(name)), calm);
+    const rate = Math.abs(this.faceRate(name));
+    return rate <= calm ? rate : calm * (1 + 0.2 * Math.log(rate / calm));
   }
 
   spinOf(name) {
