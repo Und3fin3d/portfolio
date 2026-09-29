@@ -222,6 +222,8 @@ main {
   margin-left: auto;
 }
 
+.chapter[data-side] { max-width: 1440px; }
+
 .chapter__inner--bare {
   border: 0;
   background: none;
