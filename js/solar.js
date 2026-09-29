@@ -716,7 +716,7 @@
     /* No ring around the focused planet: the label alone marks it, set in
        ink against the muted labels of the others. */
     const overSun = Math.hypot(s.x - sunPos.x, s.y - sunPos.y) < sunPos.R + 14;
-    if (R < 60 && !overSun && (showAll || [focusIdx, hover].includes(i))) {
+    if (R < 60 && !overSun && focusBody !== "sun" && (showAll || [focusIdx, hover].includes(i))) {
       ctx.fillStyle = hover === i || i === focusIdx ? ink : muted;
       ctx.fillText(name, s.x + R + 6, s.y + 3.5);
     }

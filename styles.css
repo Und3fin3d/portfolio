@@ -302,15 +302,19 @@ main {
 
 .hero-hooks li {
   position: relative;
-  padding-left: 1.4rem;
+  padding-left: 1.2rem;
   text-shadow: 0 1px 14px var(--paper);
 }
 
 .hero-hooks li::before {
-  content: "—";
+  content: "";
   position: absolute;
-  left: 0;
-  color: color-mix(in oklab, var(--muted) 80%, transparent);
+  left: 0.15rem;
+  top: 0.66em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--sunlit) 70%, var(--muted));
 }
 
 .hero-avail {
