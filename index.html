@@ -99,7 +99,7 @@
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
       <h2 class="reveal">Draw a digit</h2>
-      <p class="chapter__lead reveal">A neural network I wrote from scratch in sixth form: NumPy for the matrix algebra and nothing else, 99% on MNIST. What runs below is the original network, its trained weights unchanged, with the forward pass ported to JavaScript.</p>
+      <p class="chapter__lead reveal">I built this network from scratch in sixth form, using only NumPy for the matrix operations. It reaches 99% accuracy on the MNIST handwritten digits. Draw one in the box and the original trained weights will classify it.</p>
       <figure class="demo reveal" id="fig-nn">
         <div class="demo__stage demo__stage--nn">
           <div class="nn-draw">
@@ -131,7 +131,7 @@
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
       <h2 class="reveal">Play the engine</h2>
-      <p class="chapter__lead reveal">My AI-coursework engine, ported piece for piece: the 5×5 <em>Chess Fragments</em> variant, where the corner piece, the Right&thinsp;<span class="right-mark">†</span>, moves as rook plus knight. The search is the Python original's: magic bitboards, a Zobrist-hashed transposition table, killer and history ordering, null-move pruning and quiescence, with its piece values and square tables copied verbatim. You play as White.</p>
+      <p class="chapter__lead reveal">I built this engine in Python for my AI coursework, then ported it to JavaScript for this site. It plays <em>Chess Fragments</em>, a 5×5 variant with one new piece: the Right&thinsp;<span class="right-mark">†</span>, which moves like a rook or a knight. You play White.</p>
       <figure class="demo reveal" id="fig-chess">
         <div class="demo__stage demo__stage--chess">
           <div class="chess-board" id="chess-board" role="grid" aria-label="5 by 5 chess board"></div>
@@ -151,7 +151,7 @@
           </div>
         </div>
         <figcaption>
-          <span><span class="fig-label">Fig. 2</span>: <span class="right-mark">†</span> the Right, the variant's custom piece. Pawns keep their double-push and en passant.</span>
+          <span><span class="fig-label">Fig. 2</span>: iterative-deepening alpha-beta search with quiescence, null-move pruning and killer and history move ordering, over magic bitboards with a Zobrist-hashed transposition table. Pawns keep their double push and en passant.</span>
           <span class="figcaption__actions">
             <a class="source-link" href="https://github.com/Und3fin3d/portfolio/blob/solar/js/chess.js" rel="noopener"><svg class="icon icon--brand" aria-hidden="true"><use href="#icon-github"/></svg>Source on GitHub</a>
             <a class="source-link" href="blog/chess-fragments-engine.html"><svg class="icon" aria-hidden="true"><use href="#icon-file"/></svg>Build notes</a>
@@ -165,7 +165,7 @@
     <div class="chapter__inner">
       <p class="chapter__eph" aria-hidden="true">–</p>
       <h2 class="reveal">Race the searches</h2>
-      <p class="chapter__lead reveal">From a team project I led in my penultimate year of school, built for a STEM fair, that solved mazes off a webcam. Breadth-first floods, A* aims for the exit, depth-first takes the first corridor it finds.</p>
+      <p class="chapter__lead reveal">In my penultimate year of school I led a team that built a maze solver for a STEM fair. It read mazes from a webcam with OpenCV and solved them with graph search. Here its three searches, breadth-first, A* and depth-first, race on the same maze.</p>
       <figure class="demo reveal" id="fig-maze">
         <div class="demo__stage demo__stage--maze">
           <canvas id="maze-canvas" aria-label="Maze being explored by a search algorithm"></canvas>
