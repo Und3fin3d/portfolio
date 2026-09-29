@@ -286,23 +286,17 @@
 
   /** @param {Vec3} F */
   const sunsideYaw = F => Math.atan2(F.x, F.y);
-  const yawHold = chapters.map(() => NaN), yawTrack = chapters.map(() => 1);
-  /** @param {number} k  @param {Vec3} F */
-  const chapterYaw = (k, F) => {
-    const target = sunsideYaw(F), hold = Number.isNaN(yawHold[k]) ? target : yawHold[k];
-    return hold + Math.atan2(Math.sin(target - hold), Math.cos(target - hold)) * yawTrack[k];
-  };
+  const yawHold = chapters.map(() => YAW), wide = chapters.map(() => 0), orbitFast = chapters.map(() => false);
+  /** @param {number} a  @param {number} b  @param {number} t */
+  const turnTowards = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
   /** @param {number} T  @param {number} dt */
-  const updateYawTracking = (T, dt) => chapters.forEach((c, k) => {
+  const updateOrbitViews = (T, dt) => chapters.forEach((c, k) => {
     const i = IDX[c.body];
     if (i === undefined) return;
-    const F = bodyPos(c.body, T);
-    if (TAU / periodDays[i] * Math.abs(speed) > 0.1) {
-      if (yawTrack[k] > 0) [yawHold[k], yawTrack[k]] = [chapterYaw(k, F), 0];
-      return;
-    }
-    yawTrack[k] = reduced ? 1 : yawTrack[k] + (1 - yawTrack[k]) * (1 - Math.exp(-dt * 1.5));
-    if (yawTrack[k] > 0.999) [yawHold[k], yawTrack[k]] = [sunsideYaw(F), 1];
+    const fast = TAU / periodDays[i] * Math.abs(speed) > 0.1;
+    if (fast && !orbitFast[k]) yawHold[k] = turnTowards(sunsideYaw(bodyPos(c.body, T)), yawHold[k], wide[k]);
+    orbitFast[k] = fast;
+    wide[k] = reduced ? +fast : wide[k] + (+fast - wide[k]) * (1 - Math.exp(-dt * 2));
   });
 
   /** @param {number} k  @param {number} T */
@@ -310,8 +304,16 @@
     const c = chapters[k];
     const a = anchorOf(c);
     const F = bodyPos(c.body, T);
-    const planet = IDX[c.body] !== undefined;
-    return { F, zl: Math.log(distOf(c.body)), ax: a.x, ay: a.y, yaw: planet ? chapterYaw(k, F) : YAW, elev: planet ? PLANET_ELEV : ELEV };
+    if (IDX[c.body] === undefined) return { F, zl: Math.log(distOf(c.body)), ax: a.x, ay: a.y, yaw: YAW, elev: ELEV };
+    const w = wide[k], pan = w * w, pull = 1 - (1 - w) ** 3;
+    const zlWide = Math.log(mapR(SEMI[c.body] * 1.15) * FL / (0.3 * Math.min(cw, ch)));
+    return {
+      F: { x: F.x * (1 - pan), y: F.y * (1 - pan), z: F.z * (1 - pan) },
+      zl: Math.log(distOf(c.body)) * (1 - pull) + zlWide * pull,
+      ax: a.x, ay: a.y,
+      yaw: orbitFast[k] ? yawHold[k] : turnTowards(sunsideYaw(F), yawHold[k], w),
+      elev: PLANET_ELEV + (ELEV - PLANET_ELEV) * w,
+    };
   };
 
   /* the camera is derived EXACTLY from a smoothed chapter coordinate each
@@ -797,7 +799,7 @@
        there. A smooth in-page scroll moves well under a chapter per frame. */
     if (reduced || Math.abs(cRaw - cSm) > 1.2) cSm = cRaw;
     else cSm += (cRaw - cSm) * (1 - Math.exp(-dt * 3.2));
-    updateYawTracking(T, dt);
+    updateOrbitViews(T, dt);
     cam = camFrom(cSm, T);
     const activeChapter = Math.round(cSm);
     if (activeChapter !== zoomChapter) {
