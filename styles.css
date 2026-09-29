@@ -189,7 +189,7 @@ main {
 .chapter {
   min-height: 100vh;
   display: grid;
-  align-items: center;
+  align-items: start;
   max-width: var(--wrap);
   margin-inline: auto;
   padding: clamp(5rem, 14vh, 9rem) var(--gutter);
@@ -262,6 +262,7 @@ main {
 /* hero on the Sun */
 
 .chapter--hero {
+  align-items: center;
   min-height: calc(100svh - 3.5rem);
   padding-block: clamp(3rem, 8vh, 5rem);
 }
@@ -1256,6 +1257,7 @@ main {
 
   .chapter { align-items: end; padding-bottom: 8rem; }
   .chapter__inner { margin-top: 34vh; }
+  .chapter:not(.chapter--hero) .chapter__inner { margin-top: 24vh; }
   .chapter .demo__stage--chess,
   .chapter .demo__stage--nn { grid-template-columns: 1fr; }
   .chess-board { max-width: 340px; }

@@ -192,7 +192,7 @@
   /** @param {string} body */
   const distOf = body => {
     if (body === "system") return mapR(31.6) * Math.hypot(1, FL / (0.40 * Math.min(cw, ch)));
-    const frac = narrow ? 0.20 : 0.30;
+    const frac = narrow ? (IDX[body] === undefined ? 0.20 : 0.27) : framing[body]?.frac ?? 0.30;
     const px = body === "sun" ? SUNPX : EL[IDX[body]].px;
     return px * BODY_SCALE * FL / (frac * Math.min(cw, ch));
   };
@@ -205,9 +205,19 @@
   const N = chapters.length;
   /** @type {number[]} */
   let bounds = [];                           /* document Y where each chapter begins */
+  /** @type {Record<string, { frac: number, x: number }>} */
+  const framing = {};
+  const reframe = () => chapters.forEach(c => {
+    const inner = c.el.querySelector(".chapter__inner");
+    if (!inner || IDX[c.body] === undefined) return;
+    const r = inner.getBoundingClientRect(), gap = 32, short = Math.min(cw, ch);
+    const R = Math.max(40, Math.min(0.30 * short, (c.side === "l" ? cw - r.right - gap : r.left - gap) / 1.4));
+    framing[c.body] = { frac: R / short, x: (c.side === "l" ? r.right + gap + R : r.left - gap - R) / cw };
+  });
   const recalcCenters = () => {
     /* getBoundingClientRect: offsetTop would be relative to <main> */
     bounds = chapters.map(c => c.el.getBoundingClientRect().top + window.scrollY);
+    reframe();
   };
 
   /* fill each chapter's ephemeris line from the real elements */
@@ -261,7 +271,7 @@
     if (narrow) return { x: 0.5, y: c.body === "sun" ? 0.26 : c.body === "system" ? 0.55 : 0.22 };
     if (c.body === "sun") return { x: 0.77, y: 0.44 };
     if (c.body === "system") return { x: 0.5, y: 0.52 };
-    return c.side === "l" ? { x: 0.74, y: 0.46 } : { x: 0.26, y: 0.46 };
+    return { x: framing[c.body]?.x ?? (c.side === "l" ? 0.74 : 0.26), y: 0.46 };
   };
 
   /* scroll → continuous chapter coordinate. The camera HOLDS its planet the
