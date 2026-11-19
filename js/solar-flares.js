@@ -76,9 +76,11 @@ const noise = `
 `;
 
 export class SolarFlares {
-  constructor(regions, sunColour, sunPreserveColour) {
+  constructor(regions, sunColour, sunPreserveColour, fit) {
+    this.fit = fit;
     this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     this.renderer.setClearColor(0x000000, 0);
+    this.renderer.debug.checkShaderErrors = false;
     this.extent = 2.2;
     this.camera = new THREE.OrthographicCamera(-this.extent, this.extent, this.extent, -this.extent, 0.1, 30);
     this.scene = new THREE.Scene();
@@ -98,9 +100,25 @@ export class SolarFlares {
     this.eruptAge = -1;
     this.wait = 30;
     this.clock = 0;
-    const geometry = mergeGeometries(regions.flatMap((region, i) => [...this.regionGeometry(region, i), ...this.arcadeGeometry(region, i)]));
-    this.model.add(new THREE.Mesh(geometry, this.filamentMaterial()));
-    this.model.add(new THREE.Mesh(geometry, this.emissionMaterial()));
+  }
+
+  static async create(regions, sunColour, sunPreserveColour, fit) {
+    const flares = new SolarFlares(regions, sunColour, sunPreserveColour, fit);
+    const yieldToFrames = () => new Promise(resolve => setTimeout(resolve));
+    const parts = [];
+    for (const [i, region] of regions.entries()) {
+      parts.push(...flares.regionGeometry(region, i));
+      await yieldToFrames();
+      parts.push(...flares.arcadeGeometry(region, i));
+      await yieldToFrames();
+    }
+    const geometry = mergeGeometries(parts);
+    geometry.computeBoundingSphere();
+    await yieldToFrames();
+    flares.model.add(new THREE.Mesh(geometry, flares.filamentMaterial()));
+    flares.model.add(new THREE.Mesh(geometry, flares.emissionMaterial()));
+    await flares.renderer.compileAsync(flares.scene, flares.camera);
+    return flares;
   }
 
   emissionMaterial() {
@@ -126,6 +144,7 @@ export class SolarFlares {
         varying float loop;
         ${noise}
         void main() {
+          if (visible < 0.001 || (disc > 0.999 && loop < 0.5)) discard;
           float gas = plasma(strandUV, localPoint, phase, shift);
           float root = 1.0 - smoothstep(0.0, 0.35, height);
           vec3 prominence = mix(vec3(0.9, 0.12, 0.02), vec3(1.0, 0.45, 0.12), gas * 0.5 + root * 0.5);
@@ -159,6 +178,7 @@ export class SolarFlares {
         varying float loop;
         ${noise}
         void main() {
+          if (visible < 0.001 || disc < 0.001 || loop > 0.5) discard;
           float gas = plasma(strandUV, localPoint, phase * 0.5, shift);
           float alpha = min(0.8, 1.8 * pow(across, 1.2) * strength * gas) * disc * smoothstep(0.35, 0.85, height) * (1.0 - loop);
           gl_FragColor = vec4(0.16, 0.025, 0.005, min(1.0, alpha * visible));
@@ -248,9 +268,22 @@ export class SolarFlares {
     this.uniforms.eruptAge.value = this.eruptAge;
   }
 
-  draw(ctx, box, yaw, elevation, spin, sunRate, tilt, time) {
+  crop(box) {
+    const reach = this.eruptAge >= 0 && this.eruptAge < 45 ? this.extent : 1.3;
+    const [left, bottom, right, top] = box.window;
+    const [px, py, sx, sy] = [(right - left) / box.dw, (top - bottom) / box.dh, box.w / box.dw, box.h / box.dh];
+    const cut = (edge, step) => Math.max(0, Math.floor((edge - reach) / step));
+    const [l, r, b, t] = [cut(-left, px), cut(right, px), cut(-bottom, py), cut(top, py)];
+    const [dw, dh] = [box.dw - l - r, box.dh - b - t];
+    const bucket = n => Math.ceil(n / 128) * 128;
+    return { x0: box.x0 + l * sx, y0: box.y0 + t * sy, w: dw * sx, h: dh * sy, dw, dh, bw: bucket(dw), bh: bucket(dh), window: [left + l * px, bottom + b * py, right - r * px, top - t * py] };
+  }
+
+  draw(ctx, full, yaw, elevation, spin, sunRate, tilt, time) {
+    const box = this.crop(full);
     const canvas = this.renderer.domElement;
-    if (canvas.width !== box.bw || canvas.height !== box.bh) this.renderer.setSize(box.bw, box.bh, false);
+    const size = this.fit.size(canvas, box, performance.now());
+    if (size) this.renderer.setSize(...size, false);
     this.renderer.setViewport(0, 0, box.dw, box.dh);
     [this.camera.left, this.camera.bottom, this.camera.right, this.camera.top] = box.window;
     this.camera.updateProjectionMatrix();
@@ -263,6 +296,6 @@ export class SolarFlares {
     this.erupt(Math.min(0.1, time - this.clock), spin, sunRate, tilt);
     this.clock = time;
     this.renderer.render(this.scene, this.camera);
-    ctx.drawImage(canvas, 0, box.bh - box.dh, box.dw, box.dh, box.x0, box.y0, box.w, box.h);
+    ctx.drawImage(canvas, 0, canvas.height - box.dh, box.dw, box.dh, box.x0, box.y0, box.w, box.h);
   }
 }

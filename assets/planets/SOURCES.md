@@ -34,6 +34,20 @@ python3 assets/planets/tools/prepare_sun.py /tmp/portfolio-sun/source.jpg assets
 
 Mercury, Venus, Jupiter, Saturn, and Saturn's ring map remain from [Solar System Scope](https://www.solarsystemscope.com/textures), under CC BY 4.0. The Milky Way backdrop remains credited to ESO / S. Brunier. Existing planet portraits remain on disk but the orrery no longer renders them.
 
+## Web delivery copies
+
+The renderer loads WebP copies from `textures/web/`. The JPEG files above remain the masters. Each full copy keeps the master's dimensions at WebP quality 90. Each `-preview` copy is 1024 × 512 at WebP quality 70. Each 4096-wide master also has a `-2048` copy at 2048 × 1024 and WebP quality 90. The full copies measure 36.8 dB PSNR against the noisy Matteo Sun master and at least 40.8 dB against every other master.
+
+The page loads the Sun preview first, then the eight planet previews. It retries a missing preview on every frame. After scrolling stops for 180 milliseconds, it requests detail for the visible body of the current chapter, then the body of the next chapter, then the body of the previous chapter. Each request selects the smallest map that gives at least 5 texels per pixel of disc radius. The current body uses its projected size. The next and previous bodies use the expected chapter size for the current viewport. This accepts one additional neighbour download to prepare reverse scrolling, for example after a link to a later chapter. Only one detailed map downloads at a time. The system overview requests detail only for visible bodies, at their projected size. Each body has at most one pending request, from download until upload. A failed download or decode can retry after two seconds. The page uploads at most one decoded map to the GPU per frame. A map for a body without an installed map can upload during scrolling. A map that replaces an installed map waits until scrolling stops. Uploads skip browser colour conversion, because the WebP copies and JPEG layers contain no embedded ICC profile. An unchanged paused view draws once at full rendering resolution and restores the earlier resolution when motion resumes. The page preloads the credited Milky Way backdrop, `assets/space.jpg`.
+
+To rebuild a copy, install `cwebp` and run these commands from `assets/planets/textures`:
+
+```sh
+cwebp -q 90 -m 6 -sharp_yuv earth.jpg -o web/earth.webp
+cwebp -q 70 -m 6 -sharp_yuv -resize 1024 512 earth.jpg -o web/earth-preview.webp
+cwebp -q 90 -m 6 -sharp_yuv -resize 2048 1024 earth.jpg -o web/earth-2048.webp
+```
+
 ## Display conventions
 
 All bodies keep the existing square-root radius scale. The Sun's model radius is 44; Jupiter's is 13.9; Earth's is 4.2; Mercury's is 2.6. The shared body scale is 1.0. This reduces all body radii by 37.5% from the previous factor of 1.6, without changing the orbital radii or relative body sizes. The renderer then applies the same perspective projection to every body. It does not apply a per-body screen-size minimum or replace textures with coloured dots.

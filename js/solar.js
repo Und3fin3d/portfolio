@@ -336,25 +336,27 @@
      the target by ~70%: so the final approach is a pure zoom onto an
      already-centred planet, never a last-moment sideways catch-up */
   let cam = { F: { x: 0, y: 0, z: 0 }, zl: Math.log(1000), ax: 0.5, ay: 0.5, yaw: YAW, elev: ELEV };
+  const unit = x => Math.max(0, Math.min(1, x));
+  const sunSafeDist = () => SUNPX * BODY_SCALE * FL / (0.32 * Math.min(cw, ch));
   /** @param {{ F: Vec3, zl: number, ax: number, ay: number, yaw: number, elev: number }} v */
-  const sunCrowds = v => {
-    const d = Math.exp(v.zl), cy = Math.cos(v.yaw), sy = Math.sin(v.yaw), ce = Math.cos(v.elev), se = Math.sin(v.elev);
+  const sunView = v => {
+    const cy = Math.cos(v.yaw), sy = Math.sin(v.yaw), ce = Math.cos(v.elev), se = Math.sin(v.elev);
     const y1 = -v.F.x * sy - v.F.y * cy;
-    const den = d - (-y1 * ce - v.F.z * se);
-    if (den <= 0) return false;
-    const R = SUNPX * BODY_SCALE * FL / den;
-    const x = v.ax * cw + (-v.F.x * cy + v.F.y * sy) * FL / den, y = v.ay * ch - (y1 * se - v.F.z * ce) * FL / den;
-    const reach = Math.hypot(Math.max(0, -x, x - cw), Math.max(0, -y, y - ch));
-    return R > 0.32 * Math.min(cw, ch) && reach < 5 * R;
+    return { x: -v.F.x * cy + v.F.y * sy, y: y1 * se - v.F.z * ce, den: Math.exp(v.zl) + y1 * ce + v.F.z * se };
+  };
+  const sunCrowding = v => {
+    const { x, y, den } = sunView(v);
+    const dist = Math.hypot(x, y, den) || 1e-9;
+    return smooth(unit((sunSafeDist() / dist - 0.75) / 0.5)) * smooth(unit((den / dist - 0.3) / 0.5));
+  };
+  const sunSize = v => {
+    const { x, y, den } = sunView(v);
+    if (den <= 0) return 0;
+    const R = SUNPX * BODY_SCALE * FL / den, sx = v.ax * cw + x * FL / den, sy = v.ay * ch - y * FL / den;
+    return Math.hypot(Math.max(0, -sx, sx - cw), Math.max(0, -sy, sy - ch)) < R ? R / Math.min(cw, ch) : 0;
   };
 
-  /** @param {number} c  @param {number} T */
-  const camFrom = (c, T) => {
-    const k = Math.floor(c);
-    const f = c - k;
-    const A = camTargetOf(k, T);
-    if (f < 1e-4 || k >= N - 1) return A;
-    const B = camTargetOf(k + 1, T);
+  const flight = (A, B, k, f) => {
     const fF = smooth(Math.max(0, Math.min(1, (f - 0.35) / 0.37)));  /* focus pan */
     const g = smooth(f);                                             /* dolly, zero-slope ends */
     const out = {
@@ -376,21 +378,44 @@
         out.elev += 4 * g * (1 - g) * (ELEV - out.elev) * 0.85;
       }
     }
-    for (let i = 0; i < 160 && out.elev < 88 * D2R && sunCrowds(out); i++) out.elev += 0.5 * D2R;
-    for (let i = 0; i < 120 && sunCrowds(out); i++) out.zl += 0.02;
     return out;
+  };
+
+  /** @param {number} c  @param {number} T */
+  const camFrom = (c, T) => {
+    const k = Math.floor(c);
+    const f = c - k;
+    const A = camTargetOf(k, T);
+    if (f < 1e-4 || k >= N - 1) return A;
+    const B = camTargetOf(k + 1, T);
+    const out = flight(A, B, k, f);
+    const fromSun = chapters[k].body === "sun";
+    const over = Math.max(...Array.from({ length: 49 }, (_, i) => sunCrowding(flight(A, B, k, i / 48)) * (fromSun ? smooth(unit(i / 48 / 0.4)) : 1)));
+    if (!over) return out;
+    const top = Math.max(Math.log(sunSafeDist()), flight(A, B, k, 0.5).zl);
+    const lifted = (rise, f) => {
+      const v = flight(A, B, k, f);
+      const zl = A.zl + (top - A.zl) * smooth(unit((f - 0.1) / 0.4)) + (B.zl - top) * smooth(unit((f - 0.5) / 0.35));
+      const elev = v.elev + (88 * D2R - v.elev) * rise * smooth(unit(f / 0.2)) * (1 - smooth(unit((f - 0.55) / 0.4)));
+      return { ...v, zl: v.zl + (zl - v.zl) * over, elev: v.elev + (elev - v.elev) * over };
+    };
+    const worst = rise => Math.max(...Array.from({ length: 49 }, (_, i) => sunSize(lifted(rise, i / 48))));
+    const limit = Math.max(0.32, worst(1));
+    let [lo, hi] = [0, worst(0) <= limit ? 0 : 1];
+    for (let i = 0; i < 10 && hi > 0; i++) worst((lo + hi) / 2) <= limit ? hi = (lo + hi) / 2 : lo = (lo + hi) / 2;
+    return lifted(hi, f);
   };
 
   /* project a 3D AU point through warp → dolly camera → perspective divide */
   let dCam = 1000;
+  let basis = { cyaw: 1, syaw: 0, se: 0, ce: 1 };
+  const warpedPaths = paths.map(path => path.map(warp));
   /** @param {Vec3} pt  @returns {Proj} */
-  const project = pt => {
-    const w = warp(pt);
-    const rx = w.x - cam.F.x, ry = w.y - cam.F.y, rz = w.z - cam.F.z;
-    const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
+  const projectWarped = pt => {
+    const rx = pt.x - cam.F.x, ry = pt.y - cam.F.y, rz = pt.z - cam.F.z;
+    const { cyaw, syaw, se, ce } = basis;
     const x1 = rx * cyaw - ry * syaw;
     const y1 = rx * syaw + ry * cyaw;
-    const se = Math.sin(elev), ce = Math.cos(elev);
     const y2 = y1 * se + rz * ce;
     const zd = -y1 * ce + rz * se;                 /* toward the camera */
     const den = dCam - zd;
@@ -399,6 +424,7 @@
     const s = FL / Math.max(den, near);
     return { x: cam.ax * cw + x1 * s, y: cam.ay * ch - y2 * s, s, zd, clip };
   };
+  const project = pt => projectWarped(warp(pt));
 
   function updateCameraDistance() {
     const maximum = Math.max(distOf("system"), Math.exp(cam.zl));
@@ -415,6 +441,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     FL = 3 * Math.min(cw, ch);
     recalcCenters();
+    lastFrame = "";
   };
 
   backdrop.src = "assets/space.jpg";
@@ -639,6 +666,7 @@
 
   /* ---------- draw ---------- */
   const fmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const ink = css("--ink"), muted = css("--muted"), labelFont = "10.5px " + (css("--font-mono") || "monospace");
   let lastDateStr = "";
 
   const drawBackdrop = () => {
@@ -687,8 +715,8 @@
     for (let i = 0; i < EL.length; i++) {
       ctx.beginPath();
       let pen = false;
-      for (const pt of paths[i]) {
-        const s = project(pt);
+      for (const pt of warpedPaths[i]) {
+        const s = projectWarped(pt);
         if (s.clip) { pen = false; continue; }
         pen ? ctx.lineTo(s.x, s.y) : ctx.moveTo(s.x, s.y);
         pen = true;
@@ -747,19 +775,21 @@
   }
 
   function draw(T, c) {
-    const ink = css("--ink"), muted = css("--muted");
+    surfaces.detailRadii = {};
     const focusBody = chapters[Math.round(c)].body;
     const focusIdx = IDX[focusBody] ?? -1;
     const heroWeight = Math.max(0, 1 - c);
+    basis = { cyaw: Math.cos(yaw), syaw: Math.sin(yaw), se: Math.sin(elev), ce: Math.cos(elev) };
     drawBackdrop();
-    if (surfaces.maps.sun && backdrop.complete) canvas.classList.add("is-lit");
+    if (!canvas.classList.contains("is-lit") && Object.keys(surfaces.maps).length) canvas.classList.add("is-lit");
     drawHeroScrim(heroWeight);
     ctx.globalAlpha = 1 - 0.6 * heroWeight;
     drawOrbits(focusIdx);
     ctx.globalAlpha = 1;
-    ctx.font = "10.5px " + (css("--font-mono") || "monospace");
-    for (const b of projectBodies(T)) {
-      if (b.s.clip) continue;
+    ctx.font = labelFont;
+    const bodies = projectBodies(T).filter(b => !b.s.clip);
+    surfaces.prerender(ctx, bodies.map(b => b.sun ? ["sun", b.s.x, b.s.y, b.R] : [b.p.name.toLowerCase(), b.s.x, b.s.y, b.R, b.light]), yaw, elev, dpr);
+    for (const b of bodies) {
       if (!b.sun) {
         drawPlanet(b, focusBody, focusIdx, ink, muted);
         continue;
@@ -779,6 +809,34 @@
   /** @type {number | null} */
   let cSm = null;
   let prev = performance.now();
+  let activePlanet = -1;
+  let renderTime = 0, qualityFrames = 0;
+  let qualityState = "";
+  let lastFrame = "";
+  let stillFrames = 0, movingScale = 0;
+  const frameKey = c => [c, yaw, elev, dCam, cw, ch, cam.ax, cam.ay, surfaces.ready, surfaces.renderScale, surfaces.revision, surfaces.clock >= surfaces.detailAfter, !!surfaces.flares, !!surfaces.customSun, !!surfaces.pedro, backdrop.complete, !!ringPixels, hover, simMs].join();
+  const renderFrame = (T, c) => {
+    const still = speed === 0 && surfaces.ready && !surfaces.detailProgram && frameKey(c) === lastFrame;
+    stillFrames = still ? stillFrames + 1 : 0;
+    if (still && (surfaces.renderScale === 1 || stillFrames < 10)) return;
+    if (still) [movingScale, surfaces.renderScale] = [surfaces.renderScale, 1];
+    else if (movingScale) [surfaces.renderScale, movingScale] = [movingScale, 0];
+    const start = performance.now();
+    draw(T, c);
+    lastFrame = frameKey(c);
+    const state = [surfaces.ready, surfaces.revision, !!surfaces.flares, surfaces.renderScale].join();
+    if (state !== qualityState) {
+      qualityState = state;
+      renderTime = qualityFrames = 0;
+      return;
+    }
+    renderTime += (performance.now() - start - renderTime) * 0.15;
+    qualityFrames++;
+    if (renderTime <= 24 && qualityFrames < 60) return;
+    if (renderTime > 24) surfaces.renderScale = Math.max(0.35, surfaces.renderScale * 0.85);
+    else if (renderTime < 12) surfaces.renderScale = Math.min(1, surfaces.renderScale + 0.05);
+    qualityFrames = 0;
+  };
   /** @param {string} id */
   const navTargetFor = id => ({
     digits: "#digits",
@@ -817,6 +875,7 @@
     const T = centuries(simMs);
 
     const cRaw = chapterAt();
+    surfaces.detailBody = chapters[Math.round(cRaw)].body;
     if (cSm === null) cSm = cRaw;
     /* a jump this big is an anchor navigation or a late layout shift, not a
        scroll: snap, so the camera never flies through every planet to get
@@ -843,15 +902,21 @@
 
     if (chapters[activeChapter].body === "system" && !userSpun && !dragging && !reduced) spinTarget += dt * 0.02;
 
-    planetBtns.forEach((b, i) => b.classList.toggle("is-active", i === Math.round(cRaw)));
+    const planet = Math.round(cRaw);
+    if (planet !== activePlanet) {
+      activePlanet = planet;
+      planetBtns.forEach((b, i) => b.classList.toggle("is-active", i === planet));
+    }
 
-    draw(T, cSm);
+    renderFrame(T, cSm);
+    surfaces.updateTextures([planet, planet + 1, planet - 1].filter(k => chapters[k]).map(k => chapters[k].body));
     requestAnimationFrame(tick);
   };
 
   resize();
   window.addEventListener("resize", resize);
   if (window.ResizeObserver) new ResizeObserver(recalcCenters).observe(document.body);
+  window.addEventListener("scroll", () => { surfaces.detailAfter = performance.now() / 1000 + 0.18; }, { passive: true });
   const settle = () => {
     cSm = chapterAt();
     cam = camFrom(cSm, centuries(simMs));
@@ -865,8 +930,7 @@
      page past its target. Suspend smooth scrolling until the jump is done. */
   const root = document.documentElement;
   if (location.hash) root.style.scrollBehavior = "auto";
-  window.addEventListener("load", () => {
-    canvas.classList.add("is-lit");
+  const restoreHashPosition = () => {
     recalcCenters();
     const hash = location.hash;
     if (hash === "#top") {
@@ -876,8 +940,14 @@
     } else if (hash) {
       document.querySelector(hash)?.scrollIntoView({ behavior: "instant", block: "start" });
     }
-    root.style.scrollBehavior = "";
     settle();
+  };
+  restoreHashPosition();
+  window.addEventListener("load", () => {
+    canvas.classList.add("is-lit");
+    recalcCenters();
+    settle();
+    root.style.scrollBehavior = "";
   });
   requestAnimationFrame(tick);
 

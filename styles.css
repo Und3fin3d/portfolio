@@ -160,7 +160,7 @@ section[id], figure[id], footer[id] { scroll-margin-top: 4.5rem; }
   z-index: 0;
   touch-action: none;
   opacity: 0;
-  transition: opacity 1.4s var(--ease);
+  transition: opacity 0.25s var(--ease);
 }
 
 #solar-canvas.is-lit { opacity: 1; }
